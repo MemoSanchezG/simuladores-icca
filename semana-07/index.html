@@ -182,7 +182,7 @@
         <li>Para que las categorías no salgan en orden alfabético crea <code>Orden severidad = SWITCH ( Eventos[Severidad], "Crítica", 1, "Alta", 2, "Media", 3, 4 )</code>, selecciona la columna Severidad y usa <strong>Herramientas de columna › Ordenar por columna</strong>.</li>
         <li>Normaliza en <strong>Inicio › Transformar datos</strong>: selecciona la columna Usuario y usa <strong>Transformar › Formato › Recortar</strong> y <strong>minúsculas</strong>, y luego <strong>Reemplazar los valores</strong> «.» por nada.</li>
         <li>Para enriquecer, carga la tabla de referencia, crea la relación en la <strong>vista de modelo</strong> (arrastra <code>GeoIP[IP]</code> sobre <code>Eventos[IP]</code>, de uno a varios) y agrega la columna <code>País = RELATED ( GeoIP[País] )</code>. Sin relación: <code>LOOKUPVALUE ( GeoIP[País], GeoIP[IP], Eventos[IP] )</code>.</li>
-        <li>Actividad ponderada 2.1: captura en la barra de fórmulas tu columna calculada y la medida que la resume, y súbelas a Teams con la insignia de <em>Create DAX calculations in semantic models</em>.</li>
+        <li>Actividad ponderada 2.1: captura en la barra de fórmulas tu columna calculada y la medida que la resume, y súbelas a la plataforma del curso con la insignia de <em>Create DAX calculations in semantic models</em>.</li>
       </ol>
     </section>
 
