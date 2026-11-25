@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 2 · Conecta tus fuentes y caza la anomalía | Simuladores ICCA</title>
+  <meta name="description" content="Elige el conector correcto de Power BI, revisa la vista previa de un CSV y un Excel, combina eventos con activos para validar una hipótesis de threat hunting y distingue inteligencia táctica, técnica y hunting.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > * { min-width: 0; }
+    .fila { display: grid; grid-template-columns: 1fr minmax(11rem, 15rem); gap: 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin: 8px 0; }
+    .fila.bien { border-color: var(--ok); background: var(--ok-soft); }
+    .fila.malo { border-color: var(--bad); background: var(--bad-soft); }
+    .fila p { margin: 0; }
+    .fila select { width: 100%; }
+    .fila .explica { grid-column: 1 / -1; font-size: .92rem; }
+    .fila .explica:empty { display: none; }
+    @media (max-width: 600px) { .fila { grid-template-columns: 1fr; } }
+    .archivo { font-family: var(--mono); font-weight: 700; }
+    .nota { font-size: .88rem; color: var(--muted); }
+    .panel { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--surface); min-width: 0; }
+    .panel h3 { margin-top: 0; }
+    .panel select { width: 100%; }
+    .controles { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+    .controles .campo { margin: 0; min-width: 0; }
+    pre.crudo { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: .82rem/1.45 var(--mono); overflow-x: auto; margin: 6px 0; }
+    .tipo { display: inline-block; font: 700 .7rem var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--accent-soft); margin-right: 6px; }
+    .grupo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .grupo-chips .chip { margin: 0; }
+    .barra-pq { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px dashed var(--border); border-radius: 8px; margin: 8px 0; background: var(--surface-2); }
+    .lista-datos { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+    .lista-datos li { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; background: var(--surface); }
+    .lista-datos li.vacio { color: var(--muted); font-style: italic; }
+    .kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); margin: 10px 0; }
+    .kpis .kpi { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--surface); }
+    .kpis .valor { font-size: 1.6rem; }
+    .hbarras { display: grid; gap: 6px; }
+    .hbarra { display: grid; grid-template-columns: minmax(6rem, 9rem) 1fr 2.2rem; gap: 8px; align-items: center; font-size: .88rem; }
+    .hbarra .et { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: .82rem; }
+    .hbarra .pista { height: 16px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+    .hbarra .relleno { display: block; height: 100%; background: var(--accent-2); border-radius: 6px; }
+    .hbarra .v { text-align: right; font-variant-numeric: tabular-nums; }
+    .hipotesis { font-weight: 600; border-left: 4px solid var(--accent-2); padding: 6px 12px; background: var(--surface-2); border-radius: 0 8px 8px 0; }
+    .flujo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .9rem; }
+    .flujo span { border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; background: var(--surface); }
+    .flujo b { color: var(--muted); }
+    fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    .opcion { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; font-weight: 400; }
+    .opcion input { margin-top: 5px; }
+    td.err { color: var(--bad); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 2 · Conecta tus fuentes y caza la anomalía</h1>
+      <p class="subtitulo">Un hunt rara vez vive en una sola fuente: los eventos dicen qué pasó y el inventario de activos dice si importa. Practica cómo traer ambas a Power BI sin errores y úsalas para confirmar o descartar una hipótesis.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás <strong>elegir</strong> el conector de Power BI adecuado para cada origen, <strong>revisar</strong> la vista previa de un CSV y de un Excel antes de cargarlos, <strong>combinar</strong> eventos con activos para validar una hipótesis de threat hunting y <strong>diferenciar</strong> inteligencia táctica, técnica y hunting.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Resuelve los retos en orden: cada uno tiene su botón de revisión con explicación.</li>
+          <li>En el Reto 3 relaciona las tablas, aplica los filtros de la hipótesis y lee los visuales para encontrar al atacante.</li>
+          <li>Usa «Reiniciar» cuando quieras repetir un reto desde cero.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Obtener datos: ¿qué conector usarías?</h2>
+      <p>En Power BI Desktop todo empieza en <strong>Inicio › Obtener datos</strong>. Elige el conector correcto para cada origen.</p>
+      <div id="r1-lista"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r1-revisar">Comprobar conectores</button>
+        <button type="button" id="r1-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Revisa la vista previa antes de cargar</h2>
+      <p>La mayoría de los errores de carga se ven en la vista previa… si la miras. Corrige la configuración de cada archivo y cárgalo.</p>
+      <div class="dos-columnas">
+        <div class="panel">
+          <h3>A. <span class="archivo">eventos.csv</span></h3>
+          <p class="nota" style="margin:0">Así se ve el archivo en el Bloc de notas (primeras líneas):</p>
+          <pre class="crudo" id="r2-crudo"></pre>
+          <div class="controles">
+            <div class="campo"><label for="r2-origen">Origen del archivo</label>
+              <select id="r2-origen"><option value="1252">1252: Europeo occidental (Windows)</option><option value="65001">65001: Unicode (UTF-8)</option></select></div>
+            <div class="campo"><label for="r2-delim">Delimitador</label>
+              <select id="r2-delim"><option value=",">Coma</option><option value=";">Punto y coma</option><option value="\t">Tabulación</option></select></div>
+            <div class="campo"><label for="r2-deteccion">Detección del tipo de datos</label>
+              <select id="r2-deteccion"><option value="200">Según las primeras 200 filas</option><option value="todo">Según todo el conjunto de datos</option><option value="no">No detectar los tipos de datos</option></select></div>
+          </div>
+          <p class="nota">Vista previa:</p>
+          <div class="tabla-scroll" id="r2-previa"></div>
+          <div class="acciones"><button type="button" class="primario" id="r2-cargar-csv">Cargar</button></div>
+        </div>
+        <div class="panel">
+          <h3>B. <span class="archivo">activos.xlsx</span> · Navegador</h3>
+          <p class="nota" style="margin-top:0">Elige qué cargar del libro:</p>
+          <div class="grupo-chips" id="r2-nav" role="group" aria-label="Elementos del libro de Excel"></div>
+          <div id="r2-pq"></div>
+          <p class="nota">Vista previa:</p>
+          <div class="tabla-scroll" id="r2-previa-xl"></div>
+          <div class="acciones" id="r2-acciones-xl"></div>
+        </div>
+      </div>
+      <h3>Panel Datos</h3>
+      <ul class="lista-datos" id="r2-datos"></ul>
+      <div class="acciones"><button type="button" id="r2-reiniciar">Reiniciar</button></div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Caza guiada: valida la hipótesis</h2>
+      <p class="hipotesis">Hipótesis: «Alguien está intentando iniciar sesión fuera de horario en servidores críticos».</p>
+      <p>Tienes <span id="r3-n"></span> eventos de autenticación del 10 al 16 de agosto de 2026 y el inventario de 18 activos. Los eventos no traen la criticidad: la aporta la tabla de activos.</p>
+      <div class="panel">
+        <h3>Paso 1 · Relaciona eventos con activos</h3>
+        <div class="controles">
+          <div class="campo"><label for="r3-col">Columna de eventos que buscarás en activos[hostname]</label>
+            <select id="r3-col"><option value="">— Elige una columna —</option><option value="usuario">usuario</option><option value="hostname">hostname</option><option value="ip">ip_origen</option></select></div>
+        </div>
+        <div class="acciones" style="margin-top:6px"><button type="button" id="r3-relacionar">Relacionar</button></div>
+        <p class="nota" id="r3-estado-rel" aria-live="polite">Aún no hay relación: los filtros de criticidad y tipo están desactivados.</p>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <h3>Paso 2 · Aplica los filtros (segmentaciones)</h3>
+        <div class="controles">
+          <div class="campo"><label for="r3-res">resultado</label><select id="r3-res"><option value="Todos">Todos</option><option value="Éxito">Éxito</option><option value="Fallo">Fallo</option></select></div>
+          <div class="campo"><label for="r3-hor">Horario</label><select id="r3-hor"><option value="todo">Todo el día</option><option value="laboral">Laboral (07:00–19:59)</option><option value="fuera">Fuera de horario (20:00–06:59)</option></select></div>
+          <div class="campo"><label for="r3-crit">criticidad (activos)</label><select id="r3-crit" disabled><option value="Todas">Todas</option><option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option></select></div>
+          <div class="campo"><label for="r3-tipo">tipo (activos)</label><select id="r3-tipo" disabled><option value="Todos">Todos</option><option value="Servidor">Servidor</option><option value="Estación de trabajo">Estación de trabajo</option><option value="Laptop">Laptop</option></select></div>
+        </div>
+        <div class="kpis" id="r3-kpis"></div>
+        <div class="dos-columnas">
+          <div><p style="font-weight:600;margin:0 0 6px">Recuento de event_id por hostname</p><div id="r3-hosts"></div></div>
+          <div><p style="font-weight:600;margin:0 0 6px">Recuento de event_id por ip_origen</p><div id="r3-ips"></div></div>
+        </div>
+        <p style="font-weight:600;margin:14px 0 6px">Eventos filtrados</p>
+        <div class="tabla-scroll" id="r3-tabla" style="max-height:320px;overflow:auto"></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <h3>Paso 3 · Reporta tu hallazgo</h3>
+        <div class="controles">
+          <div class="campo"><label for="r3-host">Host bajo ataque</label><select id="r3-host"></select></div>
+          <div class="campo"><label for="r3-ip">IP origen anómala</label><select id="r3-ip"></select></div>
+        </div>
+        <fieldset>
+          <legend>Deja los demás filtros y cambia resultado a «Todos». ¿Qué evento cambia la prioridad del hallazgo?</legend>
+          <div id="r3-mc"></div>
+        </fieldset>
+      </div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-comprobar">Comprobar hallazgo</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto4">
+      <h2 id="reto4">Reto 4 · ¿Inteligencia táctica, técnica o threat hunting?</h2>
+      <p>Se alimentan entre sí: la inteligencia táctica (TTPs) y la técnica (IOCs) inspiran hipótesis; el hunt las pone a prueba en tus datos y produce nueva inteligencia.</p>
+      <p class="flujo" aria-label="Ciclo entre inteligencia y hunting"><span>Inteligencia táctica y técnica</span><b>→</b><span>Hipótesis</span><b>→</b><span>Hunt en tus datos</span><b>→</b><span>Hallazgos: nuevos IOCs y TTPs</span><b>↺</b></p>
+      <div id="r4-lista"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r4-revisar">Revisar casos</button>
+        <button type="button" id="r4-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro4"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li><strong>Inicio › Obtener datos › Texto/CSV</strong> y elige <code>eventos.csv</code>. En la vista previa revisa <strong>Origen del archivo</strong> (65001: Unicode (UTF-8) si ves acentos rotos), <strong>Delimitador</strong> y <strong>Detección del tipo de datos</strong>; luego pulsa <strong>Cargar</strong>.</li>
+        <li><strong>Inicio › Obtener datos › Libro de Excel</strong> y elige <code>activos.xlsx</code>. En el <strong>Navegador</strong> marca la tabla (o la hoja). Si la vista previa muestra <code>Column1</code>, <code>Column2</code>…, pulsa <strong>Transformar datos</strong> y en Power Query usa <strong>Inicio › Usar la primera fila como encabezado</strong>; después <strong>Cerrar y aplicar</strong>.</li>
+        <li>Para una carpeta con un archivo por día: <strong>Obtener datos › Más… › Archivo › Carpeta</strong> y después <strong>Combinar › Combinar y transformar datos</strong>. Para un JSON: <strong>Obtener datos › Más… › Archivo › JSON</strong>, convierte la lista con <strong>A la tabla</strong> y expande los campos.</li>
+        <li>Para cruzar eventos con activos en Power Query: <strong>Inicio › Combinar consultas</strong>, elige <code>hostname</code> en ambas tablas y el tipo <strong>Externa izquierda</strong>; expande <code>criticidad</code>, <code>tipo</code> y <code>responsable</code>. (En la Semana 4 lo harás con una relación en la Vista de modelo, sin duplicar columnas).</li>
+        <li>Para filtrar por horario, crea la hora con <strong>Agregar columna › Hora › Hora</strong>, que genera <code>Time.Hour([fecha_hora])</code>, y úsala en una <strong>Segmentación de datos</strong> o en el panel <strong>Filtros</strong>.</li>
+      </ol>
+      <p class="nota">Evidencia de la semana: una captura del panel Datos con las dos tablas cargadas con sus encabezados correctos. En el dataset del curso las columnas se llaman <code>hostname</code>, <code>source_ip</code> y <code>status</code>, y la de activos <code>criticality</code>.</p>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Identifica al menos <strong>dos fuentes</strong> para tu dashboard: una de eventos (lo que pasó) y otra de contexto (activos, usuarios o IOCs) que diga si importa. Anota en tu README qué conector usarás para cada una y redacta una hipótesis de hunting que tu dashboard ayudaría a confirmar o descartar. La llevarás al checkpoint-1 de la Semana 5.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(2);
+    const { el, $, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 4);
+
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const dos = n => String(n).padStart(2, '0');
+    const marcarChips = (g, v) => g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.valor === v)));
+    function barrasH(cont, datos, max) {
+      max = max || Math.max(1, ...datos.map(d => d.valor));
+      if (!datos.length) { cont.replaceChildren(el('p', { class: 'nota' }, '(En blanco): ningún evento cumple los filtros.')); return; }
+      cont.replaceChildren(el('div', { class: 'hbarras' }, datos.map(d => el('div', { class: 'hbarra' },
+        el('span', { class: 'et', title: d.etiqueta }, d.etiqueta),
+        el('span', { class: 'pista' }, el('span', { class: 'relleno', style: `width:${(100 * d.valor / max).toFixed(1)}%` })),
+        el('span', { class: 'v' }, num(d.valor))))));
+    }
+
+    /* =========================================================
+       Datos sintéticos: activos y eventos
+       ========================================================= */
+    const ACTIVOS = [
+      ['FCFM-DIR-01', 'Dirección', 'Estación de trabajo', 'Alta', 'Laura Méndez'],
+      ['FCFM-DIR-02', 'Dirección', 'Laptop', 'Alta', 'Laura Méndez'],
+      ['FCFM-ESC-01', 'Servicios Escolares', 'Servidor', 'Alta', 'Jorge Salinas'],
+      ['FCFM-ESC-02', 'Servicios Escolares', 'Estación de trabajo', 'Media', 'Ana Treviño'],
+      ['FCFM-BIB-01', 'Biblioteca', 'Estación de trabajo', 'Baja', 'Rosa Garza'],
+      ['FCFM-BIB-02', 'Biblioteca', 'Laptop', 'Baja', 'Rosa Garza'],
+      ['FCFM-LAB-01', 'Laboratorio de Cómputo', 'Estación de trabajo', 'Baja', 'Diego Cantú'],
+      ['FCFM-LAB-02', 'Laboratorio de Cómputo', 'Estación de trabajo', 'Baja', 'Diego Cantú'],
+      ['FCFM-LAB-03', 'Laboratorio de Cómputo', 'Estación de trabajo', 'Baja', 'Diego Cantú'],
+      ['FCFM-LAB-04', 'Laboratorio de Cómputo', 'Estación de trabajo', 'Baja', 'Diego Cantú'],
+      ['FCFM-LAB-05', 'Laboratorio de Cómputo', 'Servidor', 'Media', 'Diego Cantú'],
+      ['FCFM-POS-01', 'Posgrado', 'Laptop', 'Media', 'Elena Rocha'],
+      ['FCFM-POS-02', 'Posgrado', 'Estación de trabajo', 'Media', 'Elena Rocha'],
+      ['FCFM-VIN-01', 'Vinculación', 'Laptop', 'Baja', 'Marco Villarreal'],
+      ['FCFM-TI-01', 'TI', 'Servidor', 'Alta', 'Sofía Ramírez'],
+      ['FCFM-TI-02', 'TI', 'Servidor', 'Alta', 'Sofía Ramírez'],
+      ['FCFM-ADM-01', 'Administración', 'Estación de trabajo', 'Media', 'Héctor Domínguez'],
+      ['FCFM-ADM-02', 'Administración', 'Servidor', 'Alta', 'Héctor Domínguez']
+    ].map(([hostname, departamento, tipo, criticidad, responsable]) => ({ hostname, departamento, tipo, criticidad, responsable }));
+    const activoDe = h => ACTIVOS.find(a => a.hostname === h);
+
+    const azar = mulberry32(20260810);
+    const DIAS = ['2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13', '2026-08-14', '2026-08-15', '2026-08-16'];
+    const PERSONAL = [
+      ['jgomez', 'FCFM-ESC-02', '10.10.2.11'], ['mrivera', 'FCFM-ESC-01', '10.10.2.12'], ['jtrevino', 'FCFM-ESC-02', '10.10.2.13'],
+      ['lsantos', 'FCFM-BIB-01', '10.10.4.21'], ['pgonzalez', 'FCFM-BIB-02', '10.10.4.22'], ['agarcia', 'FCFM-ADM-01', '10.10.8.31'],
+      ['shernandez', 'FCFM-ADM-02', '10.10.8.32'], ['rmartinez', 'FCFM-TI-01', '10.10.9.41'], ['jcantu', 'FCFM-TI-02', '10.10.9.42'],
+      ['cvillarreal', 'FCFM-DIR-01', '10.10.1.51'], ['flopez', 'FCFM-POS-01', '10.10.6.61'], ['eramirez', 'FCFM-VIN-01', '10.10.7.71']
+    ];
+    const EVENTOS = (() => {
+      const f = [];
+      const seg = (h, m, s) => h * 3600 + m * 60 + s;
+      const fmt = t => `${dos(Math.floor(t / 3600) % 24)}:${dos(Math.floor(t / 60) % 60)}:${dos(t % 60)}`;
+      const push = (dia, t, usuario, hostname, ip, resultado) => f.push({ ts: `${dia} ${fmt(t)}`, hora: Math.floor(t / 3600) % 24, usuario, hostname, ip, resultado });
+      DIAS.forEach((dia, d) => {
+        PERSONAL.forEach(([u, h, ip]) => {
+          const n = d >= 5 ? (azar() < 0.1 ? 1 : 0) : (azar() < 0.12 ? 2 : 1);
+          for (let k = 0; k < n; k++) {
+            const t = seg(7, 30, 0) + Math.floor(azar() * 11 * 3600);
+            if (azar() < 0.08) { push(dia, t, u, h, ip, 'Fallo'); push(dia, t + 35 + Math.floor(azar() * 60), u, h, ip, 'Éxito'); }
+            else push(dia, t, u, h, ip, 'Éxito');
+          }
+        });
+        if (d < 5) {
+          // alumnos en el laboratorio
+          ['FCFM-LAB-03', 'FCFM-LAB-03', 'FCFM-LAB-01', 'FCFM-LAB-01'].forEach((h, k) => {
+            const n = 1 + Math.floor(azar() * 9);
+            push(dia, seg(8, 0, 0) + Math.floor(azar() * 10 * 3600), `alumno0${n}`, h, `10.10.30.${100 + n + k}`, 'Éxito');
+          });
+          // servicio de impresión con una contraseña vieja guardada (ruido benigno)
+          let t = seg(9, 0, 0) + Math.floor(azar() * 1800);
+          for (let k = 0; k < 3; k++) { push(dia, t, 'svc_impresion', 'FCFM-LAB-03', '10.10.30.21', 'Fallo'); t += 2 * 3600 + Math.floor(azar() * 3600); }
+        }
+        push(dia, seg(2, 0, 5) + Math.floor(azar() * 90), 'svc_respaldo', 'FCFM-TI-02', '10.10.0.5', 'Éxito'); // respaldo nocturno
+      });
+      // señuelo: laptop de baja criticidad que, desde casa, reintenta con una contraseña guardada vieja
+      let tv = seg(22, 5, 12);
+      for (let k = 0; k < 14; k++) { push('2026-08-11', tv, 'eramirez', 'FCFM-VIN-01', '203.0.113.9', 'Fallo'); tv += 300 + Math.floor(azar() * 120); }
+      push('2026-08-11', tv + 60, 'eramirez', 'FCFM-VIN-01', '203.0.113.9', 'Éxito');
+      // administrador que trabaja tarde y se equivoca una vez
+      push('2026-08-10', seg(21, 15, 22), 'jcantu', 'FCFM-TI-02', '10.10.9.42', 'Fallo');
+      push('2026-08-10', seg(21, 16, 1), 'jcantu', 'FCFM-TI-02', '10.10.9.42', 'Éxito');
+      // ataque: rociado de contraseñas contra el controlador de dominio
+      let t = seg(2, 7, 41);
+      ['agarcia', 'jgomez', 'lsantos', 'flopez', 'shernandez', 'mrivera', 'agarcia', 'jgomez', 'lsantos', 'flopez', 'shernandez', 'mrivera'].forEach(u => {
+        push('2026-08-13', t, u, 'FCFM-TI-01', '198.51.100.77', 'Fallo'); t += 200 + Math.floor(azar() * 160);
+      });
+      push('2026-08-13', t + 95, 'mrivera', 'FCFM-TI-01', '198.51.100.77', 'Éxito');
+      f.sort((a, b) => a.ts.localeCompare(b.ts));
+      f.forEach((e, i) => { e.id = 2001 + i; });
+      return f;
+    })();
+
+    /* =========================================================
+       Reto 1 · Conectores
+       ========================================================= */
+    const CONECTORES = ['Libro de Excel', 'Texto/CSV', 'Carpeta', 'JSON', 'Web', 'PDF', 'Base de datos SQL Server'];
+    const ORIGENES = [
+      { a: 'eventos.csv', d: 'Exportación del log de autenticación: texto con valores separados por comas.', r: 'Texto/CSV',
+        e: 'Texto/CSV lee archivos delimitados y te muestra una vista previa con el delimitador y los tipos detectados.',
+        mal: { 'Libro de Excel': 'Aunque Excel abra archivos .csv, el conector Libro de Excel espera un .xlsx: para texto delimitado usa Texto/CSV.' } },
+      { a: 'activos.xlsx', d: 'Inventario de equipos que TI mantiene en Excel.', r: 'Libro de Excel',
+        e: 'Libro de Excel abre el Navegador, donde eliges una hoja o una tabla con nombre del libro.',
+        mal: { 'Texto/CSV': 'Un .xlsx no es texto delimitado: es un libro de Excel (un paquete comprimido de XML). Texto/CSV no puede leerlo.' } },
+      { a: 'logs\\auth\\', d: 'Carpeta con un CSV por día (auth-2026-08-01.csv … auth-2026-08-31.csv), todos con las mismas columnas.', r: 'Carpeta',
+        e: 'Carpeta lista todos los archivos y, con Combinar y transformar datos, los apila en una sola tabla. Cuando llegue el archivo de mañana, solo actualizas.',
+        mal: { 'Texto/CSV': 'Texto/CSV abre un solo archivo: tendrías que cargar y anexar 31 consultas, y repetirlo cada día.' } },
+      { a: 'feed-iocs.json', d: 'Feed OSINT de indicadores descargado en formato JSON.', r: 'JSON',
+        e: 'JSON abre el archivo como una lista o un registro; en Power Query lo conviertes a tabla y expandes los campos.',
+        mal: { Web: 'Web sirve para leer el feed directamente desde su URL; aquí ya lo descargaste como archivo, así que usa JSON.', 'Texto/CSV': 'Un JSON no es texto delimitado: tiene llaves, listas y campos anidados.' } }
+    ];
+    const resp1 = new Array(ORIGENES.length).fill('');
+    function pintarReto1() {
+      $('#r1-lista').replaceChildren(...ORIGENES.map((o, i) => {
+        const sel = el('select', { id: `r1-sel-${i}`, 'aria-label': `Conector para ${o.a}`, onchange: e => { resp1[i] = e.target.value; $(`#r1-fila-${i}`).classList.remove('bien', 'malo'); $(`#r1-exp-${i}`).textContent = ''; } },
+          el('option', { value: '' }, '— Elige el conector —'), CONECTORES.map(c => el('option', { value: c }, c)));
+        sel.value = resp1[i];
+        return el('div', { class: 'fila', id: `r1-fila-${i}` }, el('p', {}, el('span', { class: 'archivo' }, o.a), el('br'), o.d), sel, el('p', { class: 'explica', id: `r1-exp-${i}` }));
+      }));
+    }
+    $('#r1-revisar').addEventListener('click', () => {
+      let bien = 0;
+      ORIGENES.forEach((o, i) => {
+        const f = $(`#r1-fila-${i}`), ex = $(`#r1-exp-${i}`);
+        f.classList.remove('bien', 'malo');
+        if (!resp1[i]) { ex.textContent = 'Sin responder.'; return; }
+        if (resp1[i] === o.r) { bien++; f.classList.add('bien'); ex.innerHTML = `<strong>✓ ${o.r}.</strong> ${o.e}`; }
+        else { f.classList.add('malo'); ex.innerHTML = `<strong>✗ ${resp1[i]} no es el adecuado.</strong> ${o.mal[resp1[i]] || `Ese conector no corresponde a este origen; fíjate en la extensión y en cómo está organizado el dato.`}`; }
+      });
+      if (bien === ORIGENES.length) { retro('#retro1', 'ok', '<strong>¡Conectores correctos!</strong> La extensión del archivo y la forma del origen (un archivo, muchos archivos iguales, una URL) deciden el conector. Elegir bien desde aquí te ahorra transformaciones después.'); prog.marcar('r1'); }
+      else retro('#retro1', 'mal', `Llevas <strong>${bien} de ${ORIGENES.length}</strong>. Lee la explicación de cada origen marcado con ✗ y vuelve a intentarlo.`);
+    });
+    $('#r1-reiniciar').addEventListener('click', () => { resp1.fill(''); pintarReto1(); retro('#retro1', '', ''); });
+    pintarReto1();
+
+    /* =========================================================
+       Reto 2 · Vista previa (CSV) y Navegador (Excel)
+       ========================================================= */
+    const LINEAS_CSV = ['event_id,fecha_hora,usuario,hostname,ip_origen,resultado',
+      ...EVENTOS.slice(0, 5).map(e => [e.id, e.ts, e.usuario, e.hostname, e.ip, e.resultado].join(','))];
+    $('#r2-crudo').textContent = LINEAS_CSV.join('\n');
+    const MOJIBAKE = { 'É': 'Ã‰', 'é': 'Ã©', 'á': 'Ã¡', 'ó': 'Ã³', 'í': 'Ã­', 'ú': 'Ãº', 'ñ': 'Ã±' };
+    const est2 = { csv: false, xl: false, nav: null, pq: false, promovido: false, xlMal: false };
+    const CSV_INICIAL = { origen: '1252', delim: ';', deteccion: '200' };
+
+    function previaCsv() {
+      const origen = $('#r2-origen').value, delim = $('#r2-delim').value === '\\t' ? '\t' : $('#r2-delim').value, det = $('#r2-deteccion').value;
+      const filas = LINEAS_CSV.map(l => (origen === '1252' ? l.replace(/[Ééáóíúñ]/g, c => MOJIBAKE[c]) : l).split(delim));
+      const cab = filas[0], datos = filas.slice(1);
+      const tipoDe = (nombre, k) => {
+        if (det === 'no' || cab.length === 1) return 'ABC';
+        if (k === 0) return '123';
+        if (k === 1) return 'Fecha/hora';
+        return 'ABC';
+      };
+      $('#r2-previa').innerHTML = `<table class="datos"><thead><tr>${cab.map((c, k) => `<th scope="col"><span class="tipo">${tipoDe(c, k)}</span>${c}</th>`).join('')}</tr></thead><tbody>${datos.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    }
+    ['#r2-origen', '#r2-delim', '#r2-deteccion'].forEach(s => $(s).addEventListener('change', () => { previaCsv(); }));
+    $('#r2-cargar-csv').addEventListener('click', () => {
+      const problemas = [];
+      if ($('#r2-origen').value !== '65001') problemas.push('<strong>Origen del archivo:</strong> con 1252 el archivo UTF-8 se lee mal y «Éxito» aparece como «Ã‰xito». Un filtro o una relación por «Éxito» no encontraría nada. Elige 65001: Unicode (UTF-8).');
+      if ($('#r2-delim').value !== ',') problemas.push('<strong>Delimitador:</strong> en el Bloc de notas se ve que los campos van separados por comas. Con otro delimitador todo queda en una sola columna.');
+      if ($('#r2-deteccion').value === 'no') problemas.push('<strong>Detección del tipo de datos:</strong> sin detección todo llega como texto (ABC): <code>fecha_hora</code> no servirá como eje de tiempo y <code>event_id</code> no será número. Deja que Power BI detecte los tipos y verifícalos.');
+      if (problemas.length) { retro('#retro2', 'mal', `<strong>✗ Así no conviene cargar eventos.csv.</strong><ul>${problemas.map(p => `<li>${p}</li>`).join('')}</ul>`); return; }
+      est2.csv = true;
+      retro('#retro2', 'ok', `<strong>✓ eventos.csv cargado:</strong> ${EVENTOS.length} filas, 6 columnas, acentos legibles y tipos detectados (event_id como número entero, fecha_hora como fecha/hora).${est2.xl ? '' : ' Falta activos.xlsx.'}`);
+      revisarFin2();
+    });
+
+    const FILAS_XL = ACTIVOS.slice(0, 5).map(a => [a.hostname, a.departamento, a.tipo, a.criticidad, a.responsable]);
+    const CAB_XL = ['hostname', 'departamento', 'tipo', 'criticidad', 'responsable'];
+    function pintarNav() {
+      const g = $('#r2-nav');
+      g.replaceChildren(...[['Hoja1', 'Hoja1 (hoja)'], ['TablaActivos', 'TablaActivos (tabla)']].map(([v, t]) => el('button', {
+        type: 'button', class: 'chip', 'aria-pressed': String(est2.nav === v), dataset: { valor: v },
+        onclick: () => { est2.nav = v; est2.pq = false; est2.promovido = false; pintarNav(); }
+      }, t)));
+      const conCabecera = est2.nav === 'TablaActivos' || est2.promovido;
+      const cab = conCabecera ? CAB_XL : ['Column1', 'Column2', 'Column3', 'Column4', 'Column5'];
+      const filas = conCabecera ? FILAS_XL : [CAB_XL, ...FILAS_XL.slice(0, 4)];
+      $('#r2-previa-xl').innerHTML = est2.nav ? `<table class="datos"><thead><tr>${cab.map(c => `<th scope="col"><span class="tipo">ABC</span>${c}</th>`).join('')}</tr></thead><tbody>${filas.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="nota" style="margin:8px">Selecciona un elemento para ver la vista previa.</p>';
+      const pq = $('#r2-pq');
+      if (est2.pq) {
+        pq.replaceChildren(el('div', { class: 'barra-pq' }, el('strong', { style: 'width:100%' }, 'Editor de Power Query · Inicio'),
+          el('button', { type: 'button', id: 'r2-promover', disabled: est2.promovido, onclick: () => { est2.promovido = true; pintarNav(); $('#r2-cerrar').focus(); } }, 'Usar la primera fila como encabezado'),
+          el('button', { type: 'button', class: 'primario', id: 'r2-cerrar', onclick: cargarExcel }, 'Cerrar y aplicar')));
+      } else pq.replaceChildren();
+      $('#r2-acciones-xl').replaceChildren(...(est2.pq ? [] : [
+        el('button', { type: 'button', class: 'primario', disabled: !est2.nav, onclick: cargarExcel }, 'Cargar'),
+        el('button', { type: 'button', disabled: !est2.nav, onclick: () => { est2.pq = true; pintarNav(); const b = $('#r2-promover'); if (b) b.focus(); } }, 'Transformar datos')]));
+    }
+    function cargarExcel() {
+      if (!est2.nav) return;
+      if (est2.nav === 'Hoja1' && !est2.promovido) {
+        est2.xlMal = true; est2.xl = false; est2.pq = false; pintarNav(); pintarDatos();
+        retro('#retro2', 'mal', '<strong>✗ activos se cargó con columnas Column1…Column5</strong> y con los nombres de columna como si fueran una fila de datos. Así no podrás relacionarla por <code>hostname</code> ni filtrar por <code>criticidad</code>. Elige <em>Transformar datos</em> y usa <em>Usar la primera fila como encabezado</em>, o carga la tabla con nombre.');
+        return;
+      }
+      est2.xl = true; est2.xlMal = false; est2.pq = false;
+      pintarNav();
+      retro('#retro2', 'ok', `<strong>✓ activos cargada con encabezados correctos.</strong> ${est2.nav === 'TablaActivos' ? 'Una tabla de Excel con nombre es la opción más robusta: si alguien agrega filas o columnas, la tabla crece y la consulta sigue funcionando.' : 'Promoviste los encabezados en Power Query: quedó el paso «Encabezados promovidos» en Pasos aplicados. Una tabla de Excel con nombre te habría ahorrado ese paso.'}${est2.csv ? '' : ' Falta eventos.csv.'}`);
+      revisarFin2();
+    }
+    function pintarDatos() {
+      const items = [];
+      if (est2.csv) items.push(el('li', {}, el('strong', {}, 'eventos'), ` · event_id, fecha_hora, usuario, hostname, ip_origen, resultado (${EVENTOS.length} filas)`));
+      if (est2.xl) items.push(el('li', {}, el('strong', {}, 'activos'), ` · hostname, departamento, tipo, criticidad, responsable (${ACTIVOS.length} filas)`));
+      else if (est2.xlMal) items.push(el('li', {}, el('strong', {}, 'activos'), ' · Column1, Column2, Column3, Column4, Column5 ✗'));
+      if (!items.length) items.push(el('li', { class: 'vacio' }, 'Todavía no has cargado tablas.'));
+      $('#r2-datos').replaceChildren(...items);
+    }
+    function revisarFin2() {
+      pintarDatos();
+      if (est2.csv && est2.xl) {
+        retro('#retro2', 'ok', '<strong>¡Dos fuentes cargadas y verificadas!</strong> El panel Datos muestra eventos y activos con sus columnas correctas: esa es la captura que pide la actividad de la semana. Moraleja: revisa siempre la vista previa (acentos, delimitador, encabezados y tipos) antes de pulsar Cargar.');
+        prog.marcar('r2');
+      }
+    }
+    function reiniciar2() {
+      Object.assign(est2, { csv: false, xl: false, nav: null, pq: false, promovido: false, xlMal: false });
+      $('#r2-origen').value = CSV_INICIAL.origen; $('#r2-delim').value = CSV_INICIAL.delim; $('#r2-deteccion').value = CSV_INICIAL.deteccion;
+      previaCsv(); pintarNav(); pintarDatos(); retro('#retro2', '', '');
+    }
+    $('#r2-reiniciar').addEventListener('click', reiniciar2);
+    reiniciar2();
+
+    /* =========================================================
+       Reto 3 · Caza guiada
+       ========================================================= */
+    $('#r3-n').textContent = num(EVENTOS.length);
+    const est3 = { relacion: false, validoHipotesis: false };
+    const IPS = [...new Set(EVENTOS.map(e => e.ip))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+    $('#r3-host').replaceChildren(el('option', { value: '' }, '— Elige el host —'), ...ACTIVOS.map(a => el('option', { value: a.hostname }, a.hostname)));
+    $('#r3-ip').replaceChildren(el('option', { value: '' }, '— Elige la IP —'), ...IPS.map(ip => el('option', { value: ip }, ip)));
+    const ATAQUE = { host: 'FCFM-TI-01', ip: '198.51.100.77' };
+    const DEL_ATACANTE = EVENTOS.filter(e => e.ip === ATAQUE.ip);
+    const hhmm = e => e.ts.slice(11, 16);
+    const FALLOS_AT = DEL_ATACANTE.filter(e => e.resultado === 'Fallo');
+    const EXITO_AT = DEL_ATACANTE.find(e => e.resultado === 'Éxito');
+    const MC3 = [
+      { v: 'exito', t: `Un inicio de sesión exitoso de mrivera desde la misma IP, a las ${hhmm(EXITO_AT)}, después de los fallos.` },
+      { v: 'respaldo', t: 'El respaldo nocturno de svc_respaldo en FCFM-TI-02 a las 02:00.' },
+      { v: 'nada', t: 'Ninguno: desde esa IP solo hay fallos.' }
+    ];
+    $('#r3-mc').replaceChildren(...MC3.map(o => el('label', { class: 'opcion' }, el('input', { type: 'radio', name: 'r3-mc', value: o.v }), el('span', {}, o.t))));
+
+    const fueraDeHorario = h => h >= 20 || h < 7;
+    function filtrados() {
+      const res = $('#r3-res').value, hor = $('#r3-hor').value, crit = $('#r3-crit').value, tipo = $('#r3-tipo').value;
+      return EVENTOS.filter(e => {
+        if (res !== 'Todos' && e.resultado !== res) return false;
+        if (hor === 'fuera' && !fueraDeHorario(e.hora)) return false;
+        if (hor === 'laboral' && fueraDeHorario(e.hora)) return false;
+        if (est3.relacion) {
+          const a = activoDe(e.hostname);
+          if (crit !== 'Todas' && a.criticidad !== crit) return false;
+          if (tipo !== 'Todos' && a.tipo !== tipo) return false;
+        }
+        return true;
+      });
+    }
+    function contar(filas, campo) {
+      const m = new Map();
+      filas.forEach(e => m.set(e[campo], (m.get(e[campo]) || 0) + 1));
+      return [...m].map(([etiqueta, valor]) => ({ etiqueta, valor })).sort((a, b) => b.valor - a.valor || a.etiqueta.localeCompare(b.etiqueta)).slice(0, 6);
+    }
+    function pintarCaza() {
+      const fs = filtrados();
+      if (est3.relacion && $('#r3-res').value === 'Fallo' && $('#r3-hor').value === 'fuera' && $('#r3-crit').value === 'Alta') est3.validoHipotesis = true;
+      const kpi = (v, t) => el('div', { class: 'kpi' }, el('span', { class: 'valor' }, num(v)), el('span', { class: 'etiqueta' }, t));
+      $('#r3-kpis').replaceChildren(kpi(fs.length, 'Eventos'), kpi(fs.filter(e => e.resultado === 'Fallo').length, 'Fallos'),
+        kpi(new Set(fs.map(e => e.ip)).size, 'IPs distintas'), kpi(new Set(fs.map(e => e.hostname)).size, 'Hosts distintos'));
+      barrasH($('#r3-hosts'), contar(fs, 'hostname'));
+      barrasH($('#r3-ips'), contar(fs, 'ip'));
+      const extra = est3.relacion ? '<th scope="col">criticidad</th><th scope="col">tipo</th><th scope="col">responsable</th>' : '';
+      const max = 40;
+      $('#r3-tabla').innerHTML = `<table class="datos"><thead><tr><th scope="col">event_id</th><th scope="col">fecha_hora</th><th scope="col">usuario</th><th scope="col">hostname</th><th scope="col">ip_origen</th><th scope="col">resultado</th>${extra}</tr></thead><tbody>${fs.slice(0, max).map(e => {
+        const a = activoDe(e.hostname);
+        return `<tr><td class="num">${e.id}</td><td>${e.ts}</td><td>${e.usuario}</td><td>${e.hostname}</td><td>${e.ip}</td><td>${e.resultado}</td>${est3.relacion ? `<td>${a.criticidad}</td><td>${a.tipo}</td><td>${a.responsable}</td>` : ''}</tr>`;
+      }).join('')}</tbody></table>${fs.length > max ? `<p class="nota" style="margin:6px 10px">Se muestran ${max} de ${fs.length} filas; agrega filtros para acotar.</p>` : ''}`;
+    }
+    ['#r3-res', '#r3-hor', '#r3-crit', '#r3-tipo'].forEach(s => $(s).addEventListener('change', pintarCaza));
+    $('#r3-relacionar').addEventListener('click', () => {
+      const col = $('#r3-col').value;
+      if (!col) { retro('#retro3', 'aviso', 'Elige primero la columna de eventos que vas a buscar en activos.'); return; }
+      const hosts = new Set(ACTIVOS.map(a => a.hostname));
+      const coinciden = EVENTOS.filter(e => hosts.has(e[col])).length;
+      if (col !== 'hostname') {
+        retro('#retro3', 'mal', `<strong>✗ Con ${col === 'ip' ? 'ip_origen' : col} coinciden ${coinciden} de ${EVENTOS.length} eventos.</strong> Para unir dos tablas necesitas una columna que contenga <em>el mismo dato</em> en ambas. activos identifica cada equipo por su <code>hostname</code>; ${col === 'ip' ? 'una IP' : 'un usuario'} no es un nombre de equipo.`);
+        return;
+      }
+      est3.relacion = true;
+      $('#r3-crit').disabled = false; $('#r3-tipo').disabled = false; $('#r3-col').disabled = true; $('#r3-relacionar').disabled = true;
+      $('#r3-estado-rel').textContent = `Relación lista: eventos[hostname] ↔ activos[hostname]. Coinciden ${coinciden} de ${EVENTOS.length} eventos. Ya puedes filtrar por criticidad y tipo.`;
+      retro('#retro3', 'ok', `<strong>✓ Relacionado por hostname:</strong> los ${coinciden} eventos encontraron su activo. Ahora cada evento «sabe» la criticidad, el tipo y el responsable del equipo. Aplica los filtros de la hipótesis.`);
+      pintarCaza();
+      $('#r3-res').focus();
+    });
+    $('#r3-comprobar').addEventListener('click', () => {
+      const host = $('#r3-host').value, ip = $('#r3-ip').value;
+      const marcada = document.querySelector('input[name="r3-mc"]:checked');
+      const mc = marcada ? marcada.value : '';
+      const errores = [];
+      if (!est3.relacion) errores.push('Primero relaciona eventos con activos (Paso 1): sin la criticidad no puedes probar la parte «servidores críticos» de la hipótesis.');
+      if (!host || !ip || !mc) errores.push('Completa el host, la IP y la pregunta del evento que cambia la prioridad.');
+      if (errores.length) { retro('#retro3', 'aviso', errores.join(' ')); return; }
+      const fallos = [];
+      if (host !== ATAQUE.host) {
+        const a = activoDe(host);
+        fallos.push(`<strong>Host:</strong> ${host} es ${a.tipo.toLowerCase()} de criticidad ${a.criticidad.toLowerCase()}. ${a.criticidad !== 'Alta' ? 'La hipótesis habla de servidores críticos: aplica criticidad = Alta.' : 'Revisa cuál concentra los fallos fuera de horario.'}`);
+      }
+      if (ip !== ATAQUE.ip) {
+        const desc = ip === '10.10.30.21' ? 'Es el servicio de impresión con contraseña vieja: falla en horario laboral en un equipo de criticidad baja (ruido benigno).'
+          : ip === '203.0.113.9' ? 'Es la laptop de eramirez (criticidad baja) que, desde su casa, reintenta con una contraseña vieja guardada hasta que la actualiza. Es fuera de horario, pero no es un servidor crítico: por eso la hipótesis pide criticidad = Alta.'
+          : ip.startsWith('10.') ? 'Es una IP interna con actividad normal; compárala con lo que muestra el visual por ip_origen con los filtros de la hipótesis.'
+          : 'Revisa el visual por ip_origen con los filtros de la hipótesis.';
+        fallos.push(`<strong>IP:</strong> ${desc}`);
+      }
+      if (mc !== 'exito') fallos.push(mc === 'respaldo' ? '<strong>Evento clave:</strong> el respaldo de svc_respaldo es una tarea programada de todos los días en otro servidor; no cambia nada.' : '<strong>Evento clave:</strong> cambia resultado a «Todos» con los demás filtros: desde esa IP también hay un éxito.');
+      if (fallos.length) { retro('#retro3', 'mal', `<strong>✗ Todavía no.</strong><ul>${fallos.map(x => `<li>${x}</li>`).join('')}</ul>`); return; }
+      if (!est3.validoHipotesis) { retro('#retro3', 'aviso', '<strong>Tus respuestas son correctas,</strong> pero no validaste la hipótesis completa. Aplica a la vez resultado = Fallo, Fuera de horario y criticidad = Alta: así compruebas que el patrón no es casualidad y documentas cómo lo encontraste.'); return; }
+      retro('#retro3', 'ok', `<strong>✓ Hipótesis confirmada.</strong> Entre las ${hhmm(FALLOS_AT[0])} y las ${hhmm(FALLOS_AT[FALLOS_AT.length - 1])} del jueves 13, <code>198.51.100.77</code> probó contraseñas contra ${new Set(FALLOS_AT.map(e => e.usuario)).size} cuentas en <code>FCFM-TI-01</code> (servidor de criticidad alta, responsable: ${activoDe(ATAQUE.host).responsable}) y a las ${hhmm(EXITO_AT)} logró entrar con <strong>mrivera</strong>: es un rociado de contraseñas (password spraying) con una cuenta probablemente comprometida. Siguientes pasos: escalar con la responsable, restablecer la contraseña de mrivera, revisar qué hizo esa sesión y bloquear la IP. Y cierra el ciclo: la IP se convierte en un IOC (inteligencia técnica) y el patrón, en una TTP (inteligencia táctica) para tus próximos hunts.`);
+      prog.marcar('r3');
+    });
+    function reiniciar3() {
+      est3.relacion = false; est3.validoHipotesis = false;
+      ['#r3-res', '#r3-hor', '#r3-crit', '#r3-tipo', '#r3-col', '#r3-host', '#r3-ip'].forEach(s => { const e = $(s); e.selectedIndex = 0; });
+      $('#r3-crit').disabled = true; $('#r3-tipo').disabled = true; $('#r3-col').disabled = false; $('#r3-relacionar').disabled = false;
+      document.querySelectorAll('input[name="r3-mc"]').forEach(r => { r.checked = false; });
+      $('#r3-estado-rel').textContent = 'Aún no hay relación: los filtros de criticidad y tipo están desactivados.';
+      pintarCaza(); retro('#retro3', '', '');
+    }
+    $('#r3-reiniciar').addEventListener('click', reiniciar3);
+    reiniciar3();
+
+    /* =========================================================
+       Reto 4 · Táctica, técnica o hunting
+       ========================================================= */
+    const TIPOS4 = ['Inteligencia táctica', 'Inteligencia técnica', 'Threat hunting'];
+    const CASOS = [
+      { t: 'Recibes 40 hashes y 12 IPs de un feed para cargarlos hoy en el EDR y en el firewall.', r: 'Inteligencia técnica', e: 'Son IOCs listos para que las herramientas los consuman: inteligencia técnica, de vida corta.' },
+      { t: 'Un informe describe que el actor usa cuentas válidas robadas (T1078) y se conecta por VPN fuera de horario.', r: 'Inteligencia táctica', e: 'Describe cómo opera el adversario (TTPs): es inteligencia táctica, materia prima para una hipótesis.' },
+      { t: 'Sin que exista una alerta, planteas «alguien usa cuentas válidas fuera de horario» y revisas 30 días de logs de VPN.', r: 'Threat hunting', e: 'Búsqueda proactiva que parte de una hipótesis y asume la brecha: eso es threat hunting.' },
+      { t: 'Buscas en los logs del proxy de los últimos 90 días los dominios de un reporte reciente, para saber si alguien los visitó antes de que existiera una regla.', r: 'Threat hunting', e: 'Es un hunt basado en inteligencia (intel-driven): usa IOCs externos para buscar de forma retroactiva en tus datos.' },
+      { t: 'Tabla con los procedimientos que usa un grupo para moverse lateralmente (PsExec, WMI) y las fuentes de datos para detectarlos.', r: 'Inteligencia táctica', e: 'Procedimientos y técnicas del adversario: inteligencia táctica que orienta qué detectar y dónde buscar.' },
+      { t: 'Lista de URLs de phishing en formato STIX, lista para importarse en el proxy.', r: 'Inteligencia técnica', e: 'Indicadores en un formato pensado para automatizar: inteligencia técnica.' }
+    ];
+    const resp4 = new Array(CASOS.length).fill('');
+    function pintarReto4() {
+      $('#r4-lista').replaceChildren(...CASOS.map((c, i) => {
+        const sel = el('select', { id: `r4-sel-${i}`, 'aria-label': `Clasificación del caso ${i + 1}`, onchange: e => { resp4[i] = e.target.value; $(`#r4-fila-${i}`).classList.remove('bien', 'malo'); $(`#r4-exp-${i}`).textContent = ''; } },
+          el('option', { value: '' }, '— Elige —'), TIPOS4.map(t => el('option', { value: t }, t)));
+        sel.value = resp4[i];
+        return el('div', { class: 'fila', id: `r4-fila-${i}` }, el('p', {}, el('strong', {}, `${i + 1}. `), c.t), sel, el('p', { class: 'explica', id: `r4-exp-${i}` }));
+      }));
+    }
+    $('#r4-revisar').addEventListener('click', () => {
+      let bien = 0;
+      CASOS.forEach((c, i) => {
+        const f = $(`#r4-fila-${i}`), ex = $(`#r4-exp-${i}`);
+        f.classList.remove('bien', 'malo');
+        if (!resp4[i]) { ex.textContent = 'Sin responder.'; return; }
+        if (resp4[i] === c.r) { bien++; f.classList.add('bien'); ex.innerHTML = `<strong>✓ ${c.r}.</strong> ${c.e}`; }
+        else { f.classList.add('malo'); ex.innerHTML = `<strong>✗ No es ${resp4[i].toLowerCase()}.</strong> ${c.e}`; }
+      });
+      if (bien === CASOS.length) { retro('#retro4', 'ok', '<strong>¡Muy bien!</strong> La inteligencia táctica responde «¿cómo opera el adversario?», la técnica responde «¿qué artefactos uso para detectarlo?» y el hunting responde «¿está ya en mi red?». El hunt de este simulador empezó con una hipótesis táctica y terminó produciendo un IOC nuevo.'); prog.marcar('r4'); }
+      else retro('#retro4', 'mal', `Llevas <strong>${bien} de ${CASOS.length}</strong>. Pista: si hay una búsqueda activa en tus propios datos, es hunting; si describe comportamiento, es táctica; si son artefactos para una herramienta, es técnica.`);
+    });
+    $('#r4-reiniciar').addEventListener('click', () => { resp4.fill(''); pintarReto4(); retro('#retro4', '', ''); });
+    pintarReto4();
+  </script>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 13 · Métricas que importan, marcadores y tooltips | Simuladores ICCA</title>
+  <meta name="description" content="Distingue métricas accionables de métricas de vanidad, guarda y restaura estados de un dashboard con marcadores y diseña una página de información sobre herramientas útil.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    .metricas { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    .metrica { border: 2px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+    .metrica.ok { border-color: var(--ok); }
+    .metrica.mal { border-color: var(--bad); }
+    .metrica p { margin: 0 0 6px; font-weight: 600; }
+    .metrica .botones { display: flex; gap: 6px; flex-wrap: wrap; }
+    .metrica .botones button { flex: 1 1 110px; font-size: .9rem; padding: 6px 8px; }
+    .metrica .botones button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-2); }
+    .metrica .explica { font-size: .88rem; margin: 6px 0 0; font-weight: 400; }
+    .panel-kpi { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 8px; }
+    .kpi-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface); }
+    .kpi-card .valor { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kpi-card .meta { font-size: .85rem; color: var(--muted); }
+    .kpi-card.fuera { border-left: 5px solid var(--bad); }
+    .kpi-card.dentro { border-left: 5px solid var(--ok); }
+    .kpi-card.sinmeta { border-left: 5px dashed var(--muted); }
+    .tablero { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 10px; }
+    .pestanas { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .pestanas button[aria-pressed="true"] { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+    .filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+    .filtros .campo { margin: 0; flex: 1 1 150px; }
+    .filtros select { width: 100%; }
+    .visibles { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0; }
+    .visibles label, .opciones-marcador label { font-weight: 400; display: inline-flex; gap: 6px; align-items: center; }
+    .visibles input, .opciones-marcador input { width: 18px; height: 18px; }
+    .lienzo13 { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 8px; }
+    .lienzo13 .bloque { border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--bg); min-width: 0; }
+    .lienzo13 .ancho { grid-column: 1 / -1; }
+    .lienzo13 .notas { border-left: 5px solid var(--warn); }
+    .marcadores { display: grid; gap: 6px; margin: 8px 0; }
+    .marcador { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; background: var(--surface); }
+    .marcador .nombre { font-weight: 700; flex: 1 1 140px; }
+    .marcador small { color: var(--muted); flex-basis: 100%; }
+    .tareas { list-style: none; padding: 0; margin: 8px 0; }
+    .tareas li { padding: 6px 10px; margin: 4px 0; border-radius: 6px; border-left: 5px solid var(--border); background: var(--surface-2); font-size: .92rem; }
+    .tareas li.hecha { border-left-color: var(--ok); }
+    .opciones-marcador { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0; }
+    .grafico13 { position: relative; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface); }
+    .fila-barra { display: grid; grid-template-columns: 64px 1fr 34px; gap: 8px; align-items: center; padding: 4px; border-radius: 6px; cursor: default; }
+    .fila-barra:hover, .fila-barra:focus-visible, .fila-barra.activa { background: var(--accent-soft); }
+    .fila-barra .barra-h { height: 18px; background: var(--accent-2); border-radius: 4px; }
+    .fila-barra .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .tooltip13 { position: absolute; left: 10px; z-index: 5; width: min(320px, calc(100% - 20px)); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); padding: 10px; font-size: .86rem; }
+    .tooltip13 h4 { margin: 0 0 4px; font-size: .95rem; }
+    .tooltip13 table { border-collapse: collapse; width: 100%; }
+    .tooltip13 td { padding: 1px 4px; border-bottom: 1px solid var(--border); }
+    .tooltip13 .corte { color: var(--bad); font-weight: 700; }
+    .campos13 { display: grid; gap: 4px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin: 8px 0; }
+    .campos13 label { font-weight: 400; display: flex; gap: 8px; align-items: flex-start; padding: 4px; }
+    .campos13 input { width: 18px; height: 18px; margin-top: 3px; flex: none; }
+    .medidor13 { height: 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+    .medidor13 > span { display: block; height: 100%; background: var(--accent-2); }
+    .medidor13.lleno > span { background: var(--bad); }
+    .pequeno { font-size: .88rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 13 · Métricas que importan, marcadores y tooltips</h1>
+      <p class="subtitulo">Un buen dashboard mide lo que lleva a una decisión y deja que cada audiencia llegue a su vista en un clic. Hoy separas métricas útiles de métricas de vanidad, guardas vistas con marcadores y diseñas un tooltip que da contexto sin saturar.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás justificar por qué una métrica es accionable o de vanidad, configurar marcadores eligiendo qué guardan (datos, presentación y página actual) y decidir qué información incluir en una página de información sobre herramientas.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Reto 1: clasifica cada métrica y observa cómo se arma tu panel de KPI.</li>
+          <li>Reto 2: cambia el mini dashboard, guarda marcadores y restáuralos para cumplir las cuatro tareas.</li>
+          <li>Reto 3: pasa el cursor o enfoca con Tab cada barra, elige los campos del tooltip y comprueba tu diseño.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · ¿Accionable o de vanidad?</h2>
+      <p>Una métrica es <strong>accionable</strong> cuando tiene una meta y, si se desvía, sabes qué decisión tomar. Es <strong>de vanidad</strong> cuando luce bien en una presentación, pero su cambio no dice si estás más seguro ni qué hacer. Clasifica las 10 métricas.</p>
+      <div class="metricas" id="metricas"></div>
+      <p id="marcador1" class="pequeno" aria-live="polite">0 de 10 clasificadas.</p>
+      <h3>Tu panel de KPI de seguimiento</h3>
+      <p class="pequeno">Aquí aparecen las métricas que marcaste como accionables, con su valor actual y su meta.</p>
+      <div class="panel-kpi" id="panelKpi"></div>
+      <div class="acciones"><button type="button" id="reiniciar1">Reiniciar</button></div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Simulador de marcadores</h2>
+      <p>Un marcador guarda el estado de una página para volver a él con un clic. Según sus opciones guarda los <strong>datos</strong> (filtros y segmentadores), la <strong>presentación</strong> (qué objetos están visibles, como en el panel Selección) y la <strong>página actual</strong>. Prepara el dashboard, ponle nombre al marcador, elige sus opciones y agrégalo.</p>
+      <div class="dos-columnas">
+        <div>
+          <h3>Mini dashboard</h3>
+          <div class="tablero">
+            <div class="pestanas" role="group" aria-label="Páginas del informe">
+              <button type="button" id="pagResumen" aria-pressed="true">Resumen</button>
+              <button type="button" id="pagDetalle" aria-pressed="false">Detalle técnico</button>
+            </div>
+            <div class="filtros">
+              <div class="campo"><label for="fSev">Severidad</label>
+                <select id="fSev"><option value="todas">Todas</option><option value="altaCritica">Alta y Crítica</option><option value="critica">Crítica</option></select></div>
+              <div class="campo"><label for="fPer">Periodo</label>
+                <select id="fPer"><option value="30">Últimos 30 días</option><option value="7">Últimos 7 días</option></select></div>
+            </div>
+            <div class="visibles" role="group" aria-label="Panel Selección: objetos visibles">
+              <label><input type="checkbox" id="vNotas" checked> Notas para dirección</label>
+              <label><input type="checkbox" id="vTabla" checked> Tabla de IPs</label>
+            </div>
+            <div class="lienzo13" id="lienzo13"></div>
+          </div>
+        </div>
+        <div>
+          <h3>Panel de marcadores</h3>
+          <div class="campo"><label for="nombreMarcador">Nombre del marcador</label>
+            <input type="text" id="nombreMarcador" placeholder="p. ej., Vista dirección"></div>
+          <div class="opciones-marcador" role="group" aria-label="Opciones del marcador">
+            <label><input type="checkbox" id="opDatos" checked> Datos</label>
+            <label><input type="checkbox" id="opPresentacion" checked> Presentación</label>
+            <label><input type="checkbox" id="opPagina" checked> Página actual</label>
+          </div>
+          <div class="acciones"><button type="button" class="primario" id="agregarMarcador">Agregar marcador</button></div>
+          <div class="marcadores" id="listaMarcadores"></div>
+          <p id="estadoMarcador" class="pequeno" aria-live="polite"></p>
+          <h3>Tareas</h3>
+          <ul class="tareas" id="tareas"></ul>
+        </div>
+      </div>
+      <div class="acciones"><button type="button" id="reiniciar2">Reiniciar</button></div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Diseña la página de información sobre herramientas</h2>
+      <p>Un tooltip personalizado es una página pequeña (320 × 240 px por defecto) que aparece al pasar el cursor sobre un dato. Debe agregar <strong>contexto para decidir</strong>, no repetir lo que ya se ve ni convertirse en otro dashboard. Elige los campos, prueba el resultado sobre las barras (cursor o Tab) y comprueba tu diseño.</p>
+      <div class="campos13" id="campos13" role="group" aria-label="Campos de la página de información sobre herramientas"></div>
+      <p class="pequeno" id="capacidadTxt">Espacio usado: 0 de 7 unidades.</p>
+      <div class="medidor13" id="capacidad" aria-hidden="true"><span></span></div>
+      <h3>Alertas de los últimos 7 días por técnica ATT&amp;CK</h3>
+      <div class="grafico13" id="grafico13">
+        <div id="barras13"></div>
+        <div class="tooltip13" id="tooltip13" role="tooltip" hidden></div>
+      </div>
+      <p class="pequeno">Con teclado: Tab para llegar a una barra, Esc para cerrar el tooltip. En pantalla táctil, toca la barra.</p>
+      <div class="acciones">
+        <button type="button" class="primario" id="revisar3">Comprobar diseño</button>
+        <button type="button" id="reiniciar3">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <h3>Marcadores</h3>
+      <ol>
+        <li>Deja la página como la quieres: filtros y segmentadores en <strong>Vista → Selección</strong> oculta o muestra objetos con el icono del ojo.</li>
+        <li>Abre <strong>Vista → Marcadores</strong> y pulsa <strong>Agregar</strong>; haz doble clic para renombrarlo (p. ej., «Vista dirección»).</li>
+        <li>En <strong>Más opciones (…)</strong> del marcador marca o desmarca <strong>Datos</strong>, <strong>Presentación</strong> y <strong>Página actual</strong>, y elige <strong>Todos los objetos visuales</strong> u <strong>Objetos visuales seleccionados</strong>. Si cambias la página después, usa <strong>Actualizar</strong>.</li>
+        <li>Para navegar: <strong>Insertar → Botones → Navegador → Navegador de marcadores</strong>, o un botón con <strong>Acción → Tipo: Marcador</strong>. En Power BI Desktop pruébalo con Ctrl + clic.</li>
+      </ol>
+      <h3>Tooltip personalizado</h3>
+      <ol>
+        <li>Crea una página nueva. En el panel <strong>Formato</strong> de la página, en <strong>Información de la página</strong>, activa <strong>Permitir el uso como información sobre herramientas</strong>; en <strong>Configuración del lienzo</strong> elige el tipo <strong>Información sobre herramientas</strong> (320 × 240).</li>
+        <li>Diseña ahí los visuales breves (top de IPs, mini tendencia, % de críticas).</li>
+        <li>En el visual de barras: <strong>Formato → General → Información sobre herramientas</strong>, tipo <strong>Página de informe</strong> y elige tu página. La página se filtra sola con el punto de datos que tiene el cursor.</li>
+      </ol>
+      <pre class="codigo"><span class="cmt">-- Métrica accionable con meta: % de alertas críticas dentro del SLA</span>
+<span class="fn">% críticas en SLA</span> =
+<span class="fn">DIVIDE</span>(
+    <span class="fn">CALCULATE</span>( <span class="fn">COUNTROWS</span>( Alertas ), Alertas[Severidad] = <span class="str">"Crítica"</span>, Alertas[HorasAtencion] &lt;= 4 ),
+    <span class="fn">CALCULATE</span>( <span class="fn">COUNTROWS</span>( Alertas ), Alertas[Severidad] = <span class="str">"Crítica"</span> )
+)</pre>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Actividad ponderada 3.2: implementa en tu dashboard al menos un <strong>marcador</strong> (por ejemplo, botones «Vista dirección» e «Incidente activo») o un <strong>tooltip personalizado</strong> que ayude a navegar. Revisa la vista de <strong>KPIs de seguimiento</strong>: cada tarjeta debe ser una métrica accionable con su meta (MTTD, MTTR, % dentro del SLA, tasa de falsos positivos). Como guardas el proyecto en formato PBIP, los marcadores y páginas quedan en la carpeta del informe: señálalos en los cambios del Pull Request y agrega una captura o GIF del funcionamiento.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(13);
+    const { $, el, retro } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+
+    /* ================= Reto 1 · Accionable o vanidad ================= */
+    const METRICAS = [
+      { n: 'Número total de alertas generadas este mes', tipo: 'vanidad', valor: '18,240',
+        exp: 'Sube o baja por ruido, nuevas fuentes o reglas mal afinadas: no dice si estás más seguro ni qué hacer.' },
+      { n: 'Tiempo medio de detección (MTTD)', tipo: 'accionable', valor: '2.6 h', meta: '≤ 2 h', dentro: false,
+        exp: 'Mide cuánto tiempo pasa el adversario sin ser visto; si sube, revisas fuentes de datos y reglas de detección.' },
+      { n: 'Número de reglas de detección activas', tipo: 'vanidad', valor: '412',
+        exp: 'Más reglas no significa mejor detección: importa qué técnicas cubren y cuántos falsos positivos generan.' },
+      { n: 'Tiempo medio de respuesta (MTTR)', tipo: 'accionable', valor: '5.2 h', meta: '≤ 4 h', dentro: false,
+        exp: 'Tiene meta; si la rebasa, ajustas turnos, guías de respuesta o automatización.' },
+      { n: 'Indicadores de compromiso (IoC) cargados en la plataforma de CTI', tipo: 'vanidad', valor: '96,500',
+        exp: 'Acumular indicadores no es inteligencia: importa cuántos produjeron detecciones útiles y siguen vigentes.' },
+      { n: '% de alertas críticas atendidas dentro del SLA de 4 h', tipo: 'accionable', valor: '91 %', meta: '≥ 95 %', dentro: false,
+        exp: 'Tiene una meta explícita; si baja, escalas o redistribuyes la carga de trabajo.' },
+      { n: 'Correos de phishing bloqueados (total)', tipo: 'vanidad', valor: '3,870',
+        exp: 'Depende de cuántos correos envíen los atacantes, no de tu desempeño. Más útil: % de correos maliciosos que sí llegaron al buzón.' },
+      { n: 'Tasa de falsos positivos por regla', tipo: 'accionable', valor: '18 %', meta: '≤ 20 %', dentro: true,
+        exp: 'Señala exactamente qué regla afinar o desactivar para reducir la fatiga de alertas.' },
+      { n: '% de técnicas ATT&CK prioritarias con al menos una detección', tipo: 'accionable', valor: '64 %', meta: '≥ 70 %', dentro: false,
+        exp: 'Muestra huecos concretos de cobertura para priorizar nuevas reglas.' },
+      { n: '% de hosts críticos con agente EDR reportando en las últimas 24 h', tipo: 'accionable', valor: '97 %', meta: '≥ 98 %', dentro: false,
+        exp: 'Un host sin telemetría es un punto ciego; la acción es revisar o reinstalar el agente.' }
+    ];
+    const resp1 = new Array(METRICAS.length).fill(null);
+
+    function construir1() {
+      resp1.fill(null);
+      $('#metricas').replaceChildren(...METRICAS.map((m, i) => el('div', { class: 'metrica', id: 'met' + i },
+        el('p', {}, m.n),
+        el('div', { class: 'botones', role: 'group', 'aria-label': 'Clasificación de: ' + m.n },
+          el('button', { type: 'button', 'aria-pressed': 'false', 'data-tipo': 'accionable', onclick: () => clasificar(i, 'accionable') }, 'Accionable'),
+          el('button', { type: 'button', 'aria-pressed': 'false', 'data-tipo': 'vanidad', onclick: () => clasificar(i, 'vanidad') }, 'Vanidad')),
+        el('p', { class: 'explica', id: 'expm' + i }))));
+      pintarPanel();
+      $('#marcador1').textContent = `0 de ${METRICAS.length} clasificadas.`;
+    }
+
+    function clasificar(i, tipo) {
+      resp1[i] = tipo;
+      const m = METRICAS[i], tarjeta = $('#met' + i), ok = m.tipo === tipo;
+      tarjeta.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-tipo') === tipo)));
+      tarjeta.classList.remove('ok', 'mal');
+      tarjeta.classList.add(ok ? 'ok' : 'mal');
+      $('#expm' + i).textContent = `${ok ? '✓ Correcto' : '✗ Es ' + (m.tipo === 'accionable' ? 'accionable' : 'de vanidad')}: ${m.exp}`;
+      pintarPanel();
+      const hechas = resp1.filter(Boolean).length;
+      const bien = resp1.filter((r, k) => r === METRICAS[k].tipo).length;
+      $('#marcador1').textContent = `${hechas} de ${METRICAS.length} clasificadas · ${bien} correctas.`;
+      if (hechas < METRICAS.length) return;
+      if (bien === METRICAS.length) {
+        prog.marcar('reto1');
+        retro('#retro1', 'ok', '<strong>✓ ¡10 de 10!</strong> Observa tu panel: todas las tarjetas tienen meta y casi todas están fuera de ella. Eso es útil, porque cada tarjeta en rojo dice qué atender. Las métricas de vanidad (totales y conteos) suelen crecer solas y no llevan a ninguna decisión.');
+      } else {
+        retro('#retro1', 'mal', `<strong>${bien} de ${METRICAS.length} correctas.</strong> Para cada métrica pregúntate: «Si este número cambia mañana, ¿qué haría distinto?». Si no hay respuesta ni meta, es vanidad. Corrige las tarjetas marcadas con ✗.`);
+      }
+    }
+
+    function pintarPanel() {
+      const elegidas = METRICAS.filter((m, i) => resp1[i] === 'accionable');
+      if (!elegidas.length) {
+        $('#panelKpi').replaceChildren(el('p', { class: 'pequeno' }, 'Aún no marcas métricas como accionables.'));
+        return;
+      }
+      $('#panelKpi').replaceChildren(...elegidas.map(m => {
+        const clase = !m.meta ? 'sinmeta' : (m.dentro ? 'dentro' : 'fuera');
+        const estado = !m.meta ? '⚠ Sin meta: ¿qué harías si cambia?' : (m.dentro ? '✓ Dentro de la meta' : '✗ Fuera de la meta: requiere acción');
+        return el('div', { class: 'kpi-card ' + clase },
+          el('div', { class: 'meta' }, m.n),
+          el('div', { class: 'valor' }, m.valor),
+          el('div', { class: 'meta' }, m.meta ? `Meta: ${m.meta}` : 'Meta: —'),
+          el('div', {}, estado));
+      }));
+    }
+    $('#reiniciar1').addEventListener('click', () => { construir1(); retro('#retro1', '', ''); });
+
+    /* ================= Reto 2 · Marcadores ================= */
+    const DATOS13 = {
+      30: { T1110: [40, 28, 19, 9], T1566: [22, 30, 14, 6], T1059: [10, 12, 9, 4], T1078: [6, 8, 7, 5], T1486: [0, 1, 2, 3] },
+      7: { T1110: [9, 7, 6, 4], T1566: [5, 6, 3, 1], T1059: [3, 2, 2, 1], T1078: [1, 2, 2, 2], T1486: [0, 0, 1, 2] }
+    };
+    const IP_TEC = { T1110: '198.51.100.23', T1566: '203.0.113.45', T1059: '192.0.2.77', T1078: '198.51.100.61', T1486: '203.0.113.9' };
+    const SEV_IDX = { todas: [0, 1, 2, 3], altaCritica: [2, 3], critica: [3] };
+    const SEV_TXT = { todas: 'Todas', altaCritica: 'Alta y Crítica', critica: 'Crítica' };
+    const PAG_TXT = { resumen: 'Resumen', detalle: 'Detalle técnico' };
+    const INICIAL = { pagina: 'resumen', sev: 'todas', per: '30', notas: true, tabla: true };
+    const OBJ1 = { pagina: 'resumen', sev: 'critica', per: '30', notas: true, tabla: false };
+    const OBJ2 = { pagina: 'detalle', sev: 'altaCritica', per: '7', notas: false, tabla: true };
+    const TAREAS = [
+      ['t1', 'Guarda «Vista dirección»: página Resumen, severidad Crítica, últimos 30 días, notas visibles y tabla de IPs oculta (con Datos, Presentación y Página actual).'],
+      ['t2', 'Guarda «Incidente activo»: página Detalle técnico, severidad Alta y Crítica, últimos 7 días, notas ocultas y tabla de IPs visible (con las tres opciones).'],
+      ['t3', 'Estando en Detalle técnico, guarda «Ir al detalle» solo con Página actual (desmarca Datos y Presentación).'],
+      ['t4', 'Desde la página Detalle técnico, aplica «Vista dirección» y comprueba que todo regresó.']
+    ];
+    let est = { ...INICIAL };
+    let marcadores = [];
+    const tareas = { t1: false, t2: false, t3: false, t4: false };
+    const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const iguales = (a, b) => ['pagina', 'sev', 'per', 'notas', 'tabla'].every(k => a[k] === b[k]);
+    const estado2 = t => { $('#estadoMarcador').textContent = t; };
+
+    function sincronizar() {
+      $('#pagResumen').setAttribute('aria-pressed', String(est.pagina === 'resumen'));
+      $('#pagDetalle').setAttribute('aria-pressed', String(est.pagina === 'detalle'));
+      $('#fSev').value = est.sev;
+      $('#fPer').value = est.per;
+      $('#vNotas').checked = est.notas;
+      $('#vTabla').checked = est.tabla;
+      pintarTablero();
+    }
+
+    function pintarTablero() {
+      const d = DATOS13[est.per], idx = SEV_IDX[est.sev];
+      const c = Object.entries(d).map(([t, arr]) => ({ t, v: idx.reduce((s, k) => s + arr[k], 0) })).sort((a, b) => b.v - a.v);
+      const total = c.reduce((s, x) => s + x.v, 0);
+      const criticas = Object.values(d).reduce((s, arr) => s + arr[3], 0);
+      const bloques = [el('p', { class: 'pequeno ancho', style: 'margin:0' }, `Página: ${PAG_TXT[est.pagina]} · Severidad: ${SEV_TXT[est.sev]} · ${est.per} días`)];
+      if (est.pagina === 'resumen') {
+        [['Alertas', ICCA.num(total)], ['Críticas', ICCA.num(criticas)], ['Técnica principal', c[0].t]].forEach(([e, v]) =>
+          bloques.push(el('div', { class: 'bloque kpi' }, el('span', { class: 'valor' }, v), el('span', { class: 'etiqueta' }, e))));
+      } else {
+        const g = el('div', { class: 'bloque ancho' });
+        ICCA.barras(g, c.map(x => ({ etiqueta: x.t, valor: x.v, resaltar: x.t === 'T1486' })), { titulo: 'Alertas por técnica (rojo: ransomware)' });
+        bloques.push(g);
+      }
+      if (est.notas) {
+        bloques.push(el('div', { class: 'bloque ancho notas' }, el('strong', {}, 'Notas para dirección: '),
+          `${c[0].t} concentra ${Math.round(c[0].v / (total || 1) * 100)} % de las alertas (${SEV_TXT[est.sev].toLowerCase()}, últimos ${est.per} días).`));
+      }
+      if (est.tabla) {
+        bloques.push(el('div', { class: 'bloque ancho' }, el('strong', {}, 'Tabla de IPs'),
+          el('div', { class: 'tabla-scroll' }, el('table', { class: 'datos' },
+            el('thead', {}, el('tr', {}, el('th', { scope: 'col' }, 'IP de origen'), el('th', { scope: 'col' }, 'Técnica'), el('th', { scope: 'col' }, 'Alertas'))),
+            el('tbody', {}, c.filter(x => x.v > 0).map(x => el('tr', {}, el('td', {}, IP_TEC[x.t]), el('td', {}, x.t), el('td', { class: 'num' }, x.v))))))));
+      }
+      $('#lienzo13').replaceChildren(...bloques);
+    }
+
+    function irPagina(p) { est.pagina = p; sincronizar(); estado2(`Estás en la página ${PAG_TXT[p]}.`); }
+    $('#pagResumen').addEventListener('click', () => irPagina('resumen'));
+    $('#pagDetalle').addEventListener('click', () => irPagina('detalle'));
+    $('#fSev').addEventListener('change', e => { est.sev = e.target.value; pintarTablero(); });
+    $('#fPer').addEventListener('change', e => { est.per = e.target.value; pintarTablero(); });
+    $('#vNotas').addEventListener('change', e => { est.notas = e.target.checked; pintarTablero(); });
+    $('#vTabla').addEventListener('change', e => { est.tabla = e.target.checked; pintarTablero(); });
+
+    function resumenOp(op) {
+      const p = [];
+      if (op.datos) p.push('datos');
+      if (op.presentacion) p.push('presentación');
+      if (op.pagina) p.push('página actual');
+      return p.join(', ');
+    }
+
+    function diferencias(e, obj) {
+      const d = [];
+      if (e.pagina !== obj.pagina) d.push(`la página es ${PAG_TXT[e.pagina]} (debe ser ${PAG_TXT[obj.pagina]})`);
+      if (e.sev !== obj.sev) d.push(`la severidad es «${SEV_TXT[e.sev]}» (debe ser «${SEV_TXT[obj.sev]}»)`);
+      if (e.per !== obj.per) d.push(`el periodo es de ${e.per} días (debe ser de ${obj.per})`);
+      if (e.notas !== obj.notas) d.push(`las notas están ${e.notas ? 'visibles' : 'ocultas'} (deben estar ${obj.notas ? 'visibles' : 'ocultas'})`);
+      if (e.tabla !== obj.tabla) d.push(`la tabla de IPs está ${e.tabla ? 'visible' : 'oculta'} (debe estar ${obj.tabla ? 'visible' : 'oculta'})`);
+      return d;
+    }
+
+    function verificar(m) {
+      const n = norm(m.nombre);
+      const todas = m.op.datos && m.op.presentacion && m.op.pagina;
+      if (n === 'vista direccion' || n === 'incidente activo') {
+        const obj = n === 'vista direccion' ? OBJ1 : OBJ2, clave = n === 'vista direccion' ? 't1' : 't2';
+        const d = diferencias(m.estado, obj);
+        if (!todas) d.push('le faltan opciones: para restaurar la vista completa marca Datos, Presentación y Página actual');
+        if (!d.length) { tareas[clave] = true; return ['ok', `✓ «${m.nombre}» guarda exactamente la vista pedida.`]; }
+        return ['mal', `«${m.nombre}» no coincide: ${d.join('; ')}. Ajusta el dashboard y agrégalo otra vez con el mismo nombre para actualizarlo.`];
+      }
+      if (n === 'ir al detalle') {
+        const d = [];
+        if (!m.op.pagina) d.push('debe tener marcada Página actual');
+        if (m.op.datos || m.op.presentacion) d.push('desmarca Datos y Presentación para que al aplicarlo se conserven los filtros y la visibilidad de quien lo use');
+        if (m.estado.pagina !== 'detalle') d.push('guárdalo estando en la página Detalle técnico');
+        if (!d.length) { tareas.t3 = true; return ['ok', '✓ «Ir al detalle» solo cambia de página: funciona como botón de navegación y respeta los filtros actuales.']; }
+        return ['mal', `«Ir al detalle» aún no: ${d.join('; ')}.`];
+      }
+      return ['aviso', `Marcador «${m.nombre}» guardado. Para las tareas usa los nombres «Vista dirección», «Incidente activo» e «Ir al detalle».`];
+    }
+
+    function pintarMarcadores() {
+      $('#listaMarcadores').replaceChildren(...marcadores.map((m, i) => el('div', { class: 'marcador' },
+        el('span', { class: 'nombre' }, m.nombre),
+        el('button', { type: 'button', onclick: () => aplicar(i) }, 'Aplicar'),
+        el('button', { type: 'button', 'aria-label': 'Eliminar el marcador ' + m.nombre, onclick: () => eliminar(i) }, 'Eliminar'),
+        el('small', {}, `Guarda: ${resumenOp(m.op)}`))));
+    }
+
+    function pintarTareas() {
+      $('#tareas').replaceChildren(...TAREAS.map(([k, t]) => el('li', { class: tareas[k] ? 'hecha' : '' }, (tareas[k] ? '✓ ' : '○ ') + t)));
+      if (TAREAS.every(([k]) => tareas[k])) {
+        prog.marcar('reto2');
+        retro('#retro2', 'ok', '<strong>✓ ¡Dominas los marcadores!</strong> Recuerda: <em>Datos</em> guarda filtros y segmentadores; <em>Presentación</em> guarda qué objetos se ven; <em>Página actual</em> te lleva a la página. Un marcador de navegación («Ir al detalle») solo necesita Página actual para no borrar los filtros del usuario.');
+      }
+    }
+
+    $('#agregarMarcador').addEventListener('click', () => {
+      const nombre = $('#nombreMarcador').value.trim();
+      if (!nombre) { estado2('Escribe un nombre para el marcador.'); $('#nombreMarcador').focus(); return; }
+      const op = { datos: $('#opDatos').checked, presentacion: $('#opPresentacion').checked, pagina: $('#opPagina').checked };
+      if (!op.datos && !op.presentacion && !op.pagina) { estado2('Marca al menos una opción: un marcador sin opciones no restaura nada.'); return; }
+      const previo = marcadores.findIndex(m => norm(m.nombre) === norm(nombre));
+      const m = { nombre, op, estado: { ...est } };
+      if (previo >= 0) marcadores[previo] = m; else marcadores.push(m);
+      pintarMarcadores();
+      estado2(`Marcador «${nombre}» ${previo >= 0 ? 'actualizado' : 'agregado'}; guarda: ${resumenOp(op)}.`);
+      const [tipo, msg] = verificar(m);
+      retro('#retro2', tipo, msg);
+      pintarTareas();
+    });
+
+    function aplicar(i) {
+      const m = marcadores[i], antes = { ...est };
+      if (m.op.pagina) est.pagina = m.estado.pagina;
+      if (m.op.datos) { est.sev = m.estado.sev; est.per = m.estado.per; }
+      if (m.op.presentacion) { est.notas = m.estado.notas; est.tabla = m.estado.tabla; }
+      sincronizar();
+      estado2(`Aplicaste «${m.nombre}». Página: ${m.op.pagina ? '✓ restaurada' : '✗ se queda la actual'}. Filtros: ${m.op.datos ? '✓ restaurados' : '✗ se quedan los actuales'}. Visibilidad: ${m.op.presentacion ? '✓ restaurada' : '✗ se queda la actual'}.`);
+      if (norm(m.nombre) === 'vista direccion' && tareas.t1 && antes.pagina === 'detalle' && iguales(est, OBJ1)) {
+        tareas.t4 = true;
+        retro('#retro2', 'ok', '✓ La vista de dirección regresó completa con un solo clic, aunque estabas en otra página y con otros filtros.');
+      }
+      pintarTareas();
+    }
+
+    function eliminar(i) {
+      const [m] = marcadores.splice(i, 1);
+      pintarMarcadores();
+      estado2(`Eliminaste el marcador «${m.nombre}».`);
+    }
+
+    $('#reiniciar2').addEventListener('click', () => {
+      est = { ...INICIAL };
+      marcadores = [];
+      Object.keys(tareas).forEach(k => { tareas[k] = false; });
+      $('#nombreMarcador').value = '';
+      ['#opDatos', '#opPresentacion', '#opPagina'].forEach(s => { $(s).checked = true; });
+      sincronizar();
+      pintarMarcadores();
+      pintarTareas();
+      estado2('');
+      retro('#retro2', '', '');
+    });
+
+    /* ================= Reto 3 · Tooltip personalizado ================= */
+    const TEC13 = [
+      { id: 'T1110', nombre: 'Fuerza bruta', tactica: 'Acceso a credenciales (TA0006)', total: 26, criticas: 4, ips: [['198.51.100.23', 14], ['198.51.100.88', 7], ['203.0.113.45', 5]], tend: [2, 3, 3, 4, 4, 5, 5] },
+      { id: 'T1566', nombre: 'Phishing', tactica: 'Acceso inicial (TA0001)', total: 15, criticas: 1, ips: [['203.0.113.45', 8], ['203.0.113.9', 4], ['192.0.2.140', 3]], tend: [3, 2, 2, 2, 2, 2, 2] },
+      { id: 'T1059', nombre: 'Intérprete de comandos y scripts', tactica: 'Ejecución (TA0002)', total: 8, criticas: 1, ips: [['192.0.2.77', 5], ['203.0.113.45', 2], ['198.51.100.61', 1]], tend: [1, 1, 1, 1, 1, 2, 1] },
+      { id: 'T1078', nombre: 'Cuentas válidas', tactica: 'Acceso inicial, persistencia y otras (TA0001, TA0003…)', total: 7, criticas: 2, ips: [['198.51.100.61', 4], ['192.0.2.77', 2], ['203.0.113.9', 1]], tend: [0, 1, 1, 1, 1, 1, 2] },
+      { id: 'T1486', nombre: 'Datos cifrados para impacto', tactica: 'Impacto (TA0040)', total: 3, criticas: 2, ips: [['203.0.113.9', 2], ['198.51.100.61', 1]], tend: [0, 0, 0, 0, 1, 0, 2] }
+    ];
+    const CAMPOS = [
+      { id: 'tactica', t: 'Nombre de la técnica y su táctica ATT&CK', util: true, costo: 1, exp: 'da contexto inmediato: qué hace el adversario y en qué fase del ataque está.' },
+      { id: 'ips', t: 'Top 3 IPs de origen', util: true, costo: 2, exp: 'permite pivotar: el analista sabe qué IPs investigar o bloquear sin salir de la vista.' },
+      { id: 'tend', t: 'Mini tendencia de los últimos 7 días', util: true, costo: 2, exp: 'responde «¿va en aumento?», algo que una sola barra no muestra.' },
+      { id: 'crit', t: '% de alertas críticas de la técnica', util: true, costo: 1, exp: 'ayuda a priorizar: no es lo mismo mucho volumen de alertas bajas que pocas críticas.' },
+      { id: 'eventos', t: 'Tabla con los 200 eventos completos', util: false, costo: 6, exp: 'es demasiado para un tooltip; para el detalle completo usa una página de obtención de detalles (drill-through).' },
+      { id: 'logo', t: 'Logotipo de la empresa', util: false, costo: 1, exp: 'es decoración: ocupa espacio sin agregar información.' },
+      { id: 'repetido', t: 'Solo el número de alertas, en grande', util: false, costo: 1, exp: 'repite lo que ya muestran la barra y el tooltip predeterminado; la página personalizada existe para agregar contexto.' },
+      { id: 'segmentadores', t: 'Segmentadores de fecha y severidad', util: false, costo: 2, exp: 'un tooltip no es interactivo: desaparece al mover el cursor, así que no puedes usar filtros dentro de él.' }
+    ];
+    const CAPACIDAD = 7;
+    const INICIALES3 = ['repetido', 'logo'];
+    const vistos3 = new Set();
+    let activa3 = null;
+
+    $('#campos13').replaceChildren(...CAMPOS.map(c => el('label', {},
+      el('input', { type: 'checkbox', id: 'campo-' + c.id, onchange: alCambiarCampos }),
+      el('span', {}, `${c.t} `, el('small', { class: 'pequeno' }, `(${c.costo} ${c.costo === 1 ? 'unidad' : 'unidades'})`)))));
+
+    const elegidos3 = () => CAMPOS.filter(c => $('#campo-' + c.id).checked);
+
+    function alCambiarCampos() {
+      const usado = elegidos3().reduce((s, c) => s + c.costo, 0);
+      $('#capacidadTxt').textContent = `Espacio usado: ${usado} de ${CAPACIDAD} unidades${usado > CAPACIDAD ? ' · ✗ no cabe en 320 × 240 px' : ''}.`;
+      $('#capacidad').classList.toggle('lleno', usado > CAPACIDAD);
+      $('#capacidad').firstElementChild.style.width = Math.min(100, usado / CAPACIDAD * 100) + '%';
+      if (activa3 !== null) $('#tooltip13').innerHTML = contenidoTooltip(TEC13[activa3]);
+    }
+
+    function sparkline(v) {
+      const max = Math.max(...v, 1);
+      const pts = v.map((x, i) => `${(4 + i * 32).toFixed(0)},${(30 - x / max * 24).toFixed(1)}`).join(' ');
+      return `<svg viewBox="0 0 200 34" role="img" aria-label="Tendencia de 7 días: ${v.join(', ')}" style="width:100%;max-width:220px;height:auto"><polyline points="${pts}" fill="none" stroke="var(--accent-2)" stroke-width="2.5"/></svg>`;
+    }
+
+    function bloqueCampo(id, t) {
+      switch (id) {
+        case 'tactica': return `<p style="margin:0 0 4px">${t.nombre} · <em>${t.tactica}</em></p>`;
+        case 'ips': return '<table><tbody>' + t.ips.map(([ip, n]) => `<tr><td>${ip}</td><td style="text-align:right">${n}</td></tr>`).join('') + '</tbody></table>';
+        case 'tend': return `<div>${sparkline(t.tend)}<div class="pequeno">Hace 7 días: ${t.tend[0]} · ayer: ${t.tend[6]}</div></div>`;
+        case 'crit': return `<p style="margin:4px 0 0">Críticas: <strong>${Math.round(t.criticas / t.total * 100)} %</strong> (${t.criticas} de ${t.total})</p>`;
+        case 'eventos': return '<p style="margin:4px 0 0">Fecha · IP · Host · Regla · … (200 filas)</p>';
+        case 'logo': return '<p style="margin:4px 0 0;font-weight:700;letter-spacing:.1em">[ LOGOTIPO ]</p>';
+        case 'repetido': return `<p style="margin:0;font-size:1.8rem;font-weight:700">${t.total}</p>`;
+        default: return '<p style="margin:4px 0 0">[Fecha ▾] [Severidad ▾]</p>';
+      }
+    }
+
+    function contenidoTooltip(t) {
+      const partes = [`<h4>${t.id} · ${t.total} alertas</h4>`];
+      const sel = elegidos3();
+      if (!sel.length) partes.push('<p class="pequeno">Página vacía: Power BI mostraría solo el tooltip predeterminado.</p>');
+      let espacio = CAPACIDAD;
+      for (const c of sel) {
+        if (c.costo > espacio) { partes.push(`<p class="corte">✗ «${c.t}» ya no cabe en 320 × 240 px: se corta.</p>`); break; }
+        espacio -= c.costo;
+        partes.push(bloqueCampo(c.id, t));
+      }
+      return partes.join('');
+    }
+
+    function mostrar3(i, fila) {
+      activa3 = i;
+      vistos3.add(i);
+      document.querySelectorAll('.fila-barra').forEach(f => f.classList.toggle('activa', f === fila));
+      const tip = $('#tooltip13');
+      tip.innerHTML = contenidoTooltip(TEC13[i]);
+      tip.style.top = ((fila.offsetTop || 0) + (fila.offsetHeight || 0) + 4) + 'px';
+      tip.hidden = false;
+    }
+    function ocultar3() {
+      activa3 = null;
+      $('#tooltip13').hidden = true;
+      document.querySelectorAll('.fila-barra').forEach(f => f.classList.remove('activa'));
+    }
+
+    const maxTec = Math.max(...TEC13.map(t => t.total));
+    $('#barras13').replaceChildren(...TEC13.map((t, i) => {
+      const fila = el('div', { class: 'fila-barra', tabindex: '0', 'aria-describedby': 'tooltip13', 'aria-label': `${t.id}, ${t.nombre}: ${t.total} alertas` },
+        el('span', { 'aria-hidden': 'true' }, t.id),
+        el('div', { 'aria-hidden': 'true' }, el('div', { class: 'barra-h', style: `width:${(t.total / maxTec * 100).toFixed(1)}%` })),
+        el('span', { class: 'num', 'aria-hidden': 'true' }, t.total));
+      fila.addEventListener('mouseenter', () => mostrar3(i, fila));
+      fila.addEventListener('focus', () => mostrar3(i, fila));
+      fila.addEventListener('mouseleave', () => { if (document.activeElement !== fila) ocultar3(); });
+      fila.addEventListener('blur', ocultar3);
+      fila.addEventListener('click', () => (activa3 === i ? ocultar3() : mostrar3(i, fila)));
+      fila.addEventListener('keydown', e => { if (e.key === 'Escape') ocultar3(); });
+      return fila;
+    }));
+
+    function reiniciar3() {
+      CAMPOS.forEach(c => { $('#campo-' + c.id).checked = INICIALES3.includes(c.id); });
+      vistos3.clear();
+      ocultar3();
+      alCambiarCampos();
+      retro('#retro3', '', '');
+    }
+
+    $('#revisar3').addEventListener('click', () => {
+      const faltan = CAMPOS.filter(c => c.util && !$('#campo-' + c.id).checked);
+      const sobran = CAMPOS.filter(c => !c.util && $('#campo-' + c.id).checked);
+      const nota = vistos3.size ? '' : '<p>Tip: pasa el cursor o enfoca con Tab una barra para ver cómo queda tu tooltip.</p>';
+      if (!faltan.length && !sobran.length) {
+        prog.marcar('reto3');
+        retro('#retro3', 'ok', '<strong>✓ ¡Tooltip bien diseñado!</strong> Cabe en 320 × 240 px y cada elemento ayuda a decidir: qué técnica es, desde dónde viene, si está creciendo y qué tan grave es. El detalle completo se deja para una página de obtención de detalles.' + nota);
+        return;
+      }
+      const li = faltan.map(c => `<li>✗ Te faltó «${c.t}»: ${c.exp}</li>`).concat(sobran.map(c => `<li>✗ Sobra «${c.t}»: ${c.exp}</li>`)).join('');
+      retro('#retro3', 'mal', `<strong>Todavía no.</strong><ul>${li}</ul>${nota}`);
+    });
+    $('#reiniciar3').addEventListener('click', reiniciar3);
+
+    construir1();
+    sincronizar();
+    pintarMarcadores();
+    pintarTareas();
+    reiniciar3();
+  </script>
+</body>
+</html>

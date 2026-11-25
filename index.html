@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simuladores ICCA · Inteligencia centralizada contra amenazas</title>
+  <meta name="description" content="15 simuladores interactivos, uno por semana, para practicar inteligencia de amenazas, threat hunting y Power BI.">
+  <link rel="stylesheet" href="assets/estilos.css">
+  <style>
+    .hero { padding: 34px 0 10px; }
+    .hero p { max-width: 75ch; }
+    .fase { margin-top: 28px; }
+    .fase h2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    a.semana {
+      display: grid; gap: 6px; text-decoration: none; color: var(--text);
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px; min-height: 140px;
+    }
+    a.semana:hover { border-color: var(--accent-2); }
+    a.semana .n { font-size: .8rem; font-weight: 700; color: var(--accent-2); letter-spacing: .03em; text-transform: uppercase; }
+    a.semana .t { font-weight: 700; font-size: 1.05rem; line-height: 1.3; }
+    a.semana .d { color: var(--muted); font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <div class="barra">
+    <div class="contenedor">
+      <a href="index.html">Simuladores ICCA</a>
+      <span class="ua">Inteligencia centralizada contra amenazas</span>
+      <span class="espacio"></span>
+      <button type="button" id="tema" aria-label="Cambiar tema claro u oscuro">Tema</button>
+    </div>
+  </div>
+
+  <main class="contenedor">
+    <header class="hero">
+      <p class="migas">Licenciatura en Seguridad en Tecnologías de Información · FCFM · UANL</p>
+      <h1>Simuladores de inteligencia de amenazas y Power BI</h1>
+      <p class="subtitulo">Quince simuladores interactivos, uno por semana, para practicar lo que vas a hacer en Power BI y en tu Producto Integrador de Aprendizaje (PIA): del dato a la inteligencia, la caza de amenazas con MITRE ATT&amp;CK y DAX, y la comunicación de resultados en un dashboard ejecutivo.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Cómo usarlos</h2>
+        <ol>
+          <li>Abre el simulador de la semana que estás cursando.</li>
+          <li>Resuelve los retos: cada respuesta te explica por qué es correcta o no.</li>
+          <li>Revisa el recuadro <strong>«Así se hace en Power BI»</strong> y repítelo en la herramienta real.</li>
+          <li>Aplica la sección <strong>«Para tu PIA»</strong> en el proyecto de tu equipo.</li>
+        </ol>
+      </div>
+      <div class="caja alerta">
+        <h2>Datos ficticios</h2>
+        <p>Todos los registros, direcciones IP, dominios y personas son inventados (rangos de documentación como 192.0.2.0/24 y dominios <em>.example</em>). Los simuladores funcionan sin conexión y no guardan tus respuestas.</p>
+      </div>
+    </section>
+
+    <div id="fases"></div>
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">Recurso educativo digital de la unidad de aprendizaje Inteligencia centralizada contra amenazas · Licenciatura en Seguridad en Tecnologías de Información · Facultad de Ciencias Físico Matemáticas · UANL.</div>
+  </footer>
+
+  <script src="assets/comun.js"></script>
+  <script>
+    'use strict';
+    const { el, SEMANAS, FASES } = ICCA;
+    const DESCRIPCIONES = {
+      1: 'Clasifica datos, información e inteligencia, ubica cada producto en su nivel de consumo y arma tu primer visual.',
+      2: 'Elige el conector correcto para cada fuente y valida una hipótesis de caza con eventos y activos.',
+      3: 'Limpia una tabla de logs paso a paso y observa los pasos aplicados y el código M que se genera.',
+      4: 'Distingue hechos y dimensiones, crea relaciones con la cardinalidad correcta y mira cómo viajan los filtros.',
+      5: 'Recorre el flujo rama → commits → Pull Request → revisión → fusión y justifica el dataset de tu PIA.',
+      6: 'Cataloga eventos con tácticas y técnicas de MITRE ATT&CK y construye tus primeras medidas DAX.',
+      7: 'Decide entre columna calculada y medida, clasifica severidad con SWITCH y normaliza datos.',
+      8: 'Mueve segmentadores y entiende cómo CALCULATE agrega, reemplaza o quita filtros; fija un umbral de alerta.',
+      9: 'Explora tendencias con inteligencia de tiempo y refina consultas hasta encontrar al host comprometido.',
+      10: 'Ejecuta un hunt completo de principio a fin y genera la ficha de hunt para tu repositorio.',
+      11: 'Audita la calidad de un dataset y define la audiencia y la pregunta objetivo de cada vista.',
+      12: 'Acomoda los visuales de un dashboard con jerarquía visual y aprende a interpretar sin sobreafirmar.',
+      13: 'Separa métricas accionables de métricas de vanidad y practica marcadores y tooltips.',
+      14: 'Configura seguridad a nivel de fila, prueba «Ver como» y asigna roles con mínimo privilegio.',
+      15: 'Prepara la defensa ejecutiva de 10 minutos y autoevalúa tu PIA con la rúbrica.'
+    };
+    const cont = document.getElementById('fases');
+    for (const f of [1, 2, 3]) {
+      const rej = el('div', { class: 'rejilla' });
+      for (const s of SEMANAS.filter(x => x.fase === f)) {
+        const nn = String(s.n).padStart(2, '0');
+        rej.append(el('a', { class: 'semana', href: `semana-${nn}/index.html` },
+          el('span', { class: 'n' }, `Semana ${s.n}`),
+          el('span', { class: 't' }, s.titulo),
+          el('span', { class: 'd' }, DESCRIPCIONES[s.n])));
+      }
+      cont.append(el('section', { class: 'fase', 'aria-labelledby': `fase${f}` },
+        el('h2', { id: `fase${f}` }, el('span', { class: 'etiqueta-fase' }, `Fase ${f}`), FASES[f].replace(/^Fase \d · /, '')),
+        rej));
+    }
+    document.getElementById('tema').addEventListener('click', ICCA.alternarTema);
+    try { const t = localStorage.getItem('icca-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) { /* sin almacenamiento */ }
+  </script>
+</body>
+</html>

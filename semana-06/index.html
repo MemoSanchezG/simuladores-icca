@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 6 · Mapea al adversario con MITRE ATT&amp;CK | Simuladores ICCA</title>
+  <meta name="description" content="Mapea eventos de seguridad a tácticas y técnicas de MITRE ATT&amp;CK y construye tu primera medida DAX para contar eventos por técnica.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > *, .matriz > * { min-width: 0; }
+    p, li, dd, label, legend, summary { overflow-wrap: anywhere; }
+    .evento { border: 1px solid var(--border); border-left: 5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--surface); }
+    .evento.bien { border-left-color: var(--ok); }
+    .evento.revisar { border-left-color: var(--bad); }
+    .evento > p { margin: 0 0 8px; }
+    .insignia { display: inline-grid; place-items: center; min-width: 26px; height: 26px; border-radius: 50%; background: var(--accent-2); color: #fff; font-weight: 700; font-size: .85rem; margin-right: 4px; }
+    .campo select, .campo input { width: 100%; }
+    .estado { font-size: .92rem; margin-top: 8px; }
+    .estado:empty { display: none; }
+    .estado p { margin: 4px 0 0; }
+    .si { color: var(--ok); font-weight: 700; }
+    .no { color: var(--bad); font-weight: 700; }
+    .nota { color: var(--muted); font-size: .92rem; }
+    .matriz { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+    .matriz .col { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); min-height: 70px; }
+    .matriz .col.vacia { opacity: .55; }
+    .matriz h4 { margin: 0; padding: 6px 8px; font-size: .78rem; background: var(--surface-2); border-radius: 8px 8px 0 0; }
+    .matriz .tec { margin: 6px; padding: 4px 6px; border-radius: 6px; background: var(--accent-soft); font-size: .78rem; font-weight: 600; }
+    .formula { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--mono); }
+    .chip[aria-pressed="true"]::before { content: "✓"; font-weight: 700; }
+    .fila-btn { background: none; border: 0; padding: 4px 0; min-height: 32px; color: var(--accent-2); text-decoration: underline; font-weight: 600; text-align: left; }
+    .fila-btn[aria-pressed="true"] { color: var(--text); text-decoration: none; }
+    table.datos tr.sel td { background: var(--accent-soft); }
+    table.datos tr.total td { font-weight: 700; background: var(--surface-2); }
+    .visual-tarjeta { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; background: var(--surface); max-width: 340px; }
+    .error-dax { color: var(--bad); font-weight: 600; }
+    fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 12px 0; min-width: 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    .opcion { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; font-weight: 400; }
+    .opcion input { margin-top: 5px; }
+    .diag { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 10px 0; background: var(--surface); }
+    .diag pre.codigo { margin-top: 0; }
+    .lista-filas { max-height: 260px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 6 · Mapea al adversario con MITRE ATT&amp;CK</h1>
+      <p class="subtitulo">MITRE ATT&amp;CK les da a todos los analistas el mismo vocabulario para describir lo que hace un adversario; DAX te permite contar y comparar ese comportamiento en Power BI. Aquí practicas ambos con datos ficticios.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás mapear eventos observados a la táctica y la técnica correctas de la matriz Enterprise de MITRE ATT&amp;CK y escribir una medida DAX que cuente eventos por técnica, explicando por qué su resultado cambia en cada fila de un visual.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Reto 1: elige táctica (el <em>porqué</em>) y técnica (el <em>cómo</em>) de cada evento y presiona <strong>Comprobar</strong>.</li>
+          <li>Reto 2: arma la medida <code>[Eventos]</code>, cambia las filas del visual y el segmentador, y observa cómo se recalcula.</li>
+          <li>Reto 3: diagnostica fórmulas con errores típicos antes de escribir las tuyas en Power BI Desktop.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Del evento a la técnica ATT&amp;CK</h2>
+      <p>El SOC de una empresa ficticia registró estos 10 eventos durante una misma intrusión. Para cada uno elige la <strong>táctica</strong> (el objetivo del adversario en ese momento) y la <strong>técnica</strong> (la forma concreta de lograrlo).</p>
+      <div class="rejilla" id="r1-eventos"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r1-comprobar">Comprobar</button>
+        <button type="button" id="r1-solucion" hidden>Mostrar solución</button>
+        <button type="button" id="r1-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro1"></div>
+      <h3>Tu mapa en la matriz</h3>
+      <p class="nota">Cada evento que mapeas por completo aparece en la columna de su táctica, en el orden de la matriz Enterprise.</p>
+      <div class="matriz" id="r1-matriz"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Constructor de medidas DAX</h2>
+      <p>La tabla <code>Eventos</code> tiene <strong>120 filas</strong>, una por cada evento detectado del 1 al 14 de septiembre de 2026, con las columnas <code>IdEvento</code>, <code>Fecha</code>, <code>Host</code>, <code>IdTécnica</code>, <code>Táctica</code> y <code>Severidad</code>.</p>
+
+      <h3>Paso A · Arma la medida base</h3>
+      <p>Queremos una medida llamada <code>Eventos</code> que cuente eventos. Elige la función y su argumento:</p>
+      <div class="formula">
+        <span>Eventos =</span>
+        <select id="r2-fn" aria-label="Función DAX"></select>
+        <span>(</span>
+        <select id="r2-arg" aria-label="Argumento de la función"></select>
+        <span>)</span>
+      </div>
+      <pre class="codigo" id="r2-codigo" aria-live="polite"></pre>
+      <div class="acciones"><button type="button" class="primario" id="r2-crear">Crear medida</button></div>
+      <div class="retro" id="r2-retroA"></div>
+
+      <h3>Paso B · Ponla en un visual</h3>
+      <div class="dos-columnas">
+        <div class="campo">
+          <label for="r2-filas">Filas del visual de tabla</label>
+          <select id="r2-filas">
+            <option value="tec">Eventos[IdTécnica]</option>
+            <option value="tac">Eventos[Táctica]</option>
+            <option value="sev">Eventos[Severidad]</option>
+            <option value="host">Eventos[Host]</option>
+          </select>
+        </div>
+        <div role="group" aria-labelledby="r2-seg-et">
+          <p id="r2-seg-et" style="margin:8px 0 2px;font-weight:600">Segmentador: Severidad <span class="nota">(sin selección = sin filtro)</span></p>
+          <div id="r2-seg"></div>
+        </div>
+      </div>
+      <p class="nota">Selecciona una fila (o el Total) para ver el contexto de filtro con el que se evalúa la medida.</p>
+      <div class="dos-columnas">
+        <div class="tabla-scroll"><table class="datos" id="r2-tabla"></table></div>
+        <div id="r2-grafica"></div>
+      </div>
+      <div class="caja" id="r2-contexto" style="margin-top:12px" aria-live="polite"></div>
+
+      <fieldset>
+        <legend>Pregunta: la fórmula de [Eventos] es idéntica en todas las filas. ¿Por qué cada fila muestra un número distinto?</legend>
+        <label class="opcion"><input type="radio" name="r2-preg" value="a"> Power BI guarda una copia de la medida por cada fila del visual.</label>
+        <label class="opcion"><input type="radio" name="r2-preg" value="b"> Cada fila aplica su propio filtro (contexto de filtro) a la tabla Eventos antes de evaluar COUNTROWS.</label>
+        <label class="opcion"><input type="radio" name="r2-preg" value="c"> La medida se calculó al importar los datos y el resultado se reparte entre las filas.</label>
+      </fieldset>
+
+      <h3>Paso C · Una medida para una técnica específica</h3>
+      <p>El SOC te pide una <strong>tarjeta</strong> con el total de eventos de <strong>volcado de memoria de LSASS</strong> (la técnica del evento 6 del reto 1). Elige la técnica y la forma de la fórmula:</p>
+      <div class="dos-columnas">
+        <div class="campo">
+          <label for="r2-tec">Técnica que filtra la medida</label>
+          <select id="r2-tec"></select>
+        </div>
+        <fieldset style="margin:0">
+          <legend>Forma de la fórmula</legend>
+          <label class="opcion"><input type="radio" name="r2-forma" value="calc"> CALCULATE sobre [Eventos]</label>
+          <label class="opcion"><input type="radio" name="r2-forma" value="filtro"> COUNTROWS de un FILTER</label>
+          <label class="opcion"><input type="radio" name="r2-forma" value="mal"> COUNTROWS de una comparación</label>
+        </fieldset>
+      </div>
+      <pre class="codigo" id="r2-codigoC"></pre>
+      <div class="visual-tarjeta kpi" aria-live="polite">
+        <span class="valor" id="r2-card">—</span>
+        <span class="etiqueta" id="r2-card-et">Tarjeta</span>
+      </div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r2-comprobar">Comprobar reto 2</button>
+        <button type="button" id="r2-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Encuentra el error en la fórmula</h2>
+      <p>Un compañero escribió estas medidas para el modelo del reto 2 (hay además una tabla llamada <code>Eventos red</code>). Diagnostica cada una: algunas no tienen error.</p>
+      <div id="r3-lista"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-comprobar">Comprobar</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li>En el panel <strong>Datos</strong> selecciona la tabla <code>Eventos</code> y elige <strong>Herramientas de tabla › Nueva medida</strong> (también está en <strong>Inicio › Nueva medida</strong>).</li>
+        <li>En la barra de fórmulas escribe <code>Eventos = COUNTROWS ( Eventos )</code> y presiona Entrar. La medida aparece en el panel <strong>Datos</strong> con el ícono de calculadora.</li>
+        <li>Inserta un objeto visual <strong>Tabla</strong> con <code>Eventos[IdTécnica]</code> y <code>[Eventos]</code>, y un <strong>Gráfico de barras agrupadas</strong> con <code>Eventos[Táctica]</code> en el eje Y y <code>[Eventos]</code> en el eje X. Agrega una <strong>segmentación de datos</strong> con <code>Eventos[Severidad]</code>.</li>
+        <li>Crea la medida de una técnica: <code>Eventos LSASS = CALCULATE ( [Eventos], Eventos[IdTécnica] = "T1003.001" )</code> y colócala en un visual de <strong>Tarjeta</strong>.</li>
+        <li>Actividad de requisito: captura la barra de fórmulas con tu medida y la tarjeta o tabla con el resultado, y súbela a Teams junto con la insignia del módulo <em>Write DAX formulas for semantic models</em> (no subas el .pbix).</li>
+      </ol>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Revisa que tu dataset tenga, por cada evento, el identificador de técnica ATT&amp;CK (o una tabla <code>Técnicas</code> con IdTécnica, nombre y táctica, relacionada uno a varios con tus eventos). Crea <code>[Eventos]</code> y un visual «Eventos por técnica»: será la base de la vista de detalle técnico que presentarás en el <strong>checkpoint-2 (Semana 10)</strong>. Trabaja en una rama, guarda el proyecto como <strong>PBIP</strong> y haz commit: la medida queda como texto en el modelo semántico y tu compañero la verá en el diff del Pull Request.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(6);
+    const { $, el, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+    const hechos = new Set();
+    function marcar(id) { hechos.add(id); prog.marcar(id); }
+    function desmarcar(id) { if (hechos.delete(id)) { prog.reiniciar(); hechos.forEach(h => prog.marcar(h)); } }
+    function aleatorio(s) {
+      return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function dax(t) {
+      return esc(t).replace(/("[^"\n]*")|(\/\/[^\n]*)|\b(VAR|RETURN)\b|\b([A-Z][A-Z0-9]*)(?=\s*\()/g,
+        (m, s, c, k, f) => s ? `<span class="str">${s}</span>` : c ? `<span class="cmt">${c}</span>` : k ? `<span class="kw">${k}</span>` : `<span class="fn">${f}</span>`);
+    }
+    function llenar(sel, lista, vacio) {
+      sel.replaceChildren(el('option', { value: '' }, vacio), ...lista.map(([v, t]) => el('option', { value: v }, t)));
+    }
+
+    /* ---------- Catálogo ATT&CK (Enterprise) ---------- */
+    const TACTICAS = [
+      ['reco', 'Reconocimiento', 'Reconnaissance', 'TA0043', 'Reconocim.'],
+      ['inicial', 'Acceso inicial', 'Initial Access', 'TA0001', 'Acceso inic.'],
+      ['ejec', 'Ejecución', 'Execution', 'TA0002', 'Ejecución'],
+      ['pers', 'Persistencia', 'Persistence', 'TA0003', 'Persistencia'],
+      ['escal', 'Escalación de privilegios', 'Privilege Escalation', 'TA0004', 'Escalación'],
+      ['evas', 'Evasión de defensas', 'Defense Evasion', 'TA0005', 'Evasión'],
+      ['cred', 'Acceso a credenciales', 'Credential Access', 'TA0006', 'Credenciales'],
+      ['desc', 'Descubrimiento', 'Discovery', 'TA0007', 'Descubrim.'],
+      ['lat', 'Movimiento lateral', 'Lateral Movement', 'TA0008', 'Mov. lateral'],
+      ['recol', 'Recolección', 'Collection', 'TA0009', 'Recolección'],
+      ['c2', 'Comando y control', 'Command and Control', 'TA0011', 'Com. y ctrl.'],
+      ['exfil', 'Exfiltración', 'Exfiltration', 'TA0010', 'Exfiltración'],
+      ['imp', 'Impacto', 'Impact', 'TA0040', 'Impacto']
+    ];
+    const TAC = Object.fromEntries(TACTICAS.map(t => [t[0], { nombre: t[1], en: t[2], id: t[3], corta: t[4] }]));
+    const TEC = {
+      'T1566.001': { nombre: 'Phishing: Spearphishing Attachment', tac: 'inicial', corto: 'phishing' },
+      'T1110': { nombre: 'Brute Force', tac: 'cred', corto: 'fuerza bruta' },
+      'T1059.001': { nombre: 'Command and Scripting Interpreter: PowerShell', tac: 'ejec', corto: 'PowerShell' },
+      'T1053.005': { nombre: 'Scheduled Task/Job: Scheduled Task', tac: 'pers', corto: 'tarea programada' },
+      'T1069.002': { nombre: 'Permission Groups Discovery: Domain Groups', tac: 'desc', corto: 'grupos del dominio' },
+      'T1003.001': { nombre: 'OS Credential Dumping: LSASS Memory', tac: 'cred', corto: 'LSASS' },
+      'T1021.001': { nombre: 'Remote Services: Remote Desktop Protocol', tac: 'lat', corto: 'RDP' },
+      'T1071.001': { nombre: 'Application Layer Protocol: Web Protocols', tac: 'c2', corto: 'C2 web' },
+      'T1567.002': { nombre: 'Exfiltration Over Web Service: Exfiltration to Cloud Storage', tac: 'exfil', corto: 'exfiltración nube' },
+      'T1486': { nombre: 'Data Encrypted for Impact', tac: 'imp', corto: 'ransomware' }
+    };
+    const DISTRACTORAS = [['T1078', 'Valid Accounts'], ['T1190', 'Exploit Public-Facing Application'], ['T1047', 'Windows Management Instrumentation'], ['T1105', 'Ingress Tool Transfer'], ['T1490', 'Inhibit System Recovery']];
+    const OPC_TEC = [...Object.entries(TEC).map(([id, t]) => [id, t.nombre]), ...DISTRACTORAS].sort((a, b) => a[0].localeCompare(b[0]));
+
+    /* ---------- Reto 1 ---------- */
+    const EVENTOS = [
+      { tac: 'inicial', tec: 'T1566.001',
+        texto: 'Ana, de Finanzas, recibe un correo de «facturas@pagos-proveedor.example» con el adjunto Factura_0925.docm; al abrirlo habilita las macros.',
+        porque: 'El adversario busca entrar a la red (Acceso inicial, TA0001) con un correo dirigido que trae el archivo malicioso adjunto: T1566.001. Si el correo trajera un enlace en lugar del adjunto, sería T1566.002.',
+        pTac: '¿En qué momento del ataque ocurre? Todavía no hay nada del atacante dentro de la red.',
+        pTec: 'El vehículo es un archivo adjunto en un correo dirigido a una persona concreta.' },
+      { tac: 'cred', tec: 'T1110',
+        texto: 'El controlador de dominio registra 4,812 inicios de sesión fallidos (evento 4625) contra la cuenta «svc.respaldo» desde 203.0.113.45 en 40 minutos.',
+        porque: 'Probar contraseñas una y otra vez busca conseguir credenciales válidas (Acceso a credenciales, TA0006): T1110 Brute Force. Si fuera una misma contraseña contra cientos de cuentas, la subtécnica sería T1110.003 (Password Spraying).',
+        pTac: 'El atacante todavía no ejecuta nada: quiere una contraseña que funcione.',
+        pTec: 'Miles de intentos contra la misma cuenta: el método es probar y probar.' },
+      { tac: 'ejec', tec: 'T1059.001',
+        texto: 'En WS-VEN-07, WINWORD.EXE lanza «powershell.exe -NoP -W Hidden -EncodedCommand JABjAGwAaQBlAG4AdAA…».',
+        porque: 'Correr código mediante un intérprete es Ejecución (TA0002); con PowerShell la subtécnica es T1059.001. El -EncodedCommand también sugiere ofuscación (T1027, Obfuscated Files or Information): un mismo evento puede mapear a más de una técnica.',
+        pTac: 'Fíjate en lo que hace el proceso: interpreta y corre un script.',
+        pTec: 'El nombre del ejecutable te dice qué intérprete se usó.' },
+      { tac: 'pers', tec: 'T1053.005',
+        texto: 'Aparece la tarea programada «GoogleUpdateTaskMachineQA», creada con schtasks /create, que ejecuta C:\\Users\\Public\\upd.exe cada vez que alguien inicia sesión.',
+        porque: 'El propósito descrito es sobrevivir a reinicios y volver a ejecutarse en cada inicio de sesión: Persistencia (TA0003), técnica T1053.005 Scheduled Task. En la matriz, T1053.005 también aparece en Ejecución y en Escalación de privilegios: la táctica la decide el propósito del adversario (el porqué).',
+        pTac: '¿Para qué querría el atacante que su programa vuelva a correr cada vez que alguien inicia sesión?',
+        pTec: 'El mecanismo es el programador de tareas de Windows (schtasks).',
+        alt: { ejec: 'T1053.005 también aparece en Ejecución, pero aquí el propósito descrito es volver a ejecutarse en cada inicio de sesión: mantenerse en el equipo.', escal: 'T1053.005 también aparece en Escalación de privilegios, pero el evento no menciona obtener permisos más altos; el propósito es mantenerse en el equipo.' } },
+      { tac: 'desc', tec: 'T1069.002',
+        texto: 'Desde WS-FIN-03 se ejecutan «net group "Domain Admins" /domain» y «net group "Enterprise Admins" /domain» a las 03:12.',
+        porque: 'Listar los miembros de grupos privilegiados del dominio es Descubrimiento (TA0007): T1069.002 Permission Groups Discovery: Domain Groups. Le sirve al atacante para decidir a qué cuentas apuntar.',
+        pTac: 'El comando solo consulta información: el atacante está conociendo el entorno.',
+        pTec: 'Se consultan grupos de permisos del dominio, no cuentas sueltas ni equipos.' },
+      { tac: 'cred', tec: 'T1003.001',
+        texto: 'El EDR detecta que rundll32.exe usa comsvcs.dll (MiniDump) para crear C:\\Windows\\Temp\\lsass.dmp, un volcado de memoria del proceso lsass.exe.',
+        porque: 'LSASS guarda en memoria credenciales de las sesiones activas; volcarlo busca extraer hashes o contraseñas: Acceso a credenciales (TA0006), T1003.001 OS Credential Dumping: LSASS Memory.',
+        pTac: '¿Qué guarda el proceso lsass.exe en su memoria y por qué alguien querría copiarla?',
+        pTec: 'Es un volcado de memoria de un proceso del sistema operativo que maneja credenciales.' },
+      { tac: 'lat', tec: 'T1021.001',
+        texto: 'La cuenta «lgarza» abre una sesión RDP (puerto 3389, inicio de sesión tipo 10) desde WS-FIN-03 hacia SRV-ARCH-02, un servidor que nunca administra.',
+        porque: 'Usar un servicio remoto legítimo para saltar de un equipo comprometido a otro es Movimiento lateral (TA0008): T1021.001 Remote Services: Remote Desktop Protocol.',
+        pTac: 'El atacante ya está dentro; ahora se desplaza de un equipo a otro.',
+        pTec: 'El puerto 3389 y el inicio de sesión tipo 10 delatan el servicio remoto usado.' },
+      { tac: 'c2', tec: 'T1071.001',
+        texto: 'WS-RH-11 se conecta por HTTPS a «cdn-metricas.test» cada 60 segundos (±2 s), las 24 horas, con respuestas de tamaño casi idéntico.',
+        porque: 'Las conexiones periódicas y regulares (beaconing) son el canal por el que el malware recibe órdenes: Comando y control (TA0011). Usar HTTP o HTTPS para mezclarse con el tráfico normal es T1071.001 Application Layer Protocol: Web Protocols.',
+        pTac: 'La regularidad casi perfecta sugiere un programa que reporta a su servidor y espera instrucciones.',
+        pTec: 'El protocolo usado es web (HTTPS), en la capa de aplicación.' },
+      { tac: 'exfil', tec: 'T1567.002',
+        texto: 'SRV-ARCH-02 sube 4.2 GB comprimidos en .7z a «files.nubecompartida.example», un servicio de almacenamiento en la nube que la empresa no usa.',
+        porque: 'Sacar datos de la organización es Exfiltración (TA0010); hacerlo por un servicio web de almacenamiento en la nube es T1567.002 Exfiltration Over Web Service: Exfiltration to Cloud Storage. Comprimirlos antes (T1560, Archive Collected Data) pertenece a Recolección.',
+        pTac: 'Los datos van de adentro hacia afuera de la organización.',
+        pTec: 'El destino es un servicio web de almacenamiento en la nube.' },
+      { tac: 'imp', tec: 'T1486',
+        texto: 'En SRV-ARCH-02 se renombran 18,000 archivos con la extensión .lockd en 15 minutos y aparece «LEEME_RESCATE.txt» en cada carpeta.',
+        porque: 'Cifrar archivos para dejarlos inutilizables y pedir un rescate es Impacto (TA0040): T1486 Data Encrypted for Impact, la técnica característica del ransomware.',
+        pTac: '¿Qué busca el atacante al final: robar, esconderse o dañar la operación?',
+        pTec: 'Los archivos quedan cifrados y hay una nota de rescate.' }
+    ];
+    const contEv = $('#r1-eventos');
+    let intentos1 = 0;
+    EVENTOS.forEach((ev, i) => {
+      const sTac = el('select', { id: `r1-tac-${i}` });
+      const sTec = el('select', { id: `r1-tec-${i}` });
+      llenar(sTac, TACTICAS.map(t => [t[0], `${t[1]} (${t[2]})`]), 'Elige la táctica…');
+      llenar(sTec, OPC_TEC.map(([id, n]) => [id, `${id} · ${n}`]), 'Elige la técnica…');
+      contEv.append(el('article', { class: 'evento', id: `r1-ev-${i}`, 'aria-label': `Evento ${i + 1}` },
+        el('p', {}, el('span', { class: 'insignia', 'aria-hidden': 'true' }, String(i + 1)), ' ', ev.texto),
+        el('div', { class: 'campo' }, el('label', { for: `r1-tac-${i}` }, 'Táctica (el porqué)'), sTac),
+        el('div', { class: 'campo' }, el('label', { for: `r1-tec-${i}` }, 'Técnica (el cómo)'), sTec),
+        el('div', { class: 'estado', id: `r1-est-${i}` })));
+    });
+
+    function pintarMatriz(correctos) {
+      $('#r1-matriz').replaceChildren(...TACTICAS.map(([k, nombre]) => {
+        const items = EVENTOS.map((ev, i) => ({ ev, i })).filter(x => x.ev.tac === k && correctos.has(x.i));
+        return el('div', { class: 'col' + (items.length ? '' : ' vacia') }, el('h4', {}, nombre),
+          ...items.map(x => el('div', { class: 'tec' }, `${x.ev.tec} · ev. ${x.i + 1}`)));
+      }));
+    }
+
+    function comprobar1() {
+      intentos1++;
+      let completos = 0, nTac = 0, nTec = 0, vacios = 0;
+      const correctos = new Set();
+      EVENTOS.forEach((ev, i) => {
+        const tac = $(`#r1-tac-${i}`).value, tec = $(`#r1-tec-${i}`).value;
+        const card = $(`#r1-ev-${i}`), est = $(`#r1-est-${i}`);
+        if (!tac || !tec) { vacios++; card.className = 'evento'; est.innerHTML = '<span class="no">✗ Incompleto:</span> elige táctica y técnica.'; return; }
+        const bTac = tac === ev.tac, bTec = tec === ev.tec;
+        nTac += bTac; nTec += bTec;
+        const lin = `<span class="${bTac ? 'si' : 'no'}">${bTac ? '✓' : '✗'} Táctica</span> · <span class="${bTec ? 'si' : 'no'}">${bTec ? '✓' : '✗'} Técnica</span>`;
+        if (bTac && bTec) {
+          completos++; correctos.add(i); card.className = 'evento bien';
+          est.innerHTML = `${lin}<p>${esc(ev.porque)}</p>`;
+        } else {
+          card.className = 'evento revisar';
+          let txt = '';
+          if (!bTac) txt += `<p><strong>Pista de táctica:</strong> ${esc(ev.alt && ev.alt[tac] ? ev.alt[tac] : ev.pTac)}</p>`;
+          if (!bTec) txt += `<p><strong>Pista de técnica:</strong> ${esc(ev.pTec)}</p>`;
+          est.innerHTML = lin + txt;
+        }
+      });
+      pintarMatriz(correctos);
+      if (completos === EVENTOS.length) {
+        retro('#retro1', 'ok', '<strong>¡Mapa completo! 10 de 10 eventos.</strong> Mira tu mapa: los eventos recorren la matriz de izquierda a derecha, de Acceso inicial a Impacto. Esa es la intrusión completa contada con un vocabulario que cualquier analista del mundo entiende, y que te permite preguntar «¿qué técnicas no estamos detectando?».');
+        marcar('reto1');
+      } else {
+        retro('#retro1', completos >= 7 ? 'aviso' : 'mal', `Llevas <strong>${completos} de 10</strong> eventos completos (${nTac} tácticas y ${nTec} técnicas correctas${vacios ? `; ${vacios} sin responder` : ''}). Lee las pistas de los eventos marcados con ✗: la táctica responde «¿para qué?» y la técnica «¿cómo?».`);
+        desmarcar('reto1');
+        if (intentos1 >= 2) $('#r1-solucion').hidden = false;
+      }
+    }
+    $('#r1-comprobar').addEventListener('click', comprobar1);
+    $('#r1-solucion').addEventListener('click', () => {
+      EVENTOS.forEach((ev, i) => { $(`#r1-tac-${i}`).value = ev.tac; $(`#r1-tec-${i}`).value = ev.tec; });
+      comprobar1();
+      retro('#retro1', 'aviso', 'Se muestra la solución con la explicación de cada evento. Léelas, presiona <strong>Reiniciar</strong> e intenta mapear los 10 eventos sin ayuda.');
+      desmarcar('reto1');
+    });
+    $('#r1-reiniciar').addEventListener('click', () => {
+      intentos1 = 0;
+      EVENTOS.forEach((ev, i) => { $(`#r1-tac-${i}`).value = ''; $(`#r1-tec-${i}`).value = ''; $(`#r1-ev-${i}`).className = 'evento'; $(`#r1-est-${i}`).innerHTML = ''; });
+      $('#r1-solucion').hidden = true;
+      retro('#retro1', '', '');
+      pintarMatriz(new Set());
+      desmarcar('reto1');
+    });
+    pintarMatriz(new Set());
+
+    /* ---------- Datos del reto 2 (120 eventos ficticios, generados con semilla) ---------- */
+    const SEVS = ['Baja', 'Media', 'Alta', 'Crítica'];
+    const CONTEOS = [['T1110', 26], ['T1566.001', 18], ['T1059.001', 16], ['T1071.001', 14], ['T1021.001', 12], ['T1053.005', 9], ['T1069.002', 8], ['T1003.001', 7], ['T1567.002', 6], ['T1486', 4]];
+    const SEV_PESOS = { 'T1110': [3, 5, 2, 0], 'T1566.001': [1, 4, 3, 0], 'T1059.001': [0, 2, 4, 1], 'T1071.001': [0, 2, 3, 1], 'T1021.001': [1, 3, 2, 0], 'T1053.005': [0, 3, 2, 0], 'T1069.002': [3, 2, 0, 0], 'T1003.001': [0, 0, 2, 3], 'T1567.002': [0, 0, 2, 2], 'T1486': [0, 0, 0, 1] };
+    const HOSTS_TEC = { 'T1110': ['SRV-DC-01', 'SRV-WEB-01'], 'T1566.001': ['WS-FIN-03', 'WS-RH-11', 'WS-VEN-07'], 'T1059.001': ['WS-VEN-07', 'WS-FIN-03', 'WS-TI-02'], 'T1071.001': ['WS-RH-11', 'WS-VEN-07'], 'T1021.001': ['SRV-ARCH-02', 'SRV-SQL-04'], 'T1053.005': ['WS-FIN-03', 'SRV-ARCH-02'], 'T1069.002': ['WS-FIN-03', 'WS-TI-02'], 'T1003.001': ['WS-FIN-03', 'SRV-ARCH-02'], 'T1567.002': ['SRV-ARCH-02'], 'T1486': ['SRV-ARCH-02', 'SRV-SQL-04'] };
+    const rnd = aleatorio(606);
+    function porPeso(p) { let r = rnd() * p.reduce((a, b) => a + b, 0); for (let i = 0; i < p.length; i++) { r -= p[i]; if (r < 0) return i; } return p.length - 1; }
+    const DATOS = [];
+    CONTEOS.forEach(([tec, n]) => {
+      for (let k = 0; k < n; k++) {
+        const hs = HOSTS_TEC[tec];
+        DATOS.push({ tec, sev: SEVS[porPeso(SEV_PESOS[tec])], host: hs[Math.floor(rnd() * hs.length)], dia: 1 + Math.floor(rnd() * 14) });
+      }
+    });
+    DATOS.sort((a, b) => a.dia - b.dia || a.tec.localeCompare(b.tec));
+    DATOS.forEach((f, i) => { f.id = i + 1; f.fecha = `${String(f.dia).padStart(2, '0')}/09/2026`; f.tac = TAC[TEC[f.tec].tac].nombre; });
+
+    const CAMPOS = {
+      tec: { col: 'IdTécnica', clave: f => f.tec, etq: k => `${k} · ${TEC[k].nombre}` },
+      tac: { col: 'Táctica', clave: f => f.tac, etq: k => k },
+      sev: { col: 'Severidad', clave: f => f.sev, etq: k => k },
+      host: { col: 'Host', clave: f => f.host, etq: k => k }
+    };
+    const ARGS = { tabla: 'Eventos', id: 'Eventos[IdEvento]', tec: 'Eventos[IdTécnica]', sev: 'Eventos[Severidad]' };
+    const FNS = ['COUNTROWS', 'SUM', 'AVERAGE', 'DISTINCTCOUNT'];
+
+    function evaluar(fn, arg, filas) {
+      if (fn === 'COUNTROWS') {
+        if (arg !== 'tabla') return { error: `COUNTROWS espera una tabla y recibió la columna ${ARGS[arg]}.` };
+        return { v: filas.length || null };
+      }
+      if (arg === 'tabla') return { error: `${fn} espera una columna, no la tabla completa Eventos.` };
+      if (fn === 'DISTINCTCOUNT') {
+        const s = new Set(filas.map(f => arg === 'id' ? f.id : arg === 'tec' ? f.tec : f.sev));
+        return { v: s.size || null };
+      }
+      if (arg !== 'id') return { error: `${fn} no puede trabajar con valores de tipo texto (String): ${ARGS[arg]} contiene texto.` };
+      if (!filas.length) return { v: null };
+      const suma = filas.reduce((a, f) => a + f.id, 0);
+      return { v: fn === 'SUM' ? suma : suma / filas.length };
+    }
+    function fmt(r) { return r.v === null ? '(en blanco)' : num(r.v, Number.isInteger(r.v) ? 0 : 1); }
+
+    let medida = null;          // {fn, arg} confirmada con «Crear medida»
+    let filaSel = null;         // clave de la fila seleccionada ('__total' para el total)
+    const sevSel = new Set();
+
+    llenar($('#r2-fn'), FNS.map(f => [f, f]), 'función…');
+    llenar($('#r2-arg'), Object.entries(ARGS), 'argumento…');
+    llenar($('#r2-tec'), Object.keys(TEC).map(id => [id, `${id} · ${TEC[id].nombre}`]), 'Elige la técnica…');
+
+    function codigoA() {
+      const fn = $('#r2-fn').value, arg = $('#r2-arg').value;
+      $('#r2-codigo').innerHTML = dax(`Eventos = ${fn || '¿función?'} ( ${arg ? ARGS[arg] : '¿argumento?'} )`);
+    }
+    function crearMedida() {
+      const fn = $('#r2-fn').value, arg = $('#r2-arg').value;
+      if (!fn || !arg) { retro('#r2-retroA', 'aviso', 'Elige una función y un argumento antes de crear la medida.'); return; }
+      medida = { fn, arg };
+      const r = evaluar(fn, arg, DATOS);
+      let tipo = 'mal', msg;
+      if (r.error) msg = `<span class="error-dax">Error en la barra de fórmulas:</span> ${esc(r.error)} Power BI no deja usar la medida en ningún visual hasta corregirla.`;
+      else if (fn === 'COUNTROWS') { tipo = 'ok'; msg = `<strong>✓ Medida correcta.</strong> COUNTROWS ( Eventos ) cuenta las filas de la tabla que sobreviven a los filtros activos. Sin filtros devuelve ${num(r.v)}: un evento por fila. Ahora mírala en el visual.`; }
+      else if (fn === 'DISTINCTCOUNT' && arg === 'id') { tipo = 'aviso'; msg = `Funciona y da ${num(r.v)} porque cada IdEvento es único, pero tu intención es contar filas: <code>COUNTROWS ( Eventos )</code> lo dice directamente y no depende de que el ID sea único. Cámbiala.`; }
+      else if (fn === 'DISTINCTCOUNT') msg = `La fórmula es válida, pero cuenta valores distintos de ${esc(ARGS[arg])} (${num(r.v)}), no eventos.`;
+      else msg = `La fórmula es válida, pero ${fn === 'SUM' ? 'suma' : 'promedia'} los identificadores: el resultado (${fmt(r)}) no significa nada, porque un ID no es una cantidad.`;
+      retro('#r2-retroA', tipo, msg);
+      pintarVisual(); pintarC();
+    }
+
+    function filtradas() { return sevSel.size ? DATOS.filter(f => sevSel.has(f.sev)) : DATOS; }
+    function textoSeg() { return sevSel.size ? ` y, por el segmentador, Eventos[Severidad] en { ${[...sevSel].map(s => `"${s}"`).join(', ')} }` : ''; }
+
+    function pintarVisual() {
+      const tabla = $('#r2-tabla'), graf = $('#r2-grafica');
+      if (!medida) {
+        tabla.innerHTML = '<tbody><tr><td>Crea la medida en el paso A para verla aquí.</td></tr></tbody>';
+        graf.innerHTML = ''; $('#r2-contexto').innerHTML = '<p>El contexto de filtro aparecerá cuando crees la medida.</p>';
+        return;
+      }
+      const base = filtradas(), campo = CAMPOS[$('#r2-filas').value] || CAMPOS.tec;
+      const total = evaluar(medida.fn, medida.arg, base);
+      if (total.error) {
+        tabla.innerHTML = `<tbody><tr><td class="error-dax">No se puede mostrar el objeto visual: ${esc(total.error)}</td></tr></tbody>`;
+        graf.innerHTML = ''; $('#r2-contexto').innerHTML = '<p>Con una medida con error, ningún visual se calcula.</p>';
+        return;
+      }
+      const grupos = new Map();
+      base.forEach(f => { const k = campo.clave(f); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(f); });
+      const filas = [...grupos].map(([k, fs]) => ({ k, fs, r: evaluar(medida.fn, medida.arg, fs) }))
+        .filter(x => x.r.v !== null).sort((a, b) => b.r.v - a.r.v || String(a.k).localeCompare(String(b.k)));
+      if (filaSel !== '__total' && !filas.some(x => x.k === filaSel)) filaSel = null;
+      const thead = el('thead', {}, el('tr', {}, el('th', { scope: 'col' }, campo.col), el('th', { scope: 'col' }, 'Eventos')));
+      const boton = (k, txt) => el('button', { type: 'button', class: 'fila-btn', 'data-k': String(k), 'aria-pressed': String(filaSel === k), onclick: () => { filaSel = k; pintarVisual(); enfocarFila(k); } }, txt);
+      const tbody = el('tbody', {}, ...filas.map(x => el('tr', { class: filaSel === x.k ? 'sel' : '' }, el('td', {}, boton(x.k, campo.etq(x.k))), el('td', { class: 'num' }, fmt(x.r)))),
+        el('tr', { class: 'total' + (filaSel === '__total' ? ' sel' : '') }, el('td', {}, boton('__total', 'Total')), el('td', { class: 'num' }, fmt(total))));
+      tabla.replaceChildren(thead, tbody);
+      const porTac = TACTICAS.map(t => ({ etiqueta: t[4], valor: evaluar(medida.fn, medida.arg, base.filter(f => f.tac === t[1])).v }))
+        .filter(x => x.valor !== null).map(x => ({ etiqueta: x.etiqueta, valor: Math.round(x.valor * 10) / 10 })).sort((a, b) => b.valor - a.valor);
+      ICCA.barras(graf, porTac, { titulo: 'Gráfico de barras: [Eventos] por táctica' });
+      pintarContexto(filas, total, campo, base);
+    }
+
+    function enfocarFila(k) {
+      const b = Array.from(document.querySelectorAll('#r2-tabla .fila-btn')).find(x => x.dataset.k === String(k));
+      if (b) b.focus();
+    }
+    function pintarContexto(filas, total, campo, base) {
+      const caja = $('#r2-contexto');
+      if (!filaSel) { caja.innerHTML = '<p>Selecciona una fila de la tabla para ver con qué filtros se evalúa la medida.</p>'; return; }
+      const nombreFn = `${medida.fn} ( ${ARGS[medida.arg]} )`;
+      let fs, r, cab;
+      if (filaSel === '__total') {
+        fs = base; r = total;
+        cab = `<strong>Fila Total.</strong> No hay filtro por <code>Eventos[${campo.col}]</code>${esc(textoSeg())}. Quedan <strong>${fs.length} de ${DATOS.length}</strong> filas y <code>${esc(nombreFn)}</code> devuelve <strong>${fmt(r)}</strong>. El total no se obtiene sumando las filas de arriba: DAX vuelve a evaluar la medida sin el filtro de la fila.`;
+      } else {
+        const x = filas.find(y => y.k === filaSel); fs = x.fs; r = x.r;
+        cab = `<strong>Fila «${esc(campo.etq(x.k))}».</strong> Contexto de filtro: <code>Eventos[${campo.col}] = "${esc(x.k)}"</code>${esc(textoSeg())}. Quedan <strong>${fs.length} de ${DATOS.length}</strong> filas y <code>${esc(nombreFn)}</code> devuelve <strong>${fmt(r)}</strong>.`;
+      }
+      const muestra = fs.slice(0, 10);
+      caja.innerHTML = `<p style="margin-top:0">${cab}</p>`;
+      caja.append(el('div', { class: 'tabla-scroll lista-filas' }, el('table', { class: 'datos' },
+        el('caption', { class: 'oculto-visual' }, 'Filas visibles en este contexto'),
+        el('thead', {}, el('tr', {}, ...['IdEvento', 'Fecha', 'Host', 'IdTécnica', 'Severidad'].map(h => el('th', { scope: 'col' }, h)))),
+        el('tbody', {}, ...muestra.map(f => el('tr', {}, el('td', { class: 'num' }, String(f.id)), el('td', {}, f.fecha), el('td', {}, f.host), el('td', {}, f.tec), el('td', {}, f.sev)))))));
+      if (fs.length > muestra.length) caja.append(el('p', { class: 'nota', style: 'margin:6px 0 0' }, `… y ${fs.length - muestra.length} filas más en este contexto.`));
+    }
+
+    const seg = $('#r2-seg');
+    SEVS.forEach(s => seg.append(el('button', { type: 'button', class: 'chip', 'aria-pressed': 'false', onclick: e => {
+      const b = e.currentTarget; if (sevSel.has(s)) sevSel.delete(s); else sevSel.add(s);
+      b.setAttribute('aria-pressed', String(sevSel.has(s))); pintarVisual(); pintarC();
+    } }, s)));
+
+    function formaC() { const r = document.querySelector('input[name="r2-forma"]:checked'); return r ? r.value : ''; }
+    function pintarC() {
+      const id = $('#r2-tec').value, forma = formaC();
+      const nombre = id ? `Eventos ${TEC[id].corto}` : 'Eventos técnica';
+      const lit = id || '¿técnica?';
+      const cuerpo = forma === 'filtro' ? `COUNTROWS ( FILTER ( Eventos, Eventos[IdTécnica] = "${lit}" ) )`
+        : forma === 'mal' ? `COUNTROWS ( Eventos[IdTécnica] = "${lit}" )`
+        : forma === 'calc' ? `CALCULATE ( [Eventos], Eventos[IdTécnica] = "${lit}" )` : '¿forma?';
+      $('#r2-codigoC').innerHTML = dax(`${nombre} = ${cuerpo}`);
+      const card = $('#r2-card'), et = $('#r2-card-et');
+      et.textContent = nombre + (sevSel.size ? ' (con el segmentador activo)' : '');
+      card.classList.remove('error-dax');
+      if (!id || !forma) { card.textContent = '—'; return; }
+      const fs = filtradas().filter(f => f.tec === id);
+      if (forma === 'mal') { card.textContent = 'Error'; card.classList.add('error-dax'); et.textContent = 'COUNTROWS necesita una tabla; una comparación devuelve VERDADERO o FALSO.'; return; }
+      if (forma === 'calc') {
+        if (!medida) { card.textContent = '—'; et.textContent = 'Primero crea [Eventos] en el paso A: CALCULATE la reutiliza.'; return; }
+        const r = evaluar(medida.fn, medida.arg, fs);
+        if (r.error) { card.textContent = 'Error'; card.classList.add('error-dax'); et.textContent = 'Hereda el error de [Eventos].'; return; }
+        card.textContent = fmt(r); return;
+      }
+      card.textContent = fmt({ v: fs.length || null });
+    }
+    ['#r2-fn', '#r2-arg'].forEach(s => $(s).addEventListener('change', codigoA));
+    $('#r2-crear').addEventListener('click', crearMedida);
+    $('#r2-filas').addEventListener('change', () => { filaSel = null; pintarVisual(); });
+    $('#r2-tec').addEventListener('change', pintarC);
+    document.querySelectorAll('input[name="r2-forma"]').forEach(r => r.addEventListener('change', pintarC));
+
+    $('#r2-comprobar').addEventListener('click', () => {
+      const partes = [];
+      const okA = !!medida && medida.fn === 'COUNTROWS' && medida.arg === 'tabla';
+      partes.push(okA ? '<span class="si">✓ Paso A:</span> [Eventos] = COUNTROWS ( Eventos ).' : '<span class="no">✗ Paso A:</span> la medida creada todavía no es COUNTROWS ( Eventos ) (recuerda presionar «Crear medida»).');
+      const p = document.querySelector('input[name="r2-preg"]:checked');
+      const expl = { a: 'las medidas no se copian ni se guardan por fila: se calculan al vuelo cada vez que un visual las pide.', b: '', c: 'eso describe una columna calculada (se calcula al actualizar y se guarda fila por fila). Una medida se evalúa en el momento, dentro del contexto de cada celda.' };
+      const pv = p ? p.value : '';
+      const okP = pv === 'b';
+      partes.push(okP ? '<span class="si">✓ Pregunta:</span> cada fila filtra la tabla con su propio valor y COUNTROWS cuenta solo lo que queda. Eso es el <strong>contexto de filtro</strong>.' : `<span class="no">✗ Pregunta:</span> ${expl[pv] ? 'no; ' + expl[pv] : 'elige una respuesta.'} Selecciona varias filas de la tabla y compara sus contextos.`);
+      const id = $('#r2-tec').value, forma = formaC();
+      let okC = false, msgC;
+      if (id !== 'T1003.001') msgC = id ? `elegiste ${id}; el volcado de memoria de LSASS es T1003.001 (revisa el evento 6 del reto 1).` : 'elige la técnica.';
+      else if (forma === 'mal' || !forma) msgC = forma ? 'COUNTROWS necesita una tabla: una comparación no lo es. Usa CALCULATE o FILTER.' : 'elige la forma de la fórmula.';
+      else if (forma === 'calc' && !okA) msgC = 'la forma es correcta, pero reutiliza [Eventos], que todavía no es COUNTROWS ( Eventos ).';
+      else { okC = true; msgC = `${forma === 'calc' ? 'CALCULATE cambia el contexto de filtro de [Eventos]' : 'FILTER recorre la tabla y se queda con las filas de esa técnica'}: sin segmentador la tarjeta muestra ${DATOS.filter(f => f.tec === 'T1003.001').length}, igual que la fila T1003.001 de la tabla. La fila aplicaba el filtro por contexto; esta medida lo lleva escrito en la fórmula.`; }
+      partes.push(`<span class="${okC ? 'si' : 'no'}">${okC ? '✓' : '✗'} Paso C:</span> ${esc(msgC)}`);
+      const ok = okA && okP && okC;
+      retro('#retro2', ok ? 'ok' : 'mal', (ok ? '<strong>¡Reto 2 completo!</strong> ' : '') + partes.join('<br>'));
+      if (ok) marcar('reto2'); else desmarcar('reto2');
+    });
+    $('#r2-reiniciar').addEventListener('click', () => {
+      medida = null; filaSel = null; sevSel.clear();
+      ['#r2-fn', '#r2-arg', '#r2-tec'].forEach(s => { $(s).value = ''; });
+      $('#r2-filas').value = 'tec';
+      document.querySelectorAll('input[name="r2-preg"], input[name="r2-forma"]').forEach(r => { r.checked = false; });
+      seg.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      retro('#r2-retroA', '', ''); retro('#retro2', '', '');
+      codigoA(); pintarVisual(); pintarC(); desmarcar('reto2');
+    });
+    codigoA(); pintarVisual(); pintarC();
+
+    /* ---------- Reto 3 ---------- */
+    const DIAG = [['ok', 'Sin error'], ['col', 'Columna sin el nombre de su tabla'], ['comillas', 'Texto entre comillas simples (deben ser dobles)'], ['paren', 'Paréntesis sin cerrar'], ['texto', 'Función numérica sobre una columna de texto'], ['tabla', 'Tabla donde se esperaba una columna'], ['espacio', 'Nombre de tabla con espacios sin comillas simples']];
+    const FORMULAS = [
+      { f: 'Técnicas distintas = DISTINCTCOUNT ( IdTécnica )', r: 'col', fix: 'Técnicas distintas = DISTINCTCOUNT ( Eventos[IdTécnica] )',
+        exp: 'Una columna se escribe con su tabla y entre corchetes: Eventos[IdTécnica]. Sin eso, DAX no reconoce el nombre y marca que no es una tabla, variable ni función válida.', pista: 'Mira cómo está escrita la referencia a la columna.' },
+      { f: 'Eventos LSASS = CALCULATE ( [Eventos], Eventos[IdTécnica] = \'T1003.001\' )', r: 'comillas', fix: 'Eventos LSASS = CALCULATE ( [Eventos], Eventos[IdTécnica] = "T1003.001" )',
+        exp: 'En DAX el texto va entre comillas dobles. Las comillas simples delimitan nombres de tabla, así que DAX busca una tabla llamada T1003.001 y no la encuentra.', pista: 'Fíjate en cómo está escrito el valor de texto que se compara.' },
+      { f: 'Eventos = COUNTROWS ( Eventos', r: 'paren', fix: 'Eventos = COUNTROWS ( Eventos )',
+        exp: 'Cada paréntesis que abre una función debe cerrarse. Escribir con espacios y saltos de línea, como en este simulador, ayuda a ver qué falta.', pista: 'Cuenta los paréntesis que abren y los que cierran.' },
+      { f: 'Total técnicas = SUM ( Eventos[IdTécnica] )', r: 'texto', fix: 'Total técnicas = DISTINCTCOUNT ( Eventos[IdTécnica] )',
+        exp: 'SUM solo suma números y IdTécnica es texto («T1110»), así que Power BI responde que SUM no puede trabajar con valores de tipo String. Para contar técnicas usa DISTINCTCOUNT; para contar eventos, COUNTROWS.', pista: '¿Qué tipo de dato guarda la columna IdTécnica?' },
+      { f: 'Eventos críticos = CALCULATE ( [Eventos], Eventos[Severidad] = "Crítica" )', r: 'ok', fix: '',
+        exp: 'Correcta: reutiliza la medida [Eventos], la columna lleva su tabla y el texto va entre comillas dobles. CALCULATE lo estudiarás a fondo en la Semana 8.', pista: 'Revisa delimitadores y tipos: quizá no haya nada que corregir.' },
+      { f: 'Eventos de red = COUNTROWS ( Eventos red )', r: 'espacio', fix: 'Eventos de red = COUNTROWS ( \'Eventos red\' )',
+        exp: 'Si el nombre de una tabla tiene espacios u otros caracteres especiales, debe ir entre comillas simples: \'Eventos red\'. Sin ellas, DAX lee dos palabras sueltas.', pista: 'El nombre de la tabla tiene dos palabras.' },
+      { f: 'Promedio = AVERAGE ( Eventos )', r: 'tabla', fix: 'Promedio = AVERAGE ( Eventos[IdEvento] )',
+        exp: 'AVERAGE, SUM y DISTINCTCOUNT reciben una columna, no una tabla completa. (Además, promediar un ID no tendría sentido: este error te obliga a pensar qué columna quieres promediar.)', pista: '¿Qué tipo de argumento recibe AVERAGE?' },
+      { f: 'Hosts afectados = DISTINCTCOUNT ( Eventos[Host] )', r: 'ok', fix: '',
+        exp: 'Correcta: DISTINCTCOUNT recibe una columna y cuenta sus valores distintos; con los filtros actuales devuelve cuántos hosts tienen eventos.', pista: 'Revisa delimitadores y tipos: quizá no haya nada que corregir.' }
+    ];
+    const lista3 = $('#r3-lista');
+    FORMULAS.forEach((x, i) => {
+      const s = el('select', { id: `r3-sel-${i}` });
+      llenar(s, DIAG, 'Elige el diagnóstico…');
+      const pre = el('pre', { class: 'codigo' }); pre.innerHTML = dax(x.f);
+      lista3.append(el('div', { class: 'diag', id: `r3-it-${i}` }, el('p', { style: 'margin:0 0 4px;font-weight:600' }, `Fórmula ${i + 1}`), pre,
+        el('div', { class: 'campo' }, el('label', { for: `r3-sel-${i}` }, 'Diagnóstico'), s), el('div', { class: 'estado', id: `r3-est-${i}` })));
+    });
+    $('#r3-comprobar').addEventListener('click', () => {
+      let bien = 0;
+      FORMULAS.forEach((x, i) => {
+        const v = $(`#r3-sel-${i}`).value, est = $(`#r3-est-${i}`);
+        if (v === x.r) {
+          bien++;
+          est.innerHTML = `<span class="si">✓ Correcto.</span> <p>${esc(x.exp)}</p>` + (x.fix ? `<p><strong>Corrección:</strong></p><pre class="codigo">${dax(x.fix)}</pre>` : '');
+        } else est.innerHTML = `<span class="no">✗ ${v ? 'Revisa' : 'Sin diagnóstico'}.</span> <p>Pista: ${esc(x.pista)}</p>`;
+      });
+      if (bien === FORMULAS.length) { retro('#retro3', 'ok', '<strong>¡8 de 8!</strong> Ya reconoces los errores que más frenan al empezar con DAX: referencias sin tabla, comillas equivocadas, paréntesis abiertos y funciones que reciben el tipo de argumento incorrecto.'); marcar('reto3'); }
+      else { retro('#retro3', 'mal', `Llevas <strong>${bien} de ${FORMULAS.length}</strong> diagnósticos correctos. Lee las pistas: en DAX, «'» encierra tablas, «"» encierra texto y «[ ]» encierra columnas y medidas.`); desmarcar('reto3'); }
+    });
+    $('#r3-reiniciar').addEventListener('click', () => {
+      FORMULAS.forEach((x, i) => { $(`#r3-sel-${i}`).value = ''; $(`#r3-est-${i}`).innerHTML = ''; });
+      retro('#retro3', '', ''); desmarcar('reto3');
+    });
+  </script>
+</body>
+</html>

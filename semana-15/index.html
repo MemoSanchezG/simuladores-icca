@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 15 · Defensa ejecutiva del PIA | Simuladores ICCA</title>
+  <meta name="description" content="Planea tu defensa oral de 10 minutos con la conclusión primero, traduce hallazgos técnicos a lenguaje ejecutivo, autoevalúa tu PIA con la rúbrica y ensaya con un cronómetro.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    .orden { list-style: none; padding: 0; margin: 8px 0; counter-reset: paso; }
+    .orden li { counter-increment: paso; display: grid; grid-template-columns: 34px 1fr; gap: 6px 8px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 8px; margin: 6px 0; background: var(--surface); }
+    .orden li::before { content: counter(paso); width: 28px; height: 28px; border-radius: 50%; background: var(--accent-2); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
+    .orden .titulo { font-weight: 700; }
+    .orden .desc { display: block; font-weight: 400; font-size: .86rem; color: var(--muted); }
+    .orden .controles { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .orden .controles button { min-width: 40px; padding: 4px 8px; }
+    .orden .controles select { min-height: 36px; padding: 4px 8px; }
+    .linea-tiempo { display: flex; height: 34px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: var(--surface-2); margin: 8px 0 4px; }
+    .linea-tiempo span { display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; color: #fff; overflow: hidden; white-space: nowrap; border-right: 2px solid var(--surface); min-width: 0; }
+    .total { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin: 6px 0; }
+    .reglas { list-style: none; padding: 0; margin: 8px 0; }
+    .reglas li { padding: 6px 10px; border-left: 5px solid var(--border); margin: 5px 0; background: var(--surface-2); border-radius: 6px; font-size: .92rem; }
+    .reglas li.si { border-left-color: var(--ok); }
+    .reglas li.no { border-left-color: var(--bad); }
+    .hallazgo { border: 2px solid var(--border); border-radius: 10px; padding: 12px; margin: 12px 0; background: var(--surface); }
+    .hallazgo.ok { border-color: var(--ok); }
+    .hallazgo.mal { border-color: var(--bad); }
+    .hallazgo .tecnico { font-family: var(--mono); font-size: .88rem; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; margin: 0 0 8px; }
+    .opcion { display: flex; gap: 10px; align-items: flex-start; padding: 6px 2px; font-weight: 400; cursor: pointer; }
+    .opcion input { margin-top: 5px; flex: none; width: 18px; height: 18px; }
+    .criterios { list-style: none; padding: 0; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+    .criterios li { font-size: .84rem; border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }
+    .criterios li.si { border-color: var(--ok); background: var(--ok-soft); }
+    .criterios li.no { border-color: var(--bad); background: var(--bad-soft); }
+    .explica { font-size: .9rem; margin: 4px 0 0; }
+    .rubrica { display: grid; gap: 12px; }
+    .criterio { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+    .criterio legend { font-weight: 700; padding: 0 6px; }
+    .criterio fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+    .niveles { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-top: 6px; }
+    .nivel { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-weight: 400; cursor: pointer; background: var(--surface-2); }
+    .nivel input { margin-top: 4px; flex: none; width: 18px; height: 18px; }
+    .nivel strong { display: block; }
+    .nivel small { color: var(--muted); }
+    .resultado { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin: 10px 0; }
+    .resultado .kpi { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface); }
+    .crono { text-align: center; }
+    .crono .reloj { font-size: clamp(2.6rem, 12vw, 4.2rem); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .crono .reloj.final { color: var(--bad); }
+    .crono .seccion { font-size: 1.1rem; font-weight: 600; min-height: 1.6em; }
+    .crono .acciones { justify-content: center; }
+    .barra-crono { height: 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; margin: 10px 0; }
+    .barra-crono span { display: block; height: 100%; width: 0; background: var(--accent-2); }
+    .pequeno { font-size: .88rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 15 · Defensa ejecutiva del PIA</h1>
+      <p class="subtitulo">Diez minutos para demostrar todo el curso. La dirección no quiere un recorrido por cada gráfica: quiere saber qué pasa, qué tan grave es, qué le cuesta al negocio y qué debe decidir. Hoy planeas, traduces, te autoevalúas y ensayas.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás estructurar una defensa ejecutiva de 10 minutos con la conclusión primero, traducir hallazgos técnicos a lenguaje de negocio y estimar tu calificación del PIA con la rúbrica para decidir qué mejorar antes de la entrega.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Reto 1: ordena las secciones con ▲ y ▼ y asigna minutos hasta cumplir todas las reglas.</li>
+          <li>Reto 2: elige la mejor versión ejecutiva de cada hallazgo.</li>
+          <li>Reto 3: autoevalúa cada criterio de la rúbrica y revisa dónde ganar puntos; luego ensaya con el cronómetro.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Tu guion de 10 minutos</h2>
+      <p>Una presentación ejecutiva va de lo general a lo particular: <strong>conclusión primero</strong>, luego riesgo y tendencia, impacto en el negocio, la decisión que necesitas y, al final, la evidencia técnica para quien quiera profundizar. Ordena las secciones, asigna minutos (pon 0 para excluir una sección) y cumple las reglas.</p>
+      <ol class="orden" id="secciones"></ol>
+      <p id="estado1" class="pequeno" aria-live="polite"></p>
+      <div class="linea-tiempo" id="lineaTiempo" aria-hidden="true"></div>
+      <div class="total">
+        <div class="kpi"><span class="valor" id="totalMin">0</span><span class="etiqueta">minutos asignados (meta: 10)</span></div>
+        <div class="kpi"><span class="valor" id="reglasOk">0/7</span><span class="etiqueta">reglas cumplidas</span></div>
+      </div>
+      <ul class="reglas" id="reglas1"></ul>
+      <div class="acciones"><button type="button" id="reiniciar1">Reiniciar</button></div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Del hallazgo técnico al mensaje ejecutivo</h2>
+      <p>Para cada hallazgo elige la versión que dirías frente a la dirección. Una buena versión no usa jerga, explica el impacto en el negocio, propone una acción y es fiel a los datos (ni exagera ni minimiza).</p>
+      <div id="hallazgos"></div>
+      <div class="acciones"><button type="button" id="reiniciar2">Reiniciar</button></div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Autoevalúa tu PIA con la rúbrica</h2>
+      <p>Elige con honestidad el nivel que hoy demuestra tu proyecto en cada criterio. El simulador calcula tu puntaje sobre 100, su equivalente sobre los 30 puntos del PIA y dónde puedes ganar más puntos antes de la entrega. <span class="pequeno">Los descriptores son orientativos: la rúbrica oficial del curso es la que cuenta.</span></p>
+      <div class="rubrica" id="rubrica"></div>
+      <div class="resultado" id="resultado3">
+        <div class="kpi"><span class="valor" id="puntos100">0</span><span class="etiqueta">puntos de 100</span></div>
+        <div class="kpi"><span class="valor" id="puntos30">0.0</span><span class="etiqueta">equivalente sobre 30 puntos del PIA</span></div>
+        <div class="kpi"><span class="valor" id="evaluados">0/6</span><span class="etiqueta">criterios evaluados</span></div>
+      </div>
+      <div id="grafica3"></div>
+      <div id="prioridades"></div>
+      <div class="acciones"><button type="button" id="reiniciar3">Reiniciar</button></div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="tarjeta crono" aria-labelledby="crono">
+      <h2 id="crono">Cronómetro de práctica (opcional)</h2>
+      <p class="pequeno">Sigue el guion que armaste en el Reto 1: el cronómetro te dice en qué sección deberías estar.</p>
+      <div class="reloj" id="reloj" role="timer" aria-label="Tiempo restante">10:00</div>
+      <div class="barra-crono" aria-hidden="true"><span id="barraCrono"></span></div>
+      <p class="seccion" id="seccionActual" aria-live="polite">Pulsa Iniciar cuando comiences a hablar.</p>
+      <div class="acciones">
+        <button type="button" class="primario" id="iniciarCrono">Iniciar</button>
+        <button type="button" id="pausarCrono" disabled>Pausar</button>
+        <button type="button" id="reiniciarCrono">Reiniciar</button>
+        <label for="velocidad" class="oculto-visual">Velocidad del cronómetro</label>
+        <select id="velocidad">
+          <option value="1">Velocidad real</option>
+          <option value="10">Ensayo rápido (×10)</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol>
+        <li><strong>Entrega:</strong> confirma que el proyecto está guardado como PBIP (<strong>Archivo → Guardar como</strong>, tipo <strong>Archivos de proyecto de Power BI (*.pbip)</strong>) y que el último cambio entró por un Pull Request revisado.</li>
+        <li><strong>Presenta desde el servicio:</strong> abre el informe en Power BI Service y usa <strong>Ver → Pantalla completa</strong> para quitar distracciones.</li>
+        <li><strong>Guion con marcadores:</strong> crea un marcador por sección (Vista → Marcadores) y en el servicio usa <strong>Marcadores → Ver</strong> para avanzar como si fueran diapositivas.</li>
+        <li><strong>Evidencia a la mano:</strong> cuando te pregunten un detalle, usa el <strong>Modo de enfoque</strong> del visual o tu tooltip personalizado en la vista de detalle técnico.</li>
+        <li><strong>Plan B:</strong> <strong>Exportar → PowerPoint → Insertar una imagen</strong> te deja un respaldo por si falla la conexión durante la defensa.</li>
+      </ol>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Esta semana entregas el <strong>Producto Integrador de Aprendizaje</strong>: el dashboard de inteligencia de amenazas en Power BI con sus tres vistas (resumen ejecutivo, detalle técnico con mapeo a MITRE ATT&amp;CK y KPIs de seguimiento), guardado como PBIP en el repositorio de GitHub con su historial de Pull Requests. En la <strong>defensa oral de 10 minutos</strong> ambos integrantes del equipo hablan: repártanse las secciones del guion del Reto 1, ensayen al menos dos veces con el cronómetro y lleven preparadas las preguntas difíciles (calidad de datos, RLS, límites de sus conclusiones).</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(15);
+    const { $, el, retro, barajar } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+
+    /* ================= Reto 1 · Guion de 10 minutos ================= */
+    const SECCIONES = {
+      conclusion: { t: 'Conclusión principal', c: 'Conclusión', d: 'La respuesta en una frase: qué está pasando y qué tan grave es.', color: '#1a7f4b' },
+      riesgo: { t: 'Nivel de riesgo y tendencia', c: 'Riesgo', d: 'KPI del resumen ejecutivo: ¿sube o baja frente al periodo anterior?', color: '#2f6fb7' },
+      impacto: { t: 'Impacto en el negocio', c: 'Impacto', d: 'Qué procesos, datos o dinero están en juego.', color: '#7a4fb5' },
+      decision: { t: 'Recomendación y decisión que necesitas', c: 'Decisión', d: 'Qué le pides a la dirección, con costo y plazo.', color: '#9a5a00' },
+      evidencia: { t: 'Evidencia técnica', c: 'Evidencia', d: 'Demo breve del detalle ATT&CK y los KPI para quien quiera profundizar.', color: '#1f497d' },
+      preguntas: { t: 'Preguntas y respuestas', c: 'Preguntas', d: 'Tiempo reservado para la réplica.', color: '#4a5468' },
+      metodo: { t: 'Cómo construimos el dataset, paso a paso', c: 'Método', d: 'Cada transformación de Power Query y cada medida DAX.', color: '#b3261e' }
+    };
+    const ORDEN_INICIAL = ['metodo', 'evidencia', 'riesgo', 'conclusion', 'impacto', 'preguntas', 'decision'];
+    const MINUTOS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4];
+    let orden1 = [];
+    let tiempos = {};
+    let reto1Hecho = false;
+    const fmt = x => ICCA.num(x, x % 1 ? 1 : 0);
+
+    function reglas1() {
+      const pos = id => orden1.indexOf(id), t = id => tiempos[id];
+      const activos = orden1.filter(id => t(id) > 0);
+      const total = Object.values(tiempos).reduce((a, b) => a + b, 0);
+      return { total, r: [
+        { ok: Math.abs(total - 10) < 1e-9, t: 'Suma exactamente 10 minutos', si: 'Tu guion cabe justo en el tiempo de la defensa.',
+          no: total > 10 ? `Te pasas ${fmt(total - 10)} min: recorta la evidencia o excluye lo que no ayuda a decidir.` : `Te sobran ${fmt(10 - total)} min: dáselos a lo que más importa o a las preguntas.` },
+        { ok: activos[0] === 'conclusion', t: 'La conclusión va primero', si: 'Si la dirección solo escucha el primer minuto, ya se lleva el mensaje.',
+          no: 'Abre con la conclusión: en una presentación ejecutiva la respuesta va antes que el camino para llegar a ella.' },
+        { ok: t('conclusion') > 0 && t('conclusion') <= 1.5, t: 'Conclusión breve (máximo 1.5 min)', si: 'Una frase contundente y una de contexto bastan.',
+          no: t('conclusion') ? 'Más de minuto y medio deja de ser una conclusión: es un resumen de todo.' : 'Sin conclusión, tu audiencia tiene que adivinar el mensaje.' },
+        { ok: t('riesgo') > 0 && t('impacto') > 0 && pos('riesgo') < pos('evidencia') && pos('impacto') < pos('evidencia'), t: 'Riesgo e impacto antes de la evidencia',
+          si: 'Primero el «qué tan grave» y el «qué nos cuesta»; el detalle técnico después.',
+          no: 'Incluye el nivel de riesgo y el impacto en el negocio, y colócalos antes de la evidencia técnica: son lo que la dirección necesita para decidir.' },
+        { ok: t('decision') > 0 && pos('decision') > pos('impacto') && pos('decision') < pos('evidencia'), t: 'Pide la decisión antes de la evidencia',
+          si: 'Pides la decisión mientras tienes su atención; la evidencia la respalda.',
+          no: 'Coloca la recomendación después del impacto y antes de la evidencia: si la dejas al final, puede no alcanzar el tiempo o la atención.' },
+        { ok: t('evidencia') >= 2 && t('evidencia') <= 3.5, t: 'Evidencia técnica entre 2 y 3.5 min', si: 'Suficiente para demostrar el dashboard sin convertir la defensa en un recorrido.',
+          no: t('evidencia') < 2 ? 'Con menos de 2 min no alcanzas a mostrar el detalle ATT&CK y los KPI que sostienen tu conclusión.' : 'Más de 3.5 min de demo se come el tiempo de la decisión y de las preguntas.' },
+        { ok: t('metodo') === 0, t: 'Sin recorrido de metodología', si: 'El paso a paso vive en el repositorio; si te lo preguntan, lo muestras.',
+          no: 'El paso a paso de Power Query y DAX no ayuda a decidir: déjalo en el repositorio y asígnale 0 min.' },
+        { ok: t('preguntas') >= 1 && activos[activos.length - 1] === 'preguntas', t: 'Preguntas al final, con al menos 1 min', si: 'Reservaste tiempo para la réplica.',
+          no: 'Deja las preguntas al final y resérvales al menos 1 minuto: en una defensa siempre hay réplica.' }
+      ] };
+    }
+
+    function pintarSecciones(foco) {
+      $('#secciones').replaceChildren(...orden1.map((id, pos) => {
+        const s = SECCIONES[id];
+        const sel = el('select', { id: 'min-' + id, 'aria-label': 'Minutos para ' + s.t },
+          MINUTOS.map(m => el('option', { value: m }, m === 0 ? '0 min (excluir)' : `${fmt(m)} min`)));
+        sel.value = String(tiempos[id]);
+        sel.addEventListener('change', () => { tiempos[id] = Number(sel.value); evaluar1(); });
+        return el('li', { id: 'sec-' + id },
+          el('span', {}, el('span', { class: 'titulo' }, s.t), el('span', { class: 'desc' }, s.d)),
+          el('div', { class: 'controles' },
+            el('button', { type: 'button', 'data-dir': '-1', 'aria-label': 'Subir: ' + s.t, disabled: pos === 0, onclick: () => mover1(pos, -1) }, '▲'),
+            el('button', { type: 'button', 'data-dir': '1', 'aria-label': 'Bajar: ' + s.t, disabled: pos === orden1.length - 1, onclick: () => mover1(pos, 1) }, '▼'),
+            sel));
+      }));
+      if (foco) {
+        const botones = Array.from($('#sec-' + foco.id).querySelectorAll('button'));
+        const b = botones.find(x => x.getAttribute('data-dir') === String(foco.dir) && !x.disabled) || botones.find(x => !x.disabled);
+        if (b) b.focus();
+      }
+    }
+
+    function mover1(pos, dir) {
+      const destino = pos + dir;
+      if (destino < 0 || destino >= orden1.length) return;
+      const id = orden1[pos];
+      [orden1[pos], orden1[destino]] = [orden1[destino], orden1[pos]];
+      pintarSecciones({ id, dir });
+      $('#estado1').textContent = `«${SECCIONES[id].t}» ahora está en la posición ${destino + 1} de ${orden1.length}.`;
+      evaluar1();
+    }
+
+    function evaluar1() {
+      const { total, r } = reglas1();
+      const n = r.filter(x => x.ok).length;
+      $('#totalMin').textContent = fmt(total);
+      $('#reglasOk').textContent = `${n}/${r.length}`;
+      $('#lineaTiempo').replaceChildren(...orden1.filter(id => tiempos[id] > 0).map(id =>
+        el('span', { style: `flex:${tiempos[id]} 1 0;background:${SECCIONES[id].color}`, title: `${SECCIONES[id].t}: ${fmt(tiempos[id])} min` }, SECCIONES[id].c)));
+      $('#reglas1').replaceChildren(...r.map(x => el('li', { class: x.ok ? 'si' : 'no' }, el('strong', {}, `${x.ok ? '✓' : '✗'} ${x.t}. `), x.ok ? x.si : x.no)));
+      if (n === r.length && !reto1Hecho) {
+        reto1Hecho = true;
+        prog.marcar('reto1');
+        retro('#retro1', 'ok', '<strong>✓ ¡Guion ejecutivo listo!</strong> Conclusión, riesgo, impacto y decisión ocupan la primera mitad: aunque te interrumpan, el mensaje ya llegó. La evidencia técnica respalda y las preguntas cierran. Ahora pruébalo con el cronómetro de práctica.');
+      } else if (n < r.length && reto1Hecho) {
+        reto1Hecho = false;
+        retro('#retro1', 'aviso', 'Cambiaste el guion y ya no cumple todas las reglas: revisa las marcadas con ✗.');
+      }
+    }
+
+    function reiniciar1() {
+      orden1 = ORDEN_INICIAL.slice();
+      tiempos = Object.fromEntries(ORDEN_INICIAL.map(id => [id, 1.5]));
+      reto1Hecho = false;
+      pintarSecciones();
+      $('#estado1').textContent = '';
+      retro('#retro1', '', '');
+      evaluar1();
+    }
+    $('#reiniciar1').addEventListener('click', reiniciar1);
+    reiniciar1();
+
+    /* ================= Reto 2 · Lenguaje ejecutivo ================= */
+    const CRIT2 = ['Sin jerga', 'Explica el impacto', 'Propone una acción', 'Fiel a los datos'];
+    const HALLAZGOS = [
+      { tec: 'Detectamos 1,284 intentos de T1110 (fuerza bruta) contra la VPN desde 37 IPs del bloque 198.51.100.0/24 en 72 h.', op: [
+        { t: 'Hubo 1,284 eventos T1110 desde 37 IPs del bloque 198.51.100.0/24 contra la VPN.', c: [0, 0, 0, 1], exp: 'Es el mismo hallazgo técnico con otras palabras: la dirección no sabe qué es T1110 ni qué decidir.' },
+        { t: 'Alguien intenta adivinar de forma masiva las contraseñas del acceso remoto; si lo logra, entraría como un empleado. Recomendamos activar la verificación en dos pasos en la VPN esta semana.', c: [1, 1, 1, 1], ok: true, exp: 'Traduce la técnica a algo comprensible, dice qué pasaría si funciona y pide una acción con plazo.' },
+        { t: 'Estamos bajo un ataque gravísimo y podríamos perderlo todo.', c: [1, 0, 0, 0], exp: 'Alarmista y vago: exagera lo que muestran los datos, no propone nada y le resta credibilidad a tu equipo.' }
+      ] },
+      { tec: 'El MTTR de incidentes críticos subió de 3.8 h a 6.1 h en el trimestre.', op: [
+        { t: 'El MTTR aumentó 60.5 % trimestre contra trimestre.', c: [0, 0, 0, 1], exp: 'Es exacto, pero usa siglas y no dice por qué importa ni qué hacer.' },
+        { t: 'El equipo del SOC está trabajando mal.', c: [1, 0, 0, 0], exp: 'Culpa a personas sin evidencia y no explica el impacto: genera defensividad, no decisiones.' },
+        { t: 'Hoy tardamos 6 horas en contener un incidente crítico, frente a menos de 4 el trimestre pasado: cada hora extra le da al atacante más tiempo para moverse. Proponemos cubrir el turno nocturno.', c: [1, 1, 1, 1], ok: true, exp: 'Convierte la métrica en tiempo concreto, explica el riesgo de cada hora y propone una acción.' }
+      ] },
+      { tec: 'Cobertura de 64 % de las técnicas prioritarias de ATT&CK; huecos en movimiento lateral (TA0008).', op: [
+        { t: 'Detectamos bien cómo entran los atacantes, pero no lo que hacen una vez dentro de la red. Cerrar ese punto ciego requiere dos reglas nuevas y un mes de trabajo.', c: [1, 1, 1, 1], ok: true, exp: 'Explica el hueco con una imagen clara y dimensiona el esfuerzo para cerrarlo.' },
+        { t: 'Tenemos 64 % de cobertura ATT&CK con huecos en TA0008.', c: [0, 0, 0, 1], exp: 'Correcto para el equipo técnico; para la dirección, TA0008 no significa nada.' },
+        { t: 'La cobertura es aceptable; no se requiere ninguna acción.', c: [1, 0, 0, 0], exp: 'Minimiza el hallazgo: hay un punto ciego concreto que un atacante podría aprovechar.' }
+      ] },
+      { tec: 'El EDR bloqueó T1486 (cifrado para impacto) en 3 hosts de Finanzas; sin evidencia de exfiltración.', op: [
+        { t: 'No pasó nada grave: el antivirus funcionó.', c: [1, 0, 0, 0], exp: 'Minimiza: fue un intento real de ransomware y el riesgo de que vuelvan a intentarlo sigue.' },
+        { t: 'Detuvimos un intento de ransomware en tres equipos de Finanzas antes de que cifrara información y no hay evidencia de robo de datos. El riesgo sigue: recomendamos investigar cómo entró antes del cierre de mes.', c: [1, 1, 1, 1], ok: true, exp: 'Da la buena noticia sin minimizar, aclara lo que no sabemos y propone el siguiente paso con plazo.' },
+        { t: 'El EDR bloqueó T1486 en 3 endpoints de FIN; los IoC no muestran exfiltración.', c: [0, 0, 0, 1], exp: 'Siglas y códigos (EDR, T1486, FIN, IoC): es un reporte técnico, no un mensaje ejecutivo.' }
+      ] },
+      { tec: 'La tasa de falsos positivos de la regla de phishing bajó de 42 % a 12 % tras el ajuste.', op: [
+        { t: 'Ya no tenemos falsas alarmas.', c: [1, 0, 0, 0], exp: 'Exagera: todavía 12 % de las alertas son falsas.' },
+        { t: 'Tasa de falsos positivos: de 42 % a 12 % (−30 puntos porcentuales).', c: [0, 0, 0, 1], exp: 'Fiel a los datos, pero no explica qué gana la organización con el cambio.' },
+        { t: 'Ajustamos la regla de phishing: ahora casi 9 de cada 10 alertas son reales (antes, 4 de cada 10 eran falsas), así que el equipo dedica su tiempo a amenazas verdaderas. Proponemos aplicar el mismo ajuste a otras reglas.', c: [1, 1, 1, 1], ok: true, exp: 'Convierte porcentajes en proporciones fáciles de imaginar y conecta el cambio con el tiempo del equipo.' }
+      ] }
+    ];
+    const correctas2 = new Set();
+
+    function construir2() {
+      correctas2.clear();
+      $('#hallazgos').replaceChildren(...HALLAZGOS.map((h, i) => el('div', { class: 'hallazgo', id: 'hall' + i },
+        el('p', { class: 'tecnico' }, el('strong', {}, `Hallazgo ${i + 1} (técnico): `), h.tec),
+        el('fieldset', { style: 'border:0;padding:0;margin:0;min-width:0' }, el('legend', { class: 'oculto-visual' }, `Versión ejecutiva del hallazgo ${i + 1}`),
+          h.op.map((o, k) => el('label', { class: 'opcion' },
+            el('input', { type: 'radio', name: 'h' + i, value: k, onchange: () => responder2(i, k) }), el('span', {}, o.t)))),
+        el('div', { id: 'fb2-' + i }))));
+    }
+
+    function responder2(i, k) {
+      const o = HALLAZGOS[i].op[k], caja = $('#hall' + i);
+      caja.classList.remove('ok', 'mal');
+      caja.classList.add(o.ok ? 'ok' : 'mal');
+      if (o.ok) correctas2.add(i); else correctas2.delete(i);
+      $('#fb2-' + i).replaceChildren(
+        el('ul', { class: 'criterios' }, CRIT2.map((n, j) => el('li', { class: o.c[j] ? 'si' : 'no' }, (o.c[j] ? '✓ ' : '✗ ') + n))),
+        el('p', { class: 'explica' }, el('strong', {}, o.ok ? '✓ La mejor versión. ' : '✗ Hay una mejor. '), o.exp));
+      if (correctas2.size === HALLAZGOS.length) {
+        prog.marcar('reto2');
+        retro('#retro2', 'ok', '<strong>✓ ¡5 de 5!</strong> El patrón ejecutivo: <em>qué pasa</em> (sin jerga) + <em>por qué importa</em> (impacto) + <em>qué proponemos</em> (acción con plazo), sin exagerar ni minimizar. Guarda los códigos ATT&amp;CK para la sección de evidencia técnica.');
+      } else {
+        retro('#retro2', o.ok ? 'aviso' : 'mal', `Hallazgo ${i + 1}: ${o.ok ? '✓ correcto' : '✗ revisa las etiquetas'}. Llevas ${correctas2.size} de ${HALLAZGOS.length}.`);
+      }
+    }
+    $('#reiniciar2').addEventListener('click', () => { construir2(); retro('#retro2', '', ''); });
+
+    /* ================= Reto 3 · Rúbrica del PIA ================= */
+    const NIVELES = ['Excelente', 'Suficiente', 'Insuficiente', 'Sin evidencia'];
+    const PUNTOS = { 20: [20, 14, 7, 0], 15: [15, 11, 5, 0] };
+    const RUBRICA = [
+      { id: 'dataset', n: 'Pertinencia y calidad del dataset', corto: 'Dataset', max: 20,
+        d: ['Pertinente a CTI, documentado, limpio y con bitácora de calidad.', 'Pertinente y casi limpio; documentación incompleta.', 'Poco relacionado con amenazas o con errores de calidad visibles.', 'No se presenta o no se puede verificar.'],
+        tip: 'Agrega la bitácora de calidad (Semana 11) y documenta el origen de cada fuente.' },
+      { id: 'dax', n: 'Modelado y análisis DAX', corto: 'DAX', max: 20,
+        d: ['Modelo en estrella correcto y medidas con CALCULATE e inteligencia de tiempo que responden las preguntas.', 'Modelo funcional y medidas básicas correctas.', 'Relaciones confusas o medidas con errores.', 'Sin modelo ni medidas propias.'],
+        tip: 'Verifica que cada pregunta objetivo tenga una medida que la responda; usa CALCULATE e inteligencia de tiempo (Semanas 7 a 9).' },
+      { id: 'conclusiones', n: 'Profundidad de conclusiones', corto: 'Conclusiones', max: 15,
+        d: ['Accionables, sostenidas por los datos y con sus límites explícitos.', 'Correctas, pero solo descriptivas.', 'Sin sustento o confunden correlación con causalidad.', 'No hay conclusiones.'],
+        tip: 'Por cada conclusión escribe qué sostienen los datos y qué no, y qué decisión habilita (Semana 12).' },
+      { id: 'visual', n: 'Calidad de las visualizaciones', corto: 'Visuales', max: 15,
+        d: ['Tres vistas con jerarquía visual, gráficos adecuados y marcadores o tooltips.', 'Tres vistas legibles con detalles de diseño por mejorar.', 'Vistas saturadas o gráficos inadecuados.', 'Faltan vistas.'],
+        tip: 'Aplica las reglas de jerarquía visual y revisa tu marcador o tooltip (Semanas 12 y 13).' },
+      { id: 'oral', n: 'Comunicación oral ejecutiva', corto: 'Oral', max: 15,
+        d: ['Conclusión primero, lenguaje de negocio, 10 minutos exactos y respuestas sólidas.', 'Estructura clara con algo de jerga o desfase de tiempo.', 'Recorrido técnico sin conclusión o fuera de tiempo.', 'No se presenta.'],
+        tip: 'Ensaya con el cronómetro: conclusión en el primer minuto y lenguaje de negocio (Retos 1 y 2).' },
+      { id: 'repo', n: 'Repositorio de GitHub completo', corto: 'Repositorio', max: 15,
+        d: ['PBIP, README, documento de audiencia y Pull Requests revisados por ambos integrantes.', 'Completo, pero con pocos Pull Requests o sin revisión.', 'Faltan archivos clave o hay cambios directos sin Pull Request.', 'Sin repositorio.'],
+        tip: 'Completa el README y asegúrate de que cada cambio entró por un Pull Request revisado (Semanas 5 y 14).' }
+    ];
+
+    function construir3() {
+      $('#rubrica').replaceChildren(...RUBRICA.map(c => el('div', { class: 'criterio' },
+        el('fieldset', {}, el('legend', {}, `${c.n} (${c.max} puntos)`),
+          el('div', { class: 'niveles' }, NIVELES.map((nv, k) => el('label', { class: 'nivel' },
+            el('input', { type: 'radio', name: 'rub-' + c.id, value: k, onchange: calcular3 }),
+            el('span', {}, el('strong', {}, `${nv} · ${PUNTOS[c.max][k]} pts`), el('small', {}, c.d[k])))))))));
+      calcular3();
+    }
+
+    function calcular3() {
+      const sel = RUBRICA.map(c => { const r = document.querySelector(`input[name="rub-${c.id}"]:checked`); return r ? Number(r.value) : null; });
+      const pts = RUBRICA.map((c, i) => (sel[i] === null ? 0 : PUNTOS[c.max][sel[i]]));
+      const total = pts.reduce((a, b) => a + b, 0);
+      const evaluados = sel.filter(x => x !== null).length;
+      $('#puntos100').textContent = total;
+      $('#puntos30').textContent = ICCA.num(total * 0.3, 1);
+      $('#evaluados').textContent = `${evaluados}/${RUBRICA.length}`;
+      ICCA.barras('#grafica3', RUBRICA.map((c, i) => ({ etiqueta: c.corto, valor: sel[i] === null ? 0 : Math.round(pts[i] / c.max * 100), resaltar: sel[i] !== null && pts[i] / c.max < 0.7 })),
+        { titulo: 'Porcentaje logrado por criterio (en rojo: menos de 70 %)', unidad: ' %' });
+      const brechas = RUBRICA.map((c, i) => ({ c, gap: sel[i] === null ? 0 : c.max - pts[i] })).filter(x => x.gap > 0).sort((a, b) => b.gap - a.gap);
+      $('#prioridades').replaceChildren(...(brechas.length ? [el('h3', {}, 'Dónde ganar más puntos'),
+        el('ol', {}, brechas.map(({ c, gap }) => el('li', {}, el('strong', {}, `${c.n}: hasta ${gap} ${gap === 1 ? 'punto' : 'puntos'} más. `), c.tip)))] : []));
+      if (evaluados === RUBRICA.length) {
+        prog.marcar('reto3');
+        const foco = brechas.length ? ` Tu mayor oportunidad está en <strong>${brechas[0].c.n}</strong>.` : ' ¡Todo en Excelente! Asegúrate de que la evidencia lo demuestre en la defensa.';
+        retro('#retro3', 'ok', `<strong>✓ Autoevaluación completa:</strong> ${total} de 100 puntos, que equivalen a ${ICCA.num(total * 0.3, 1)} de los 30 puntos del PIA.${foco} Repite la autoevaluación después de tus mejoras: la diferencia es tu avance.`);
+      } else if (evaluados) {
+        retro('#retro3', 'aviso', `Llevas ${evaluados} de ${RUBRICA.length} criterios. Evalúa todos para ver tu estimación completa.`);
+      }
+    }
+    $('#reiniciar3').addEventListener('click', () => { construir3(); retro('#retro3', '', ''); });
+
+    /* ================= Cronómetro de práctica ================= */
+    const DURACION = 600;
+    let acumulado = 0, inicio = null, intervalo = null, factor = 1, ultimoTexto = '';
+    const mmss = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    const transcurrido = () => acumulado + (inicio === null ? 0 : (Date.now() - inicio) / 1000 * factor);
+
+    function planCrono() {
+      let t = 0;
+      return orden1.filter(id => tiempos[id] > 0).map(id => { const ini = t; t += tiempos[id] * 60; return { id, ini, fin: t }; });
+    }
+
+    function pintarCrono() {
+      const t = Math.min(DURACION, transcurrido()), resta = DURACION - t;
+      $('#reloj').textContent = mmss(Math.ceil(resta));
+      $('#reloj').classList.toggle('final', resta <= 60);
+      $('#barraCrono').style.width = (t / DURACION * 100).toFixed(2) + '%';
+      let texto;
+      if (t === 0 && inicio === null) texto = 'Pulsa Iniciar cuando comiences a hablar.';
+      else if (resta <= 0) texto = '¡Tiempo! Cierra con tu conclusión y la decisión que necesitas.';
+      else {
+        const s = planCrono().find(p => t >= p.ini && t < p.fin);
+        texto = s ? `Ahora: ${SECCIONES[s.id].t} (hasta el minuto ${mmss(s.fin)})` : 'Tu guion ya terminó: según tu plan te sobra tiempo.';
+        if (resta <= 60) texto = 'Último minuto. ' + texto;
+        if (inicio === null) texto = 'En pausa. ' + texto;
+      }
+      if (texto !== ultimoTexto) { $('#seccionActual').textContent = texto; ultimoTexto = texto; }
+    }
+
+    function detener() {
+      acumulado = Math.min(DURACION, transcurrido());
+      inicio = null;
+      if (intervalo !== null) { clearInterval(intervalo); intervalo = null; }
+      $('#iniciarCrono').disabled = false;
+      $('#pausarCrono').disabled = true;
+    }
+
+    $('#iniciarCrono').addEventListener('click', () => {
+      if (intervalo !== null) return;
+      if (transcurrido() >= DURACION) acumulado = 0;
+      inicio = Date.now();
+      intervalo = setInterval(() => { pintarCrono(); if (transcurrido() >= DURACION) { detener(); pintarCrono(); } }, 200);
+      $('#iniciarCrono').disabled = true;
+      $('#pausarCrono').disabled = false;
+      pintarCrono();
+    });
+    $('#pausarCrono').addEventListener('click', () => { detener(); pintarCrono(); });
+    $('#reiniciarCrono').addEventListener('click', () => { detener(); acumulado = 0; pintarCrono(); });
+    $('#velocidad').addEventListener('change', e => {
+      acumulado = transcurrido();
+      if (inicio !== null) inicio = Date.now();
+      factor = Number(e.target.value);
+    });
+
+    construir2();
+    construir3();
+    pintarCrono();
+  </script>
+</body>
+</html>

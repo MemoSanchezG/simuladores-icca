@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 1 · Del dato a la inteligencia | Simuladores ICCA</title>
+  <meta name="description" content="Distingue dato, información e inteligencia, asigna productos de CTI a su nivel de consumo, ordena el ciclo de inteligencia y construye tu primer visual de Power BI con eventos de autenticación ficticios.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > * { min-width: 0; }
+    .item { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface); display: flex; flex-direction: column; gap: 8px; }
+    .item > p { margin: 0; }
+    .item .num { font-size: .8rem; font-weight: 700; color: var(--muted); }
+    .item.bien { border-color: var(--ok); background: var(--ok-soft); }
+    .item.malo { border-color: var(--bad); background: var(--bad-soft); }
+    .explica { font-size: .92rem; margin: 0; }
+    .explica:empty { display: none; }
+    .grupo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .grupo-chips .chip { margin: 0; }
+    .fila-nivel { display: grid; grid-template-columns: 1fr minmax(10rem, 14rem); gap: 10px; align-items: start; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin: 8px 0; }
+    .fila-nivel.bien { border-color: var(--ok); background: var(--ok-soft); }
+    .fila-nivel.malo { border-color: var(--bad); background: var(--bad-soft); }
+    .fila-nivel p { margin: 0; }
+    .fila-nivel select { width: 100%; }
+    .fila-nivel .explica { grid-column: 1 / -1; }
+    @media (max-width: 600px) { .fila-nivel { grid-template-columns: 1fr; } }
+    .orden { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+    .orden li { display: grid; grid-template-columns: 2.2rem 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: var(--surface); }
+    .orden li.bien { border-color: var(--ok); background: var(--ok-soft); }
+    .orden li.malo { border-color: var(--bad); background: var(--bad-soft); }
+    .orden .pos { width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; background: var(--accent-2); color: var(--surface); font-weight: 700; }
+    .orden .desc { display: block; font-size: .88rem; color: var(--muted); font-weight: 400; }
+    .orden .flechas { display: flex; gap: 4px; }
+    .orden .flechas button { min-width: 44px; padding: 6px 10px; }
+    .panel { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--surface); min-width: 0; }
+    .panel h3 { margin-top: 0; }
+    .panel select { width: 100%; }
+    .lienzo { min-height: 240px; }
+    .tit-visual { font-weight: 600; margin: 0 0 8px; }
+    .filtro-activo { font-size: .85rem; color: var(--muted); margin: 8px 0 0; }
+    .hbarras { display: grid; gap: 6px; }
+    .hbarra { display: grid; grid-template-columns: minmax(5.5rem, 8.5rem) 1fr 2.5rem; gap: 8px; align-items: center; font-size: .9rem; }
+    .hbarra .et { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hbarra .pista { height: 18px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+    .hbarra .relleno { display: block; height: 100%; background: var(--accent-2); border-radius: 6px; }
+    .hbarra .v { text-align: right; font-variant-numeric: tabular-nums; }
+    .tarjeta-kpi { display: grid; place-items: center; min-height: 200px; text-align: center; }
+    .tarjeta-kpi .valor { font-size: 3.2rem; }
+    .leyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .85rem; margin-top: 8px; }
+    .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .leyenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    .pastel { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 12px; align-items: center; }
+    @media (max-width: 520px) { .pastel { grid-template-columns: 1fr; } }
+    .resp { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-top: 10px; }
+    .resp .campo { margin: 0; }
+    .ciclo-svg { max-width: 420px; margin: 0 auto; display: block; }
+    .nota { font-size: .88rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 1 · Del dato a la inteligencia</h1>
+      <p class="subtitulo">Un dato aislado no protege a nadie: se vuelve inteligencia cuando alguien lo pone en contexto, lo evalúa y recomienda qué hacer. Aquí practicarás ese recorrido y armarás tu primer visual de Power BI para responder una pregunta concreta.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás <strong>distinguir</strong> dato, información e inteligencia; <strong>asignar</strong> un producto de inteligencia a su nivel de consumo; <strong>ordenar</strong> las etapas del ciclo de inteligencia, y <strong>elegir</strong> el eje, el valor y el tipo de visual que responden una pregunta sobre eventos de autenticación.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Resuelve los retos en orden; cada uno se revisa con su botón y te explica el porqué de cada respuesta.</li>
+          <li>Si te equivocas, corrige y vuelve a revisar: la barra de progreso avanza cuando un reto queda completo.</li>
+          <li>En el Reto 4 arma el visual como en el panel Visualizaciones de Power BI y léelo para contestar.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · ¿Dato, información o inteligencia?</h2>
+      <p>Clasifica cada tarjeta. Recuerda: el <strong>dato</strong> es un hecho aislado; la <strong>información</strong> es el dato con contexto inmediato (agrupado, comparado o ubicado en el tiempo); la <strong>inteligencia</strong> es información evaluada que explica qué significa para la organización y recomienda qué hacer.</p>
+      <div id="r1-lista" class="rejilla"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r1-revisar">Revisar clasificación</button>
+        <button type="button" id="r1-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · ¿Para quién es este producto?</h2>
+      <p>La inteligencia se clasifica por su audiencia. Elige el nivel de consumo de cada producto; la tabla de resumen se actualiza mientras respondes.</p>
+      <div id="r2-lista"></div>
+      <div class="tabla-scroll" style="margin-top:12px">
+        <table class="datos">
+          <caption class="oculto-visual">Resumen de productos asignados a cada nivel de consumo</caption>
+          <thead><tr><th scope="col">Nivel</th><th scope="col">Quién lo consume</th><th scope="col">De qué habla</th><th scope="col">Productos que asignaste</th></tr></thead>
+          <tbody id="r2-resumen"></tbody>
+        </table>
+      </div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r2-revisar">Revisar niveles</button>
+        <button type="button" id="r2-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Ordena el ciclo de inteligencia</h2>
+      <p>Las seis etapas están revueltas. Usa los botones ↑ y ↓ para acomodarlas en el orden en que se produce la inteligencia. El diagrama dibuja el ciclo con tu orden actual.</p>
+      <div class="dos-columnas">
+        <ol class="orden" id="r3-lista" aria-describedby="r3-ayuda"></ol>
+        <div id="r3-diagrama" aria-hidden="true"></div>
+      </div>
+      <p id="r3-ayuda" class="oculto-visual">Cada etapa tiene botones para subirla o bajarla una posición.</p>
+      <p id="r3-anuncio" class="oculto-visual" aria-live="polite"></p>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-revisar">Revisar orden</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto4">
+      <h2 id="reto4">Reto 4 · Tu primer visual</h2>
+      <p>Tienes una semana de eventos de autenticación ficticios de la FCFM (del lunes 3 al domingo 9 de agosto de 2026). Así se ven las primeras filas en la <strong>Vista de tabla</strong>:</p>
+      <div class="tabla-scroll" id="r4-tabla"></div>
+      <p class="nota" id="r4-filas"></p>
+      <h3>Elige la pregunta que vas a responder</h3>
+      <div class="grupo-chips" id="r4-preguntas" role="group" aria-label="Preguntas del reto 4"></div>
+      <p id="r4-enunciado" style="font-weight:600"></p>
+      <div class="dos-columnas">
+        <div class="panel">
+          <h3>Visualizaciones</h3>
+          <p class="nota" style="margin-top:0">Tipo de visual</p>
+          <div class="grupo-chips" id="r4-tipos" role="group" aria-label="Tipo de visual"></div>
+          <div class="campo">
+            <label for="r4-eje">Eje (categoría)</label>
+            <select id="r4-eje"></select>
+          </div>
+          <div class="campo">
+            <label for="r4-valor">Valores</label>
+            <select id="r4-valor"></select>
+          </div>
+          <div class="campo">
+            <label for="r4-filtro">Filtros en este objeto visual: resultado</label>
+            <select id="r4-filtro">
+              <option value="Todos">Todos</option>
+              <option value="Éxito">Éxito</option>
+              <option value="Fallo">Fallo</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel lienzo">
+          <p class="tit-visual" id="r4-titulo"></p>
+          <div id="r4-visual"></div>
+          <p class="filtro-activo" id="r4-filtro-activo"></p>
+        </div>
+      </div>
+      <div class="resp" id="r4-respuesta"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r4-comprobar">Comprobar visual y respuesta</button>
+        <button type="button" id="r4-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro4"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li>Instala <strong>Power BI Desktop</strong> (gratuito, solo para Windows) desde Microsoft Store o desde el Centro de descargas de Microsoft.</li>
+        <li>En la pestaña <strong>Inicio</strong>, elige <strong>Obtener datos › Texto/CSV</strong>, abre <code>eventos.csv</code>, revisa la vista previa y pulsa <strong>Cargar</strong>.</li>
+        <li>Recorre las vistas con los íconos de la barra izquierda: <strong>Informe</strong> (lienzo y visuales), <strong>Tabla</strong> (las filas cargadas) y <strong>Modelo</strong> (tablas y relaciones). A la derecha están los paneles <strong>Visualizaciones</strong>, <strong>Datos</strong> y <strong>Filtros</strong>.</li>
+        <li>En la vista de Informe, elige <strong>Gráfico de barras agrupadas</strong> en Visualizaciones. Arrastra el usuario a <strong>Eje Y</strong> y <code>event_id</code> a <strong>Eje X</strong>. Como <code>event_id</code> es numérico, Power BI suele <em>sumarlo</em>: abre el menú del campo y cámbialo a <strong>Recuento</strong>. (En un gráfico de columnas los ejes se invierten: categoría en Eje X, valor en Eje Y).</li>
+        <li>En el panel <strong>Filtros</strong>, arrastra el campo de resultado a <strong>Filtros en este objeto visual</strong> y marca solo los valores de fallo.</li>
+        <li>Para la tendencia diaria usa <strong>Gráfico de líneas</strong> con la fecha en Eje X. Con una columna de fecha y hora, Power BI crea una <strong>Jerarquía de fechas</strong> (Año, Trimestre, Mes, Día): baja hasta Día con <em>Expandir todo un nivel hacia abajo en la jerarquía</em> (la flecha bifurcada sobre el visual).</li>
+        <li>Para un total usa <strong>Tarjeta</strong>; para contar IPs distintas, cambia la agregación del campo a <strong>Recuento (distintos)</strong>.</li>
+      </ol>
+      <p class="nota">En el <code>eventos.csv</code> del curso las columnas se llaman <code>event_id</code>, <code>timestamp</code>, <code>username</code>, <code>hostname</code>, <code>source_ip</code> y <code>status</code>; aquí usamos nombres en español para que el ejercicio se lea más fácil.</p>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Tu dashboard de inteligencia de amenazas es un <strong>producto de diseminación</strong>: cada vista debe llevar a su audiencia del dato a la inteligencia. El resumen ejecutivo habla en nivel estratégico u operacional; el detalle técnico con MITRE ATT&amp;CK, en nivel táctico; los KPIs de seguimiento ayudan a medir. Antes del checkpoint-1 (Semana 5), anota en equipo tres preguntas de inteligencia que tu dashboard debe responder y el visual que usarías para cada una: ese será tu primer boceto.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(1);
+    const { el, $, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 4);
+
+    /* ---------- utilidades ---------- */
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const dos = n => String(n).padStart(2, '0');
+    const DIAS_SEM = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    const DIAS_LARGO = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    function diaSemana(iso) { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); }
+    const diaCorto = iso => `${DIAS_SEM[diaSemana(iso)]} ${Number(iso.slice(8, 10))}`;
+    const diaLargo = iso => `${DIAS_LARGO[diaSemana(iso)]} ${Number(iso.slice(8, 10))} de agosto`;
+
+    function marcarChips(grupo, valor) {
+      grupo.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.valor === valor)));
+    }
+
+    /* =========================================================
+       Reto 1 · Dato / Información / Inteligencia
+       ========================================================= */
+    const TARJETAS = ICCA.barajar([
+      { t: 'La IP <code>203.0.113.45</code> aparece en una línea del log del firewall.', r: 'Dato', e: 'Es un hecho aislado: no sabemos cuántas veces aparece, contra qué equipo ni si importa.' },
+      { t: 'Registro: <code>2026-08-08 01:14:09 · jtrevino · Fallo</code>.', r: 'Dato', e: 'Un solo evento, sin agrupar ni comparar: es la materia prima del análisis.' },
+      { t: 'Hash SHA-256 de un archivo adjunto: <code>9f2c…e81a</code>.', r: 'Dato', e: 'Un identificador sin contexto: no dice si el archivo es malicioso ni a quién llegó.' },
+      { t: 'Línea del visor de eventos: <code>FCFM-TI-01 · ID 4625</code>.', r: 'Dato', e: '4625 es el identificador de Windows para un inicio de sesión fallido. Como registro suelto, sigue siendo un dato.' },
+      { t: 'La IP 203.0.113.45 generó 9 inicios de sesión fallidos contra la cuenta jtrevino entre la 01:00 y las 02:00 del sábado.', r: 'Información', e: 'Los datos ya están agrupados y ubicados en el tiempo: hay contexto inmediato, pero todavía no hay evaluación ni recomendación.' },
+      { t: 'Los fallos de autenticación del fin de semana triplicaron el promedio de los días hábiles.', r: 'Información', e: 'Compara periodos: es un dato procesado con contexto. Aún no explica por qué ocurrió ni qué hacer.' },
+      { t: 'El 60 % de los fallos de la semana se concentra en tres cuentas de Servicios Escolares.', r: 'Información', e: 'Es una agregación (proporción por cuenta): describe lo que pasó, sin juicio sobre la amenaza ni acción sugerida.' },
+      { t: 'El adjunto con hash 9f2c…e81a llegó a 14 buzones desde el dominio <code>facturas-pago.example</code>.', r: 'Información', e: 'Relaciona el hash con su alcance (14 buzones) y su origen: contexto inmediato, todavía sin evaluar intención ni riesgo.' },
+      { t: 'La IP 203.0.113.45 es infraestructura de «Grupo Nómada», que ataca universidades con fuerza bruta: bloquéala y revisa los últimos 90 días de autenticación.', r: 'Inteligencia', e: 'Evalúa quién está detrás y qué busca, y recomienda acciones concretas: es inteligencia accionable.' },
+      { t: 'La campaña de falsas facturas busca robar credenciales del personal administrativo; activa MFA en esas cuentas antes del cierre de semestre.', r: 'Inteligencia', e: 'Explica la intención del adversario y recomienda qué hacer y cuándo.' },
+      { t: 'Por el horario y las cuentas elegidas, es probable un ataque de diccionario dirigido; prioriza restablecer las contraseñas de esas tres cuentas.', r: 'Inteligencia', e: 'Hay juicio analítico («es probable») y una recomendación priorizada: eso ya no es solo describir.' },
+      { t: 'El ransomware contra universidades creció este año; conviene invertir en respaldos fuera de línea en el próximo presupuesto.', r: 'Inteligencia', e: 'Tendencia evaluada más su implicación para una decisión de la dirección: inteligencia de nivel estratégico.' }
+    ], 11);
+    const OPC1 = ['Dato', 'Información', 'Inteligencia'];
+    const resp1 = new Array(TARJETAS.length).fill(null);
+
+    function pintarReto1() {
+      const lista = $('#r1-lista');
+      lista.replaceChildren(...TARJETAS.map((c, i) => {
+        const grupo = el('div', { class: 'grupo-chips', role: 'group', 'aria-label': `Clasificación de la tarjeta ${i + 1}` },
+          OPC1.map(op => el('button', {
+            type: 'button', class: 'chip', 'aria-pressed': String(resp1[i] === op), dataset: { valor: op },
+            onclick: () => { resp1[i] = op; marcarChips(grupo, op); limpiarItem(i); }
+          }, op)));
+        return el('article', { class: 'item', id: `r1-item-${i}` },
+          el('span', { class: 'num' }, `Tarjeta ${i + 1}`),
+          el('p', { html: c.t }), grupo, el('p', { class: 'explica', id: `r1-exp-${i}` }));
+      }));
+    }
+    function limpiarItem(i) {
+      const it = $(`#r1-item-${i}`);
+      it.classList.remove('bien', 'malo');
+      $(`#r1-exp-${i}`).textContent = '';
+    }
+    $('#r1-revisar').addEventListener('click', () => {
+      let bien = 0, vacias = 0;
+      TARJETAS.forEach((c, i) => {
+        const it = $(`#r1-item-${i}`), ex = $(`#r1-exp-${i}`);
+        it.classList.remove('bien', 'malo');
+        if (!resp1[i]) { vacias++; ex.textContent = 'Sin responder.'; return; }
+        if (resp1[i] === c.r) { bien++; it.classList.add('bien'); ex.innerHTML = `<strong>✓ Correcto: ${c.r}.</strong> ${c.e}`; }
+        else { it.classList.add('malo'); ex.innerHTML = `<strong>✗ No es ${resp1[i].toLowerCase()}, es ${c.r.toLowerCase()}.</strong> ${c.e}`; }
+      });
+      if (bien === TARJETAS.length) {
+        retro('#retro1', 'ok', `<strong>¡${bien} de ${TARJETAS.length}!</strong> Fíjate en el patrón: la información <em>describe</em> lo que pasó; la inteligencia <em>evalúa</em> (quién, por qué, qué tan probable) y <em>recomienda</em> una acción a alguien que debe decidir.`);
+        prog.marcar('r1');
+      } else {
+        retro('#retro1', vacias ? 'aviso' : 'mal', `Llevas <strong>${bien} de ${TARJETAS.length}</strong>${vacias ? ` y ${vacias} sin responder` : ''}. Lee la explicación de cada tarjeta marcada con ✗. Pista: si el texto recomienda algo o hace un juicio («es probable», «busca robar»), ya es inteligencia; si solo agrupa o compara, es información.`);
+      }
+    });
+    $('#r1-reiniciar').addEventListener('click', () => { resp1.fill(null); pintarReto1(); retro('#retro1', '', ''); });
+    pintarReto1();
+
+    /* =========================================================
+       Reto 2 · Niveles de consumo
+       ========================================================= */
+    const NIVELES = [
+      { n: 'Estratégica', quien: 'Consejo, dirección, CISO', que: 'Tendencias y riesgo de largo plazo para decidir inversión y prioridades' },
+      { n: 'Operacional', quien: 'Gerencia de seguridad', que: 'Campañas y actores concretos que se dirigen a la organización o su sector' },
+      { n: 'Táctica', quien: 'Analistas SOC y threat hunters', que: 'TTPs: cómo opera el adversario, para diseñar detecciones y búsquedas' },
+      { n: 'Técnica', quien: 'Herramientas: firewall, EDR, SIEM, proxy', que: 'IOCs consumibles por máquinas (IPs, hashes, dominios); caducan rápido' }
+    ];
+    const PRODUCTOS = [
+      { t: 'Informe trimestral para el consejo universitario: tendencias de ransomware en el sector educativo y su impacto en el presupuesto de TI.', r: 'Estratégica', e: 'Lo usa la alta dirección para decidir inversión: habla de tendencias y riesgo, no de IPs ni de técnicas.' },
+      { t: 'Aviso para la gerencia de seguridad: «Colectivo Fénix» lanzó una campaña activa contra universidades de la región durante el periodo de inscripciones.', r: 'Operacional', e: 'Es una campaña concreta y cercana en el tiempo: ayuda a la gerencia a planear recursos, turnos y avisos a usuarios.' },
+      { t: 'Ficha para el SOC: cómo «Grupo Nómada» usa cuentas válidas (T1078) y fuerza bruta (T1110) después de una filtración de contraseñas.', r: 'Táctica', e: 'Describe TTPs, es decir, cómo opera el adversario. Los analistas la usan para diseñar detecciones y hipótesis de hunting.' },
+      { t: 'Lista de 25 IPs y 10 hashes para cargar hoy en el firewall y en el EDR.', r: 'Técnica', e: 'Son IOCs que consumen directamente las herramientas automatizadas; pierden valor en días porque el adversario los cambia fácilmente.' },
+      { t: 'Análisis del riesgo regulatorio y geopolítico de alojar datos de estudiantes en la nube durante los próximos tres años.', r: 'Estratégica', e: 'Horizonte de años y una decisión de negocio: es material para la dirección, no para el SOC.' },
+      { t: 'Dominios de phishing recién registrados (<code>facturas-pago.example</code>, <code>portal-becas.test</code>) en formato STIX para importarlos al proxy.', r: 'Técnica', e: 'Indicadores listos para que una herramienta los bloquee; STIX es un formato pensado para compartir y automatizar.' },
+      { t: 'Guía para analistas: secuencia típica de acceso inicial por phishing y robo de credenciales, con las técnicas ATT&amp;CK asociadas y cómo detectarlas.', r: 'Táctica', e: 'Explica procedimientos del adversario y cómo detectarlos: el lenguaje de las TTPs es táctico.' },
+      { t: 'Pronóstico para la gerencia: el actor que atacó a otra universidad del estado prepara una segunda ola la próxima semana; conviene reforzar la mesa de ayuda y avisar a los usuarios.', r: 'Operacional', e: 'Anticipa una operación específica del adversario contra tu sector y propone preparación inmediata: nivel operacional.' }
+    ];
+    const resp2 = new Array(PRODUCTOS.length).fill('');
+
+    function pintarReto2() {
+      $('#r2-lista').replaceChildren(...PRODUCTOS.map((p, i) => {
+        const sel = el('select', { id: `r2-sel-${i}`, 'aria-label': `Nivel de consumo del producto ${i + 1}`, onchange: e => { resp2[i] = e.target.value; const f = $(`#r2-fila-${i}`); f.classList.remove('bien', 'malo'); $(`#r2-exp-${i}`).textContent = ''; pintarResumen2(); } },
+          el('option', { value: '' }, '— Elige el nivel —'), NIVELES.map(n => el('option', { value: n.n }, n.n)));
+        sel.value = resp2[i];
+        return el('div', { class: 'fila-nivel', id: `r2-fila-${i}` },
+          el('p', { html: `<strong>${i + 1}.</strong> ${p.t}` }), sel, el('p', { class: 'explica', id: `r2-exp-${i}` }));
+      }));
+      pintarResumen2();
+    }
+    function pintarResumen2() {
+      $('#r2-resumen').replaceChildren(...NIVELES.map(n => {
+        const asignados = resp2.map((r, i) => r === n.n ? `#${i + 1}` : null).filter(Boolean);
+        return el('tr', {}, el('th', { scope: 'row' }, n.n), el('td', { style: 'white-space:normal' }, n.quien), el('td', { style: 'white-space:normal' }, n.que),
+          el('td', {}, asignados.length ? asignados.join(', ') : '—'));
+      }));
+    }
+    $('#r2-revisar').addEventListener('click', () => {
+      let bien = 0, vacias = 0;
+      PRODUCTOS.forEach((p, i) => {
+        const f = $(`#r2-fila-${i}`), ex = $(`#r2-exp-${i}`);
+        f.classList.remove('bien', 'malo');
+        if (!resp2[i]) { vacias++; ex.textContent = 'Sin responder.'; return; }
+        const quien = NIVELES.find(n => n.n === p.r).quien;
+        if (resp2[i] === p.r) { bien++; f.classList.add('bien'); ex.innerHTML = `<strong>✓ ${p.r}.</strong> ${p.e} <em>Lo consume: ${quien}.</em>`; }
+        else { f.classList.add('malo'); ex.innerHTML = `<strong>✗ No es ${resp2[i].toLowerCase()}, es ${p.r.toLowerCase()}.</strong> ${p.e} <em>Lo consume: ${quien}.</em>`; }
+      });
+      if (bien === PRODUCTOS.length) {
+        retro('#retro2', 'ok', '<strong>¡Todos en su nivel!</strong> Regla práctica: pregúntate quién lo va a leer y qué decisión tomará. La dirección decide inversión (estratégica), la gerencia prepara recursos (operacional), el SOC diseña detecciones (táctica) y las herramientas bloquean (técnica).');
+        prog.marcar('r2');
+      } else {
+        retro('#retro2', vacias ? 'aviso' : 'mal', `Llevas <strong>${bien} de ${PRODUCTOS.length}</strong>${vacias ? ` y ${vacias} sin responder` : ''}. Revisa las explicaciones marcadas con ✗ y fíjate en la audiencia: ¿lo lee una persona que decide presupuesto, una que organiza al equipo, un analista o una máquina?`);
+      }
+    });
+    $('#r2-reiniciar').addEventListener('click', () => { resp2.fill(''); pintarReto2(); retro('#retro2', '', ''); });
+    pintarReto2();
+
+    /* =========================================================
+       Reto 3 · Ciclo de inteligencia
+       ========================================================= */
+    const ETAPAS = [
+      { id: 'dir', n: 'Dirección', d: 'Definir qué preguntas debe responder la inteligencia (requerimientos).' },
+      { id: 'rec', n: 'Recolección', d: 'Reunir datos de fuentes internas y externas.' },
+      { id: 'pro', n: 'Procesamiento', d: 'Normalizar y preparar los datos para analizarlos.' },
+      { id: 'ana', n: 'Análisis', d: 'Dar sentido a los datos procesados y obtener conclusiones.' },
+      { id: 'dis', n: 'Diseminación', d: 'Entregar el producto al consumidor correcto, en el formato correcto.' },
+      { id: 'ret', n: 'Retroalimentación', d: 'El consumidor evalúa si le sirvió; eso ajusta la siguiente dirección.' }
+    ];
+    const etapa = id => ETAPAS.find(e => e.id === id);
+    function ordenInicial() {
+      const o = ICCA.barajar(ETAPAS.map(e => e.id), 7);
+      if (o.every((id, i) => id === ETAPAS[i].id)) o.reverse();
+      return o;
+    }
+    let orden3 = ordenInicial();
+    let revisado3 = false;
+
+    function mover(i, delta) {
+      const j = i + delta;
+      if (j < 0 || j >= orden3.length) return;
+      [orden3[i], orden3[j]] = [orden3[j], orden3[i]];
+      revisado3 = false;
+      pintarReto3();
+      $('#r3-anuncio').textContent = `${etapa(orden3[j]).n} ahora está en la posición ${j + 1}.`;
+      const destino = $(`#r3-${delta < 0 ? 'sube' : 'baja'}-${j}`);
+      const alterno = $(`#r3-${delta < 0 ? 'baja' : 'sube'}-${j}`);
+      (destino && !destino.disabled ? destino : alterno).focus();
+    }
+    function pintarReto3() {
+      $('#r3-lista').replaceChildren(...orden3.map((id, i) => {
+        const e = etapa(id);
+        const estado = revisado3 ? (ETAPAS[i].id === id ? 'bien' : 'malo') : '';
+        return el('li', { class: estado },
+          el('span', { class: 'pos', 'aria-hidden': 'true' }, String(i + 1)),
+          el('span', {}, el('strong', {}, `${revisado3 ? (estado === 'bien' ? '✓ ' : '✗ ') : ''}${e.n}`), el('span', { class: 'desc' }, e.d)),
+          el('span', { class: 'flechas' },
+            el('button', { type: 'button', id: `r3-sube-${i}`, 'aria-label': `Subir ${e.n} (posición ${i + 1})`, disabled: i === 0, onclick: () => mover(i, -1) }, '↑'),
+            el('button', { type: 'button', id: `r3-baja-${i}`, 'aria-label': `Bajar ${e.n} (posición ${i + 1})`, disabled: i === orden3.length - 1, onclick: () => mover(i, 1) }, '↓')));
+      }));
+      dibujarCiclo();
+    }
+    function dibujarCiclo() {
+      const cx = 250, cy = 150, R = 100, r = 21;
+      const pts = orden3.map((id, i) => {
+        const a = -Math.PI / 2 + i * Math.PI / 3;
+        return { id, x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) };
+      });
+      let s = `<svg class="ciclo-svg" viewBox="0 0 500 300" style="width:100%;height:auto;font:13px var(--font)"><defs><marker id="r3-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>`;
+      pts.forEach((p, i) => {
+        const q = pts[(i + 1) % pts.length];
+        const dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy);
+        const x1 = p.x + dx / L * (r + 3), y1 = p.y + dy / L * (r + 3), x2 = q.x - dx / L * (r + 5), y2 = q.y - dy / L * (r + 5);
+        s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#r3-flecha)"/>`;
+      });
+      pts.forEach((p, i) => {
+        const ok = revisado3 && ETAPAS[i].id === p.id, malo = revisado3 && !ok;
+        const fill = ok ? 'var(--ok)' : malo ? 'var(--bad)' : 'var(--accent-2)';
+        let lx = p.x, ly = p.y + 5, anchor = 'middle';
+        if (Math.abs(p.x - cx) < 1) ly = p.y < cy ? p.y - r - 8 : p.y + r + 18;
+        else { lx = p.x + (p.x > cx ? r + 7 : -(r + 7)); anchor = p.x > cx ? 'start' : 'end'; }
+        s += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}"/>`;
+        s += `<text x="${p.x.toFixed(1)}" y="${(p.y + 5).toFixed(1)}" text-anchor="middle" fill="var(--surface)" style="font-weight:700;font-size:14px">${i + 1}</text>`;
+        s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" fill="var(--text)" style="font-weight:600">${ok ? '✓ ' : malo ? '✗ ' : ''}${etapa(p.id).n}</text>`;
+      });
+      s += '</svg>';
+      $('#r3-diagrama').innerHTML = s;
+    }
+    $('#r3-revisar').addEventListener('click', () => {
+      revisado3 = true;
+      pintarReto3();
+      const bien = orden3.filter((id, i) => ETAPAS[i].id === id).length;
+      if (bien === ETAPAS.length) {
+        retro('#retro3', 'ok', '<strong>¡Ciclo completo!</strong> Dirección → Recolección → Procesamiento → Análisis → Diseminación → Retroalimentación, y vuelta a empezar. En Power BI: <em>Obtener datos</em> es recolección, <em>Power Query</em> es procesamiento, el modelo y DAX apoyan el análisis, el informe publicado es diseminación y los comentarios de tu audiencia son la retroalimentación.');
+        prog.marcar('r3');
+      } else {
+        const mal = orden3.map((id, i) => ETAPAS[i].id === id ? null : etapa(id).n).filter(Boolean);
+        retro('#retro3', 'mal', `Tienes <strong>${bien} de 6</strong> en su lugar. Revisa: ${mal.join(', ')}. Pista: todo empieza por saber qué pregunta responder; no puedes analizar lo que no has procesado, ni procesar lo que no has recolectado, y la retroalimentación llega después de entregar el producto.`);
+      }
+    });
+    $('#r3-reiniciar').addEventListener('click', () => { orden3 = ordenInicial(); revisado3 = false; pintarReto3(); retro('#retro3', '', ''); $('#r3-anuncio').textContent = ''; });
+    pintarReto3();
+
+    /* =========================================================
+       Reto 4 · Tu primer visual (datos sintéticos)
+       ========================================================= */
+    const azar = mulberry32(20260803);
+    const USUARIOS = ['jgomez', 'mrivera', 'lsantos', 'dcastillo', 'agarcia', 'rmartinez', 'cvillarreal', 'flopez', 'shernandez', 'jtrevino', 'pgonzalez', 'jcantu'];
+    const HOST_DE = { jgomez: 'FCFM-ESC-01', mrivera: 'FCFM-ESC-01', lsantos: 'FCFM-BIB-01', dcastillo: 'FCFM-LAB-03', agarcia: 'FCFM-ADM-01', rmartinez: 'FCFM-TI-01', cvillarreal: 'FCFM-DIR-01', flopez: 'FCFM-POS-01', shernandez: 'FCFM-ADM-01', jtrevino: 'FCFM-ESC-02', pgonzalez: 'FCFM-BIB-01', jcantu: 'FCFM-TI-01' };
+    const DIAS = ['2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07', '2026-08-08', '2026-08-09'];
+    function horaAzar(hMin, hMax) { return [hMin + Math.floor(azar() * (hMax - hMin + 1)), Math.floor(azar() * 60), Math.floor(azar() * 60)]; }
+    const fmtHora = ([h, m, s]) => `${dos(h)}:${dos(m)}:${dos(s)}`;
+    function sumarSeg([h, m, s], seg) { const t = h * 3600 + m * 60 + s + seg; return [Math.floor(t / 3600) % 24, Math.floor(t / 60) % 60, t % 60]; }
+
+    const EVENTOS = (() => {
+      const f = [];
+      const push = (dia, hms, usuario, host, ip, resultado) => f.push({ ts: `${dia} ${fmtHora(hms)}`, fecha: dia, usuario, host, ip, resultado });
+      DIAS.forEach((dia, d) => {
+        const finde = d >= 5;
+        USUARIOS.forEach((u, i) => {
+          const n = finde ? (azar() < 0.22 ? 1 : 0) : (azar() < 0.35 ? 2 : 1);
+          for (let k = 0; k < n; k++) {
+            const t = horaAzar(7, 19), ip = `10.20.1.${11 + i}`;
+            if (azar() < 0.14) { push(dia, t, u, HOST_DE[u], ip, 'Fallo'); push(dia, sumarSeg(t, 40 + Math.floor(azar() * 50)), u, HOST_DE[u], ip, 'Éxito'); }
+            else push(dia, t, u, HOST_DE[u], ip, 'Éxito');
+          }
+        });
+      });
+      let t = [1, 5, 12];
+      for (let k = 0; k < 9; k++) { push('2026-08-08', t, 'jtrevino', 'FCFM-ESC-02', '203.0.113.45', 'Fallo'); t = sumarSeg(t, 150 + Math.floor(azar() * 120)); }
+      t = [23, 41, 7];
+      for (let k = 0; k < 3; k++) { push('2026-08-09', t, 'cvillarreal', 'FCFM-DIR-01', '198.51.100.23', 'Fallo'); t = sumarSeg(t, 200 + Math.floor(azar() * 100)); }
+      push('2026-08-06', [22, 18, 40], 'rmartinez', 'FCFM-TI-01', '198.51.100.23', 'Fallo');
+      f.sort((a, b) => a.ts.localeCompare(b.ts));
+      f.forEach((e, i) => { e.id = 1001 + i; });
+      return f;
+    })();
+
+    const fallos = EVENTOS.filter(e => e.resultado === 'Fallo');
+    const contarPor = (filas, campo) => filas.reduce((m, e) => m.set(e[campo], (m.get(e[campo]) || 0) + 1), new Map());
+    const masAlto = mapa => [...mapa].sort((a, b) => b[1] - a[1])[0][0];
+    const RESPUESTAS = {
+      usuario: masAlto(contarPor(fallos, 'usuario')),
+      dia: masAlto(contarPor(fallos, 'fecha')),
+      total: fallos.length,
+      ips: new Set(fallos.map(e => e.ip)).size
+    };
+
+    // Vista de tabla
+    $('#r4-tabla').innerHTML = `<table class="datos"><thead><tr><th scope="col">event_id</th><th scope="col">fecha_hora</th><th scope="col">usuario</th><th scope="col">host</th><th scope="col">ip_origen</th><th scope="col">resultado</th></tr></thead><tbody>${EVENTOS.slice(0, 8).map(e => `<tr><td class="num">${e.id}</td><td>${e.ts}</td><td>${e.usuario}</td><td>${e.host}</td><td>${e.ip}</td><td>${e.resultado}</td></tr>`).join('')}</tbody></table>`;
+    $('#r4-filas').textContent = `Mostrando 8 de ${EVENTOS.length} filas cargadas.`;
+
+    const TIPOS = [
+      { id: 'barras', n: 'Gráfico de barras agrupadas' }, { id: 'columnas', n: 'Gráfico de columnas agrupadas' },
+      { id: 'lineas', n: 'Gráfico de líneas' }, { id: 'circular', n: 'Gráfico circular' },
+      { id: 'tarjeta', n: 'Tarjeta' }, { id: 'tabla', n: 'Tabla' }
+    ];
+    const EJES = { ninguno: '(sin campo)', usuario: 'usuario', host: 'host', fecha: 'fecha (día)', resultado: 'resultado', ip: 'ip_origen' };
+    const VALORES = { recuento: 'Recuento de event_id', dusuario: 'Recuento (distintos) de usuario', dip: 'Recuento (distintos) de ip_origen' };
+
+    const PREGUNTAS = [
+      {
+        texto: '¿Qué usuario acumula más inicios de sesión fallidos?', eje: 'usuario', valor: 'recuento', filtro: 'Fallo', ejeTxt: 'un valor por usuario',
+        tipos: {
+          barras: ['ok'], columnas: ['ok'],
+          tabla: ['aviso', 'una tabla también lo responde, pero tienes que leer número por número; las barras ordenadas muestran al instante quién encabeza.'],
+          circular: ['aviso', 'con muchos usuarios las rebanadas se parecen demasiado; comparar longitudes de barra es más fácil que comparar ángulos.'],
+          lineas: ['mal', 'la línea une puntos como si hubiera continuidad entre un usuario y otro. Úsala cuando el eje es tiempo.'],
+          tarjeta: ['mal', 'la tarjeta muestra un solo número total; no compara usuarios.']
+        },
+        respuesta: { tipo: 'select', etiqueta: 'Usuario con más fallos', opciones: USUARIOS.map(u => [u, u]), correcta: RESPUESTAS.usuario },
+        cierre: u => `<strong>${u}</strong> concentra los fallos: casi todos llegan de madrugada desde <code>203.0.113.45</code>, una IP externa. Eso ya es <em>información</em>; convertirla en inteligencia exige evaluar quién está detrás y qué hacer.`
+      },
+      {
+        texto: '¿Cómo evolucionan los fallos día a día? ¿Qué día tuvo el pico?', eje: 'fecha', valor: 'recuento', filtro: 'Fallo', ejeTxt: 'un valor por día',
+        tipos: {
+          lineas: ['ok'],
+          columnas: ['aviso', 'las columnas por día también sirven, aunque la línea comunica mejor la tendencia en el tiempo.'],
+          barras: ['aviso', 'las barras horizontales se ordenan por valor y desacomodan los días; para tiempo usa línea o columnas.'],
+          tabla: ['aviso', 'la tabla da los números, pero la tendencia no se ve de un vistazo.'],
+          circular: ['mal', 'un circular reparte un total en partes; no muestra cómo cambia algo en el tiempo.'],
+          tarjeta: ['mal', 'la tarjeta muestra un solo total y oculta la evolución.']
+        },
+        respuesta: { tipo: 'select', etiqueta: 'Día con más fallos', opciones: DIAS.map(d => [d, diaLargo(d)]), correcta: RESPUESTAS.dia },
+        cierre: d => `El pico es el <strong>${diaLargo(d)}</strong>: un fin de semana, cuando casi nadie inicia sesión. Un pico fuera del patrón normal es justo lo que un analista investiga.`
+      },
+      {
+        texto: '¿Cuántos inicios de sesión fallidos hubo en toda la semana?', eje: 'ninguno', valor: 'recuento', filtro: 'Fallo',
+        tipos: {
+          tarjeta: ['ok'],
+          tabla: ['aviso', 'una tabla con un solo número funciona, pero la tarjeta es el visual pensado para un indicador clave.'],
+          columnas: ['mal', 'para un solo número clave usa una tarjeta; una columna solitaria no aporta comparación.'],
+          barras: ['mal', 'para un solo número clave usa una tarjeta; una barra solitaria no aporta comparación.'],
+          lineas: ['mal', 'sin eje de tiempo, la línea no tiene nada que mostrar; para un total usa una tarjeta.'],
+          circular: ['mal', 'un circular de una sola rebanada no comunica nada; para un total usa una tarjeta.']
+        },
+        respuesta: { tipo: 'numero', etiqueta: 'Total de fallos', correcta: RESPUESTAS.total },
+        cierre: n => `Son <strong>${n}</strong> fallos. Una tarjeta con este número es un buen KPI para el encabezado de un tablero.`
+      },
+      {
+        texto: '¿Desde cuántas direcciones IP distintas se intentó iniciar sesión sin éxito?', eje: 'ninguno', valor: 'dip', filtro: 'Fallo',
+        tipos: {
+          tarjeta: ['ok'],
+          tabla: ['aviso', 'la tabla funciona, aunque la tarjeta es el visual natural para un solo indicador.'],
+          columnas: ['mal', 'la pregunta pide un solo número; usa una tarjeta.'], barras: ['mal', 'la pregunta pide un solo número; usa una tarjeta.'],
+          lineas: ['mal', 'la pregunta pide un solo número; usa una tarjeta.'], circular: ['mal', 'la pregunta pide un solo número; usa una tarjeta.']
+        },
+        respuesta: { tipo: 'numero', etiqueta: 'IPs distintas', correcta: RESPUESTAS.ips },
+        cierre: n => `Son <strong>${n}</strong> IPs distintas. Observa que el <em>Recuento</em> cuenta filas (intentos) y el <em>Recuento (distintos)</em> cuenta valores únicos: confundirlos es un error clásico.`
+      }
+    ];
+    const MSG_VALOR = {
+      recuento: 'Valores: <em>Recuento de event_id</em> cuenta intentos (filas), pero la pregunta pide cuántas IP <strong>diferentes</strong> hubo: usa <em>Recuento (distintos) de ip_origen</em>.',
+      dusuario: 'Valores: <em>Recuento (distintos) de usuario</em> cuenta usuarios únicos, no lo que pide la pregunta.',
+      dip: 'Valores: <em>Recuento (distintos) de ip_origen</em> cuenta IPs únicas; aquí necesitas contar intentos con <em>Recuento de event_id</em>.'
+    };
+
+    const est4 = { tipo: 'columnas', eje: 'ninguno', valor: 'recuento', filtro: 'Todos', pregunta: 0, resueltas: new Set() };
+
+    // controles
+    $('#r4-eje').replaceChildren(...Object.entries(EJES).map(([v, t]) => el('option', { value: v }, t)));
+    $('#r4-valor').replaceChildren(...Object.entries(VALORES).map(([v, t]) => el('option', { value: v }, t)));
+    const grupoTipos = $('#r4-tipos');
+    grupoTipos.replaceChildren(...TIPOS.map(t => el('button', { type: 'button', class: 'chip', 'aria-pressed': 'false', dataset: { valor: t.id }, onclick: () => { est4.tipo = t.id; marcarChips(grupoTipos, t.id); dibujarVisual(); } }, t.n)));
+    $('#r4-eje').addEventListener('change', e => { est4.eje = e.target.value; dibujarVisual(); });
+    $('#r4-valor').addEventListener('change', e => { est4.valor = e.target.value; dibujarVisual(); });
+    $('#r4-filtro').addEventListener('change', e => { est4.filtro = e.target.value; dibujarVisual(); });
+
+    function agregado(filas, valor) {
+      if (valor === 'recuento') return filas.length;
+      return new Set(filas.map(e => valor === 'dip' ? e.ip : e.usuario)).size;
+    }
+    function calcular() {
+      const filas = EVENTOS.filter(e => est4.filtro === 'Todos' || e.resultado === est4.filtro);
+      if (est4.eje === 'ninguno') return { filas, datos: [{ etiqueta: 'Total', valor: agregado(filas, est4.valor) }] };
+      const grupos = new Map();
+      filas.forEach(e => { const k = e[est4.eje]; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(e); });
+      const datos = [...grupos].map(([k, fs]) => ({ clave: k, etiqueta: est4.eje === 'fecha' ? diaCorto(k) : k, valor: agregado(fs, est4.valor) }));
+      if (est4.eje === 'fecha') datos.sort((a, b) => a.clave.localeCompare(b.clave));
+      else datos.sort((a, b) => b.valor - a.valor || String(a.etiqueta).localeCompare(String(b.etiqueta)));
+      return { filas, datos };
+    }
+    function barrasH(cont, datos) {
+      const max = Math.max(1, ...datos.map(d => d.valor));
+      cont.replaceChildren(el('div', { class: 'hbarras' }, datos.slice(0, 15).map(d =>
+        el('div', { class: 'hbarra' }, el('span', { class: 'et', title: d.etiqueta }, d.etiqueta),
+          el('span', { class: 'pista' }, el('span', { class: 'relleno', style: `width:${(100 * d.valor / max).toFixed(1)}%` })),
+          el('span', { class: 'v' }, num(d.valor))))));
+      if (datos.length > 15) cont.append(el('p', { class: 'nota' }, `Se muestran 15 de ${datos.length} categorías.`));
+    }
+    const COLORES = ['var(--accent-2)', 'var(--ok)', 'var(--warn)', 'var(--bad)', '#7c5cc4', '#2a9d8f', 'var(--muted)'];
+    function circular(cont, datos) {
+      let lista = datos.slice(0, 6);
+      if (datos.length > 6) lista.push({ etiqueta: 'Otros', valor: datos.slice(6).reduce((s, d) => s + d.valor, 0) });
+      const total = lista.reduce((s, d) => s + d.valor, 0) || 1;
+      let ang = -Math.PI / 2, svg = '<svg viewBox="0 0 200 200" style="width:100%;height:auto" role="img" aria-label="Gráfico circular">';
+      lista.forEach((d, i) => {
+        const frac = d.valor / total, c = COLORES[i % COLORES.length];
+        if (frac >= 0.9999) { svg += `<circle cx="100" cy="100" r="90" fill="${c}"/>`; return; }
+        const a2 = ang + frac * 2 * Math.PI;
+        const p = a => `${(100 + 90 * Math.cos(a)).toFixed(2)} ${(100 + 90 * Math.sin(a)).toFixed(2)}`;
+        svg += `<path d="M100 100 L${p(ang)} A90 90 0 ${frac > 0.5 ? 1 : 0} 1 ${p(a2)} Z" fill="${c}" stroke="var(--surface)" stroke-width="2"><title>${d.etiqueta}: ${d.valor}</title></path>`;
+        ang = a2;
+      });
+      svg += '</svg>';
+      cont.replaceChildren(el('div', { class: 'pastel' }, el('div', { html: svg }),
+        el('div', { class: 'leyenda' }, lista.map((d, i) => el('span', {}, el('i', { style: `background:${COLORES[i % COLORES.length]}` }), `${d.etiqueta}: ${d.valor} (${Math.round(100 * d.valor / total)} %)`)))));
+    }
+    function dibujarVisual() {
+      const cont = $('#r4-visual');
+      const { filas, datos } = calcular();
+      const tit = $('#r4-titulo');
+      tit.textContent = est4.tipo === 'tarjeta' || est4.eje === 'ninguno' ? VALORES[est4.valor] : `${VALORES[est4.valor]} por ${EJES[est4.eje]}`;
+      $('#r4-filtro-activo').textContent = est4.filtro === 'Todos' ? 'Filtros en este objeto visual: resultado es (Todas)' : `Filtros en este objeto visual: resultado es ${est4.filtro}`;
+      if (est4.tipo === 'tarjeta') {
+        cont.replaceChildren(el('div', { class: 'kpi tarjeta-kpi' }, el('span', { class: 'valor' }, num(agregado(filas, est4.valor))), el('span', { class: 'etiqueta' }, VALORES[est4.valor]),
+          est4.eje !== 'ninguno' ? el('span', { class: 'nota' }, 'La tarjeta no usa eje: siempre muestra el total.') : null));
+      } else if (est4.tipo === 'tabla') {
+        const total = num(agregado(filas, est4.valor));
+        const sinEje = est4.eje === 'ninguno';
+        const cab = (sinEje ? '' : `<th scope="col">${EJES[est4.eje]}</th>`) + `<th scope="col">${VALORES[est4.valor]}</th>`;
+        const cuerpo = sinEje ? `<tr><td class="num"><strong>${total}</strong></td></tr>`
+          : datos.map(d => `<tr><td>${d.etiqueta}</td><td class="num">${num(d.valor)}</td></tr>`).join('') + `<tr><td><strong>Total</strong></td><td class="num"><strong>${total}</strong></td></tr>`;
+        cont.innerHTML = `<div class="tabla-scroll" style="max-height:300px;overflow:auto"><table class="datos"><thead><tr>${cab}</tr></thead><tbody>${cuerpo}</tbody></table></div>`;
+      } else if (est4.tipo === 'barras') barrasH(cont, datos);
+      else if (est4.tipo === 'columnas') ICCA.barras(cont, datos.slice(0, 15), { titulo: '' });
+      else if (est4.tipo === 'lineas') ICCA.lineas(cont, datos.map(d => d.etiqueta), [{ nombre: VALORES[est4.valor], valores: datos.map(d => d.valor) }], { titulo: '' });
+      else circular(cont, datos);
+    }
+
+    function pintarPreguntas() {
+      const g = $('#r4-preguntas');
+      g.replaceChildren(...PREGUNTAS.map((p, i) => el('button', {
+        type: 'button', class: 'chip' + (est4.resueltas.has(i) ? ' correcto' : ''), 'aria-pressed': String(est4.pregunta === i),
+        onclick: () => { est4.pregunta = i; pintarPreguntas(); retro('#retro4', '', ''); }
+      }, `${est4.resueltas.has(i) ? '✓ ' : ''}Pregunta ${i + 1}`)));
+      const p = PREGUNTAS[est4.pregunta];
+      $('#r4-enunciado').textContent = `Pregunta ${est4.pregunta + 1}: ${p.texto}`;
+      const r = p.respuesta, cont = $('#r4-respuesta');
+      const control = r.tipo === 'select'
+        ? el('select', { id: 'r4-resp' }, el('option', { value: '' }, '— Elige —'), r.opciones.map(([v, t]) => el('option', { value: v }, t)))
+        : el('input', { id: 'r4-resp', type: 'number', min: '0', step: '1', inputmode: 'numeric', style: 'width:9rem' });
+      cont.replaceChildren(el('div', { class: 'campo' }, el('label', { for: 'r4-resp' }, `Tu respuesta · ${r.etiqueta}`), control));
+    }
+
+    $('#r4-comprobar').addEventListener('click', () => {
+      const p = PREGUNTAS[est4.pregunta];
+      const errores = [], avisos = [];
+      if (est4.filtro !== p.filtro) errores.push(est4.filtro === 'Todos' ? 'Filtro: estás contando éxitos y fallos juntos. En <em>Filtros en este objeto visual</em> deja solo <strong>Fallo</strong>.' : 'Filtro: elegiste Éxito, pero la pregunta es sobre inicios de sesión <strong>fallidos</strong>.');
+      if (est4.valor !== p.valor) errores.push(MSG_VALOR[est4.valor]);
+      if (p.eje === 'ninguno') {
+        if (est4.tipo !== 'tarjeta' && est4.eje !== 'ninguno') errores.push(`Eje: la pregunta pide un solo número, no un desglose por ${EJES[est4.eje]}. Quita el campo del eje.`);
+        if (est4.tipo === 'tarjeta' && est4.eje !== 'ninguno') avisos.push('La tarjeta ignora el campo del eje; puedes quitarlo.');
+      } else if (est4.eje !== p.eje) {
+        errores.push(`Eje: para responder necesitas ${p.ejeTxt}; pon <strong>${EJES[p.eje]}</strong> en el eje${est4.eje === 'ninguno' ? '' : ` en lugar de ${EJES[est4.eje]}`}.`);
+      }
+      const t = p.tipos[est4.tipo];
+      const nombreTipo = TIPOS.find(x => x.id === est4.tipo).n;
+      if (t[0] === 'mal') errores.push(`Tipo de visual (${nombreTipo}): ${t[1]}`);
+      else if (t[0] === 'aviso') avisos.push(`Tipo de visual (${nombreTipo}): ${t[1]}`);
+      const lista = a => `<ul>${a.map(x => `<li>${x}</li>`).join('')}</ul>`;
+      if (errores.length) {
+        retro('#retro4', 'mal', `<strong>✗ Tu visual todavía no responde la pregunta.</strong>${lista(errores)}${avisos.length ? lista(avisos) : ''}`);
+        return;
+      }
+      const valor = $('#r4-resp').value.trim();
+      const r = p.respuesta;
+      const acierto = r.tipo === 'numero' ? Number(valor) === r.correcta && valor !== '' : valor === r.correcta;
+      if (!valor) { retro('#retro4', 'aviso', `<strong>Tu visual sí responde la pregunta.</strong> Ahora léelo y escribe tu respuesta.${avisos.length ? lista(avisos) : ''}`); return; }
+      if (!acierto) { retro('#retro4', 'mal', `<strong>✗ El visual es correcto, pero la respuesta no.</strong> Vuelve a leerlo con calma${r.tipo === 'numero' ? ': el número que buscas es el que muestra el visual con el filtro aplicado' : ': busca el valor más alto'}.${avisos.length ? lista(avisos) : ''}`); return; }
+      est4.resueltas.add(est4.pregunta);
+      const faltan = PREGUNTAS.length - est4.resueltas.size;
+      retro('#retro4', 'ok', `<strong>✓ ¡Correcto!</strong> ${p.cierre(r.correcta)}${avisos.length ? `<p style="margin:6px 0 0">Para mejorar:</p>${lista(avisos)}` : ''}<p style="margin:6px 0 0">${faltan ? `Te ${faltan === 1 ? 'falta 1 pregunta' : `faltan ${faltan} preguntas`}.` : '<strong>¡Respondiste las cuatro preguntas!</strong> Ya sabes elegir campo, agregación, filtro y tipo de visual según la pregunta.'}</p>`);
+      if (!faltan) prog.marcar('r4');
+      pintarPreguntas();
+    });
+    function reiniciar4() {
+      Object.assign(est4, { tipo: 'columnas', eje: 'ninguno', valor: 'recuento', filtro: 'Todos', pregunta: 0 });
+      est4.resueltas.clear();
+      marcarChips(grupoTipos, est4.tipo);
+      $('#r4-eje').value = est4.eje; $('#r4-valor').value = est4.valor; $('#r4-filtro').value = est4.filtro;
+      pintarPreguntas(); dibujarVisual(); retro('#retro4', '', '');
+    }
+    $('#r4-reiniciar').addEventListener('click', reiniciar4);
+    reiniciar4();
+  </script>
+</body>
+</html>

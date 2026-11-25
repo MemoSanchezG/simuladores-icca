@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 5 · Checkpoint 1: repositorio y Pull Request | Simuladores ICCA</title>
+  <meta name="description" content="Practica el flujo de GitHub del PIA con un grafo de commits (rama, commits, Pull Request, revisión y fusión), organiza el repositorio con un proyecto PBIP y elige un dataset con los criterios de la guía.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > * { min-width: 0; }
+    .nota { font-size: .88rem; color: var(--muted); }
+    .paso-flujo { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--surface); }
+    .paso-flujo h3 { margin: 0 0 6px; }
+    .ops { display: grid; gap: 6px; margin-top: 8px; }
+    .ops button { text-align: left; font-weight: 500; }
+    .ops button code { font-size: .88em; }
+    .grafo-svg { width: 100%; height: auto; display: block; font-family: var(--font); }
+    pre.terminal { background: var(--code-bg); color: var(--code-text); border-radius: 10px; padding: 10px 12px; font: .84rem/1.5 var(--mono); max-height: 220px; overflow: auto; margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .pr { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); margin-top: 12px; }
+    .pr h3 { margin: 0 0 4px; font-size: 1rem; }
+    .estado { display: inline-block; font-size: .8rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); }
+    .estado.cambios { background: var(--warn-soft); border: 1px solid var(--warn); }
+    .estado.aprobado, .estado.fusionado { background: var(--ok-soft); border: 1px solid var(--ok); }
+    .comentario { border-left: 3px solid var(--warn); padding: 4px 10px; margin: 8px 0; background: var(--surface-2); border-radius: 0 8px 8px 0; font-size: .92rem; }
+    .comentario.ok { border-left-color: var(--ok); }
+    .diff { font: .82rem/1.45 var(--mono); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; margin: 6px 0; background: var(--surface); }
+    .diff .arch { background: var(--surface-2); padding: 4px 8px; font-weight: 700; border-bottom: 1px solid var(--border); }
+    .diff .l { padding: 0 8px; white-space: pre; }
+    .diff .mas { background: var(--ok-soft); }
+    .diff .menos { background: var(--bad-soft); }
+    .diff .bin { padding: 10px; color: var(--muted); font-style: italic; }
+    .grupo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .grupo-chips .chip { margin: 0; font-family: var(--mono); font-size: .86rem; }
+    .chip.correcto::before { content: "✓ "; }
+    .chip.incorrecto::before { content: "✗ "; }
+    .destinos { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 10px; }
+    .destinos .zona { display: flex; flex-direction: column; gap: 6px; }
+    .destinos .zona > button { font-family: var(--mono); }
+    .arbol { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font: .85rem/1.5 var(--mono); white-space: pre; overflow-x: auto; margin: 0; color: var(--text); }
+    .matriz-ds td, .matriz-ds th { white-space: normal; vertical-align: top; }
+    .matriz-ds td .grupo-chips .chip { font-family: var(--font); font-size: .85rem; }
+    .ds-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+    .ds-card h3 { margin: 0 0 4px; font-size: 1rem; }
+    .ds-card p { margin: 0; font-size: .92rem; }
+    fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 12px 0 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    .opcion { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; font-weight: 400; }
+    .opcion input { margin-top: 5px; }
+    pre.readme { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font: .84rem/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 0; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 5 · Checkpoint 1: repositorio y Pull Request</h1>
+      <p class="subtitulo">Tu PIA vive en un repositorio de GitHub: cada avance llega por una rama y un Pull Request que el docente revisa antes de fusionarlo. Practica ese flujo, organiza el repositorio y elige con criterio el dataset del equipo.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás <strong>ejecutar</strong> el flujo de rama, commit, Pull Request, revisión y fusión del checkpoint-1; <strong>organizar</strong> el repositorio del PIA con el proyecto guardado como PBIP, y <strong>justificar</strong> la elección del dataset con los criterios de la guía.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>En el Reto 1 elige la acción correcta en cada paso: el grafo de commits, la terminal y el Pull Request se actualizan.</li>
+          <li>En el Reto 2 selecciona un archivo y luego su carpeta destino (con clic o con Enter).</li>
+          <li>En el Reto 3 evalúa los cuatro datasets y arma la justificación del README.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Del repositorio al Pull Request fusionado</h2>
+      <div class="dos-columnas">
+        <div class="paso-flujo" id="r1-paso"></div>
+        <div>
+          <p style="font-weight:600;margin:0 0 4px">Historial de commits</p>
+          <div id="r1-grafo"></div>
+          <pre class="terminal" id="r1-terminal" aria-label="Terminal con los comandos ejecutados"></pre>
+        </div>
+      </div>
+      <div class="pr" id="r1-pr" hidden></div>
+      <div class="acciones"><button type="button" id="r1-reiniciar">Reiniciar</button></div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Acomoda el repositorio del PIA</h2>
+      <p>Selecciona un archivo y después pulsa la carpeta a la que pertenece. Puedes volver a seleccionar un archivo ya acomodado para moverlo.</p>
+      <div class="grupo-chips" id="r2-archivos" role="group" aria-label="Archivos por acomodar"></div>
+      <p class="nota" id="r2-sel" aria-live="polite">Ningún archivo seleccionado.</p>
+      <div class="destinos" id="r2-destinos"></div>
+      <div class="dos-columnas" style="margin-top:12px">
+        <div>
+          <p style="font-weight:600;margin:0 0 4px">Así se verá en GitHub</p>
+          <pre class="arbol" id="r2-arbol"></pre>
+        </div>
+        <div>
+          <p style="font-weight:600;margin:0 0 4px">¿Por qué PBIP y no .pbix? Mira el mismo cambio (una medida nueva) en el Pull Request:</p>
+          <div class="grupo-chips" id="r2-comparar" role="group" aria-label="Formato del proyecto"></div>
+          <div id="r2-diff"></div>
+        </div>
+      </div>
+      <fieldset>
+        <legend>¿Por qué el equipo guarda el proyecto como PBIP?</legend>
+        <div id="r2-mc"></div>
+      </fieldset>
+      <div class="acciones">
+        <button type="button" class="primario" id="r2-revisar">Revisar estructura y respuesta</button>
+        <button type="button" id="r2-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Elige el dataset del equipo</h2>
+      <p>La guía del PIA pide tres criterios: <strong>disponibilidad real</strong> (puedes obtenerlo, usarlo y citarlo legalmente), <strong>tamaño manejable en el semestre</strong> y <strong>relevancia a un escenario organizacional creíble</strong>. Evalúa cada candidato.</p>
+      <div class="rejilla" id="r3-candidatos"></div>
+      <div class="tabla-scroll" style="margin-top:12px">
+        <table class="datos matriz-ds">
+          <caption class="oculto-visual">Evaluación de candidatos por criterio</caption>
+          <thead><tr><th scope="col">Candidato</th><th scope="col">Disponibilidad real</th><th scope="col">Tamaño manejable</th><th scope="col">Relevancia organizacional</th></tr></thead>
+          <tbody id="r3-matriz"></tbody>
+        </table>
+      </div>
+      <div class="dos-columnas">
+        <fieldset>
+          <legend>Dataset elegido</legend>
+          <div id="r3-eleccion"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Justificación para el README</legend>
+          <div id="r3-justif"></div>
+        </fieldset>
+      </div>
+      <p style="font-weight:600;margin:12px 0 0">Vista previa de README.md</p>
+      <pre class="readme" id="r3-readme"></pre>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-revisar">Revisar evaluación</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li>En GitHub: <strong>New repository</strong> › nombre, <strong>Private</strong>, marca <strong>Add a README file</strong> › <strong>Create repository</strong>. Luego <strong>Settings › Collaborators › Add people</strong> para tu compañero y el docente.</li>
+        <li>En Power BI Desktop: <strong>Archivo › Guardar como</strong> y, en el tipo de archivo, elige el proyecto de Power BI (<code>*.pbip</code>) dentro de <code>dashboard/</code>. Si no aparece, actívalo en <strong>Archivo › Opciones y configuración › Opciones › Características en versión preliminar</strong>. El proyecto se guarda como <code>.pbip</code> + carpeta <code>.SemanticModel</code> (modelo en TMDL) + carpeta <code>.Report</code> (informe en JSON).</li>
+        <li>Power BI crea un <code>.gitignore</code> que excluye los archivos locales de las carpetas <code>.pbi</code>; si no existe, créalo en la raíz con <code>**/.pbi/localSettings.json</code> y <code>**/.pbi/cache.abf</code>.</li>
+        <li>Rama, commits y Pull Request:</li>
+      </ol>
+      <pre class="codigo"><span class="cmt"># una sola vez</span>
+git clone https://github.com/&lt;usuario&gt;/pia-dashboard-amenazas.git   <span class="cmt"># &lt;usuario&gt;: quien creó el repositorio</span>
+cd pia-dashboard-amenazas
+git switch -c checkpoint-1          <span class="cmt"># equivale a: git checkout -b checkpoint-1</span>
+<span class="cmt"># cada avance</span>
+git add README.md reportes dashboard capturas .gitignore
+git commit -m <span class="str">"Agrega README con integrantes, dataset y justificación"</span>
+git push -u origin checkpoint-1
+<span class="cmt"># después de fusionar el Pull Request en GitHub</span>
+git switch main
+git pull</pre>
+      <p class="nota">En GitHub: <strong>Compare &amp; pull request</strong> con base <code>main</code> ← compare <code>checkpoint-1</code>; el docente revisa en <strong>Files changed</strong>; ustedes corrigen con nuevos commits en la misma rama; al final <strong>Merge pull request › Confirm merge</strong> y <strong>Delete branch</strong>. Git no guarda carpetas vacías: pon al menos un archivo en cada una.</p>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Esta semana es el <strong>checkpoint-1 (EV01, en equipo de 2)</strong>: repositorio compartido con <code>README.md</code>, <code>reportes/</code>, <code>dashboard/</code>, <code>capturas/</code> y <code>.gitignore</code>; el docente como colaborador; rama <code>checkpoint-1</code> y un Pull Request hacia <code>main</code> con (a) el dataset identificado y accesible, (b) la justificación de su relevancia y (c) el primer boceto de las tablas que van a relacionar. Atiendan la revisión con nuevos commits y fusionen. El mismo flujo se repite en la Semana 10 (<code>checkpoint-2</code>) y en la Semana 15 (<code>entrega-final</code>).</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(5);
+    const { el, $, retro } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    /* =========================================================
+       Reto 1 · Flujo de GitHub
+       ========================================================= */
+    const HASHES = ['a1f3c9e', '4b7d2e0', 'c93e5a1', '7e21f0b', 'f0a8d36'];
+    const REVISION = 'Buen README. Falta el punto (c): el boceto de las tablas que van a relacionar y con qué columna. Agréguenlo en esta misma rama.';
+    let g; // estado del flujo
+    function estadoInicial() { return { paso: 0, commits: [], ramas: {}, head: null, pr: null, log: [], borrada: false }; }
+    function commit(msg, rama, padres) {
+      const h = HASHES[g.commits.length];
+      g.commits.push({ h, msg, rama, padres: padres || (g.ramas[rama] ? [g.ramas[rama]] : []) });
+      g.ramas[rama] = h;
+      return h;
+    }
+    const FLUJO = [
+      { t: 'Crea el repositorio del equipo', q: 'Uno de los dos integrantes crea el repositorio. ¿Qué hace?',
+        ops: [
+          { t: 'En GitHub: New repository › «pia-dashboard-amenazas», Private, con «Add a README file».', ok: true, x: 'Un solo repositorio compartido; el README inicial crea el primer commit en main.' },
+          { t: 'Sube el .pbix a una carpeta compartida en la nube y manda el enlace.', x: 'Una carpeta compartida no guarda un historial comparable ni permite Pull Requests: el docente no podría revisar los cambios.' },
+          { t: 'Cada integrante crea su propio repositorio.', x: 'El PIA es de equipo: un solo repositorio con los dos como colaboradores, para que el historial muestre el trabajo de ambos.' }
+        ],
+        efecto: () => { commit('Initial commit', 'main', []); g.head = 'main'; g.log.push('# En GitHub: New repository (Private, Add a README file)'); } },
+      { t: 'Agrega a tu equipo', q: '¿Cómo das acceso a tu compañero y al docente?',
+        ops: [
+          { t: 'Settings › Collaborators › Add people: tu compañero y el docente.', ok: true, x: 'Cada quien entra con su propia cuenta: el historial muestra quién hizo cada commit y el docente puede revisar el Pull Request.' },
+          { t: 'Comparto mi usuario y contraseña de GitHub con mi compañero.', x: 'Nunca compartas credenciales: es un riesgo de seguridad y además el historial no distinguiría quién hizo qué.' },
+          { t: 'Hago el repositorio público y mando el enlace por correo.', x: 'Ver no es colaborar: sin acceso de colaborador no pueden subir cambios a ramas del repositorio. Además, el repo puede ser privado.' }
+        ],
+        efecto: () => { g.log.push('# Settings › Collaborators: compañero y docente agregados'); } },
+      { t: 'Crea la rama del checkpoint', q: 'Ya clonaste el repositorio. ¿Qué comando crea la rama checkpoint-1 y te cambia a ella?',
+        ops: [
+          { t: '<code>git switch -c checkpoint-1</code>', ok: true, x: 'Crea la rama a partir de main y te mueve a ella (equivale a <code>git checkout -b checkpoint-1</code>). Tus commits ya no tocarán main.' },
+          { t: '<code>git commit -m "checkpoint-1"</code>', x: 'commit guarda cambios en la rama actual; no crea ramas. Si lo hicieras ahora, el commit caería en main.' },
+          { t: '<code>git merge checkpoint-1</code>', x: 'merge une una rama existente con la actual; checkpoint-1 todavía no existe.' }
+        ],
+        efecto: () => { g.ramas['checkpoint-1'] = g.ramas.main; g.head = 'checkpoint-1'; g.log.push('$ git clone https://github.com/<usuario>/pia-dashboard-amenazas.git', '$ git switch -c checkpoint-1'); } },
+      { t: 'Primer commit', q: 'Escribiste el README con los integrantes, el dataset y la justificación. ¿Qué mensaje de commit usas?',
+        ops: [
+          { t: '«Agrega README con integrantes, dataset y justificación»', ok: true, x: 'Breve, en imperativo y dice qué cambió: dentro de diez semanas seguirá siendo útil al leer el historial.' },
+          { t: '«cambios»', x: 'Todo commit tiene cambios: el mensaje no dice cuáles. En el historial no podrás encontrar nada.' },
+          { t: '«Subí el README, carpetas, archivos varios, arreglé cosas y otras correcciones del PIA»', x: 'Demasiado largo y mezcla varios cambios. Un commit = un cambio lógico, descrito en una línea corta.' },
+          { t: '«asdfg»', x: 'Un mensaje sin significado convierte el historial en ruido; el docente revisa también los mensajes.' }
+        ],
+        efecto: m => { commit(m, 'checkpoint-1'); g.log.push('$ git add README.md', `$ git commit -m "${m}"`); } },
+      { t: 'Segundo commit', q: 'Creaste reportes/, dashboard/ y capturas/ (cada una con un archivo, porque Git no guarda carpetas vacías) y el .gitignore. ¿Mensaje?',
+        ops: [
+          { t: '«Agrega carpetas reportes, dashboard y capturas con .gitignore»', ok: true, x: 'Describe el cambio concreto. Recuerda: una carpeta vacía no aparece en Git; por eso cada una lleva al menos un archivo.' },
+          { t: '«final final ahora sí v2»', x: 'Los nombres tipo «final_v2» son justo lo que Git vuelve innecesario: el historial ya guarda todas las versiones.' },
+          { t: '«Update»', x: 'Es el mensaje por defecto de GitHub y no dice qué se actualizó.' }
+        ],
+        efecto: m => { commit(m, 'checkpoint-1'); g.log.push('$ git add reportes dashboard capturas .gitignore', `$ git commit -m "${m}"`); } },
+      { t: 'Sube la rama', q: 'Tus commits solo existen en tu computadora. ¿Cómo los subes a GitHub?',
+        ops: [
+          { t: '<code>git push -u origin checkpoint-1</code>', ok: true, x: 'Sube la rama y, con <code>-u</code>, la vincula para que después baste con <code>git push</code>.' },
+          { t: '<code>git push origin main</code>', x: 'Subirías main, que no tiene tus cambios: tu trabajo está en checkpoint-1.' },
+          { t: '<code>git push --force</code>', x: '--force reescribe el historial remoto y puede borrar el trabajo de tu compañero. En un flujo normal nunca lo necesitas.' }
+        ],
+        efecto: () => { g.log.push('$ git push -u origin checkpoint-1'); } },
+      { t: 'Abre el Pull Request', q: 'En GitHub aparece «Compare & pull request». ¿Qué ramas eliges?',
+        ops: [
+          { t: 'base: <code>main</code> ← compare: <code>checkpoint-1</code>', ok: true, x: 'Pides llevar los cambios de checkpoint-1 hacia main. El docente recibe la notificación para revisar.' },
+          { t: 'base: <code>checkpoint-1</code> ← compare: <code>main</code>', x: 'Al revés: pedirías llevar main hacia tu rama, y main no tiene nada nuevo.' }
+        ],
+        efecto: () => { g.pr = { estado: 'Cambios solicitados', comentarios: [{ quien: 'Docente', t: REVISION, tipo: '' }] }; g.log.push('# En GitHub: Pull Request #1 (base: main ← compare: checkpoint-1)'); } },
+      { t: 'Atiende la revisión', q: `El docente solicitó cambios: «${REVISION}» ¿Qué haces?`,
+        ops: [
+          { t: 'Agrego el boceto al README, hago un nuevo commit en checkpoint-1 y <code>git push</code>: el Pull Request se actualiza solo.', ok: true, x: 'El Pull Request sigue a la rama: cada commit nuevo aparece en él y la conversación queda documentada.' },
+          { t: 'Cierro el Pull Request y abro uno nuevo.', x: 'No hace falta y pierdes el hilo de la revisión: basta con otro commit en la misma rama.' },
+          { t: 'Hago el cambio directamente en main.', x: 'Saltarías la revisión, que es justo lo que el Pull Request garantiza.' },
+          { t: 'Respondo «ok» al comentario sin cambiar nada.', x: 'La revisión pide un cambio concreto; sin él, el checkpoint queda incompleto.' }
+        ],
+        efecto: () => { commit('Agrega boceto del modelo en estrella al README', 'checkpoint-1'); g.log.push('$ git add README.md', '$ git commit -m "Agrega boceto del modelo en estrella al README"', '$ git push'); g.pr.estado = 'Aprobado'; g.pr.comentarios.push({ quien: 'Docente', t: 'Listo, ya está el boceto. Aprobado: pueden fusionar.', tipo: 'ok' }); } },
+      { t: 'Fusiona', q: 'El Pull Request está aprobado. ¿Cómo integran el trabajo?',
+        ops: [
+          { t: 'Merge pull request › Confirm merge y luego Delete branch; en la computadora, <code>git switch main</code> y <code>git pull</code>.', ok: true, x: 'Se crea un commit de fusión en main con dos padres: el último de main y el último de tu rama. Borrar la rama ya fusionada mantiene limpio el repositorio.' },
+          { t: 'Copio los archivos a main a mano.', x: 'Perderías el historial de la rama y el vínculo con la revisión.' },
+          { t: '<code>git reset --hard</code>', x: 'reset --hard descarta cambios locales; no integra nada y puede hacerte perder trabajo.' }
+        ],
+        efecto: () => { commit('Merge pull request #1 from equipo/checkpoint-1', 'main', [g.ramas.main, g.ramas['checkpoint-1']]); g.borrada = true; g.head = 'main'; g.pr.estado = 'Fusionado'; g.log.push('# En GitHub: Merge pull request › Confirm merge › Delete branch', '$ git switch main', '$ git pull'); } }
+    ];
+    const OPS1 = FLUJO.map((p, i) => ICCA.barajar(p.ops, 31 + i * 7));
+
+    function pintarFlujo() {
+      const cont = $('#r1-paso');
+      if (g.paso >= FLUJO.length) {
+        cont.replaceChildren(el('h3', {}, '✓ Checkpoint fusionado'), el('p', {}, 'El Pull Request #1 quedó fusionado en main. Revisa el grafo: la rama salió de main, recibió tres commits (uno por la revisión) y volvió a main con un commit de fusión.'));
+      } else {
+        const p = FLUJO[g.paso];
+        cont.replaceChildren(el('h3', {}, `Paso ${g.paso + 1} de ${FLUJO.length} · ${p.t}`), el('p', { style: 'margin:0' }, p.q),
+          el('div', { class: 'ops', role: 'group', 'aria-label': 'Opciones' }, OPS1[g.paso].map(o => el('button', { type: 'button', html: o.t, onclick: () => elegir(o) }))));
+      }
+      dibujarGrafo();
+      $('#r1-terminal').textContent = g.log.length ? g.log.join('\n') : '# Aquí aparecerán los comandos que ejecutes.';
+      $('#r1-terminal').scrollTop = 99999;
+      pintarPR();
+    }
+    function elegir(o) {
+      const p = FLUJO[g.paso];
+      if (!o.ok) { retro('#retro1', 'mal', `<strong>✗ Así no.</strong> ${o.x}`); return; }
+      const mensaje = o.t.replace(/[«»]/g, '');
+      p.efecto(mensaje);
+      g.paso++;
+      const fin = g.paso >= FLUJO.length;
+      retro('#retro1', 'ok', `<strong>✓ ${p.t}.</strong> ${o.x}${fin ? ' <strong>¡Completaste el flujo del checkpoint-1!</strong> Este mismo ciclo (rama → commits → Pull Request → revisión → fusión) se repite en checkpoint-2 y en entrega-final.' : ''}`);
+      pintarFlujo();
+      if (fin) prog.marcar('r1');
+      const b = $('#r1-paso button'); if (b) b.focus();
+    }
+    function dibujarGrafo() {
+      const X = i => 34 + i * 74, Y = { main: 42, 'checkpoint-1': 112 };
+      const W = Math.max(420, 70 + g.commits.length * 74);
+      const pos = h => { const i = g.commits.findIndex(c => c.h === h); return [X(i), Y[g.commits[i].rama]]; };
+      let s = `<svg class="grafo-svg" viewBox="0 0 ${W} 160" role="img" aria-label="Grafo con ${g.commits.length} commits">`;
+      if (g.ramas['checkpoint-1'] && !g.commits.some(c => c.rama === 'checkpoint-1')) {
+        const [x, y] = pos(g.ramas.main);
+        s += `<path d="M${x} ${y} C ${x + 30} ${y}, ${x + 20} ${Y['checkpoint-1']}, ${x + 50} ${Y['checkpoint-1']}" fill="none" stroke="var(--warn)" stroke-width="2.5" stroke-dasharray="4 4"/>`;
+      }
+      g.commits.forEach(c => c.padres.forEach(ph => {
+        const [x1, y1] = pos(ph), [x2, y2] = pos(c.h);
+        const color = c.rama === 'checkpoint-1' || y1 !== y2 ? 'var(--warn)' : 'var(--accent-2)';
+        s += y1 === y2 ? `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.5"/>`
+          : `<path d="M${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="2.5"/>`;
+      }));
+      g.commits.forEach(c => {
+        const [x, y] = pos(c.h), merge = c.padres.length > 1;
+        s += `<circle cx="${x}" cy="${y}" r="${merge ? 10 : 8}" fill="${c.rama === 'main' ? 'var(--accent-2)' : 'var(--warn)'}" stroke="var(--surface)" stroke-width="2"><title>${esc(c.h)} · ${esc(c.msg)}</title></circle>`;
+        s += `<text x="${x}" y="${y + 24}" text-anchor="middle" style="font:11px var(--mono)" fill="var(--muted)">${c.h}</text>`;
+      });
+      const etiqueta = (rama, x, y, arriba) => {
+        const txt = g.borrada && rama !== 'main' ? `${rama} (eliminada)` : (g.head === rama ? 'HEAD → ' : '') + rama, w = txt.length * 6.6 + 12;
+        const cx = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, x)), yy = arriba ? y - 32 : y + 30;
+        const tenue = g.borrada && rama !== 'main' ? ' opacity="0.55" stroke-dasharray="3 3"' : '';
+        return `<rect x="${cx - w / 2}" y="${yy}" width="${w}" height="18" rx="9" fill="${rama === 'main' ? 'var(--accent-soft)' : 'var(--warn-soft)'}" stroke="${rama === 'main' ? 'var(--accent-2)' : 'var(--warn)'}"${tenue}/><text x="${cx}" y="${yy + 13}" text-anchor="middle" style="font-size:11px;font-weight:700" fill="var(--text)">${txt}</text>`;
+      };
+      if (g.ramas.main) { const [x, y] = pos(g.ramas.main); s += etiqueta('main', x, y, true); }
+      if (g.ramas['checkpoint-1']) {
+        const enRama = g.commits.some(c => c.rama === 'checkpoint-1');
+        const [x, y] = enRama ? pos(g.ramas['checkpoint-1']) : [pos(g.ramas.main)[0] + 70, Y['checkpoint-1']];
+        s += etiqueta('checkpoint-1', x, y, false);
+      }
+      if (!g.commits.length) s += `<text x="${W / 2}" y="80" text-anchor="middle" style="font-size:13px" fill="var(--muted)">Todavía no hay repositorio.</text>`;
+      $('#r1-grafo').innerHTML = s + '</svg>';
+    }
+    function pintarPR() {
+      const cont = $('#r1-pr');
+      if (!g.pr) { cont.hidden = true; return; }
+      cont.hidden = false;
+      const clase = { 'Cambios solicitados': 'cambios', Aprobado: 'aprobado', Fusionado: 'fusionado' }[g.pr.estado] || '';
+      const commitsRama = g.commits.filter(c => c.rama === 'checkpoint-1');
+      const lineasReadme = ['+# PIA · Dashboard de inteligencia de amenazas', '+Equipo: integrante 1, integrante 2', '+## Dataset y justificación', '+Logs de un honeypot SSH (Kaggle, CC BY 4.0)…'];
+      if (commitsRama.length >= 3) lineasReadme.push('+## Boceto del modelo', '+Hechos: intentos_ssh · Dimensiones: ip_origen, calendario, usuario_probado');
+      cont.replaceChildren(
+        el('h3', {}, 'Pull Request #1 · Checkpoint 1 ', el('span', { class: 'estado ' + clase }, g.pr.estado)),
+        el('p', { class: 'nota', style: 'margin:0' }, `base: main ← compare: checkpoint-1 · ${commitsRama.length} commits`),
+        ...g.pr.comentarios.map(c => el('p', { class: 'comentario ' + c.tipo }, el('strong', {}, `${c.quien}: `), c.t)),
+        el('p', { style: 'font-weight:600;margin:8px 0 0' }, 'Files changed'),
+        el('div', { class: 'diff', html: `<div class="arch">README.md</div>${lineasReadme.map(l => `<div class="l mas">${esc(l)}</div>`).join('')}` }));
+    }
+    $('#r1-reiniciar').addEventListener('click', () => { g = estadoInicial(); pintarFlujo(); retro('#retro1', '', ''); });
+    g = estadoInicial();
+    pintarFlujo();
+
+    /* =========================================================
+       Reto 2 · Estructura del repositorio
+       ========================================================= */
+    const DESTINOS = [['raiz', '/ (raíz)'], ['reportes', 'reportes/'], ['dashboard', 'dashboard/'], ['capturas', 'capturas/'], ['ignorar', 'No se sube']];
+    const ARCHIVOS = [
+      { a: 'README.md', d: 'raiz', x: 'Va en la raíz: GitHub lo muestra como portada del repositorio (integrantes, dataset, justificación y boceto).' },
+      { a: '.gitignore', d: 'raiz', x: 'En la raíz, para que sus reglas apliquen a todo el repositorio.' },
+      { a: 'PIA-amenazas.pbip', d: 'dashboard', x: 'Es el archivo que abres con Power BI Desktop; apunta a las carpetas del modelo y del informe.' },
+      { a: 'PIA-amenazas.SemanticModel/', d: 'dashboard', x: 'El modelo semántico en TMDL (tablas, relaciones, medidas DAX y consultas M) como texto: Git puede compararlo.' },
+      { a: 'PIA-amenazas.Report/', d: 'dashboard', x: 'El diseño del informe (páginas y visuales) en JSON.' },
+      { a: 'reporte-semana-11.md', d: 'reportes', x: 'Los reportes en Markdown van en reportes/.' },
+      { a: 'reporte-final.md', d: 'reportes', x: 'El reporte final del PIA también va en reportes/.' },
+      { a: 'vista-antes.png', d: 'capturas', x: 'Capturas de apoyo (por ejemplo, el antes y después de la Semana 12).' },
+      { a: 'vista-despues.png', d: 'capturas', x: 'Capturas de apoyo en capturas/.' },
+      { a: '.pbi/cache.abf', d: 'ignorar', x: 'Es la caché local con los datos importados: pesa mucho, cambia en cada actualización y no aporta al historial. El .gitignore la excluye.' },
+      { a: 'PIA-amenazas.pbix', d: 'ignorar', x: 'Es un binario: Git no puede mostrar qué cambió entre versiones. El proyecto se versiona como PBIP.' },
+      { a: 'token-feed-osint.txt', d: 'ignorar', x: 'Una llave de API es un secreto: nunca va a un repositorio (aunque sea privado). Si se sube por error, revócala de inmediato.' }
+    ];
+    const lugar = {}; // archivo -> destino
+    let seleccionado = null, revisado2 = false;
+    let formato = 'pbix';
+    function pintarReto2() {
+      const pendientes = ARCHIVOS.filter(f => !lugar[f.a]);
+      $('#r2-archivos').replaceChildren(...(pendientes.length ? pendientes.map(f => chipArchivo(f)) : [el('span', { class: 'nota' }, 'Todos los archivos están acomodados.')]));
+      $('#r2-destinos').replaceChildren(...DESTINOS.map(([id, t]) => el('div', { class: 'zona' + (seleccionado ? ' activa' : '') },
+        el('button', { type: 'button', id: `r2-dest-${id}`, onclick: () => mover(id), 'aria-label': `Mover el archivo seleccionado a ${t}` }, t),
+        el('div', { class: 'grupo-chips' }, ARCHIVOS.filter(f => lugar[f.a] === id).map(f => chipArchivo(f))))));
+      $('#r2-sel').textContent = seleccionado ? `Seleccionado: ${seleccionado}. Ahora elige su carpeta.` : 'Ningún archivo seleccionado.';
+      pintarArbol();
+    }
+    function chipArchivo(f) {
+      const estado = revisado2 && lugar[f.a] ? (lugar[f.a] === f.d ? ' correcto' : ' incorrecto') : '';
+      return el('button', { type: 'button', class: 'chip' + estado, 'aria-pressed': String(seleccionado === f.a), onclick: () => { seleccionado = seleccionado === f.a ? null : f.a; pintarReto2(); const b = seleccionado ? $(`#r2-dest-raiz`) : null; if (b) b.focus(); } }, f.a);
+    }
+    function mover(dest) {
+      if (!seleccionado) { retro('#retro2', 'aviso', 'Primero selecciona un archivo de la lista.'); return; }
+      lugar[seleccionado] = dest;
+      const t = DESTINOS.find(d => d[0] === dest)[1];
+      $('#r2-sel').textContent = `${seleccionado} → ${t}.`;
+      seleccionado = null; revisado2 = false;
+      pintarReto2();
+      const sig = $('#r2-archivos button'); if (sig) sig.focus();
+    }
+    function pintarArbol() {
+      const en = d => ARCHIVOS.filter(f => lugar[f.a] === d).map(f => f.a);
+      const lineas = ['pia-dashboard-amenazas/'];
+      const raiz = en('raiz'), carpetas = ['reportes', 'dashboard', 'capturas'];
+      const items = [...carpetas.map(c => ({ c, hijos: en(c) })), ...raiz.map(a => ({ a }))];
+      items.forEach((it, i) => {
+        const ult = i === items.length - 1, rama = ult ? '└── ' : '├── ', sangria = ult ? '    ' : '│   ';
+        if (it.a) { lineas.push(rama + it.a); return; }
+        lineas.push(`${rama}${it.c}/`);
+        if (!it.hijos.length) lineas.push(`${sangria}└── (vacía: Git no la guardará)`);
+        it.hijos.forEach((h, j) => lineas.push(`${sangria}${j === it.hijos.length - 1 ? '└── ' : '├── '}${h}`));
+      });
+      const ign = en('ignorar');
+      if (ign.length) lineas.push('', `Excluidos (no se suben): ${ign.join(', ')}`);
+      $('#r2-arbol').textContent = lineas.join('\n');
+    }
+    const DIFF = {
+      pbix: '<div class="arch">dashboard/PIA-amenazas.pbix</div><div class="bin">Binary file not shown.<br>(GitHub no puede mostrar qué cambió: solo sabes que «algo» cambió en un archivo de varios MB).</div>',
+      pbip: `<div class="arch">dashboard/PIA-amenazas.SemanticModel/definition/tables/Eventos.tmdl</div>${[
+        [' ', 'table Eventos'], [' ', ''], ['+', "\tmeasure 'Eventos fallidos' = CALCULATE(COUNTROWS(Eventos), Eventos[resultado] = \"Fallo\")"], ['+', '\t\tformatString: 0'], [' ', ''], [' ', '\tcolumn hostname'], [' ', '\t\tdataType: string']
+      ].map(([s, l]) => `<div class="l${s === '+' ? ' mas' : ''}">${s} ${esc(l.replace(/\t/g, '    '))}</div>`).join('')}`
+    };
+    function pintarComparar() {
+      const g2 = $('#r2-comparar');
+      g2.replaceChildren(...[['pbix', 'Guardado como .pbix'], ['pbip', 'Guardado como PBIP']].map(([v, t]) => el('button', { type: 'button', class: 'chip', 'aria-pressed': String(formato === v), onclick: () => { formato = v; pintarComparar(); } }, t)));
+      $('#r2-diff').innerHTML = `<div class="diff">${DIFF[formato]}</div>`;
+    }
+    const MC2 = [
+      { v: 'texto', t: 'Porque PBIP guarda el modelo (TMDL) y el informe (JSON) como archivos de texto: Git muestra qué cambió línea por línea y el docente puede revisarlo en el Pull Request.', ok: true },
+      { v: 'rapido', t: 'Porque con PBIP el dashboard carga más rápido.', x: 'El formato de guardado no cambia el rendimiento del informe; cambia cómo se versiona.' },
+      { v: 'github', t: 'Porque GitHub no acepta archivos .pbix.', x: 'GitHub sí acepta un .pbix (hasta 100 MB por archivo), pero como binario: no ves diferencias ni puedes resolver conflictos.' },
+      { v: 'datos', t: 'Porque PBIP incluye todos los datos y así ya no se necesita el dataset.', x: 'Al contrario: la caché con los datos (cache.abf) se excluye con .gitignore.' }
+    ];
+    $('#r2-mc').replaceChildren(...MC2.map(o => el('label', { class: 'opcion' }, el('input', { type: 'radio', name: 'r2-mc', value: o.v }), el('span', {}, o.t))));
+    $('#r2-revisar').addEventListener('click', () => {
+      const faltan = ARCHIVOS.filter(f => !lugar[f.a]).length;
+      if (faltan) { retro('#retro2', 'aviso', `Te ${faltan === 1 ? 'falta 1 archivo' : `faltan ${faltan} archivos`} por acomodar.`); return; }
+      revisado2 = true; seleccionado = null; pintarReto2();
+      const malos = ARCHIVOS.filter(f => lugar[f.a] !== f.d);
+      const m = document.querySelector('input[name="r2-mc"]:checked');
+      const o = m ? MC2.find(x => x.v === m.value) : null;
+      const partes = malos.map(f => `<li>✗ <code>${esc(f.a)}</code> va en <strong>${DESTINOS.find(d => d[0] === f.d)[1]}</strong>: ${f.x}</li>`);
+      if (!o) partes.push('<li>Responde la pregunta sobre PBIP.</li>');
+      else if (!o.ok) partes.push(`<li>✗ Pregunta: ${o.x}</li>`);
+      if (!partes.length) {
+        retro('#retro2', 'ok', '<strong>¡Repositorio en orden!</strong> Raíz con README y .gitignore; el proyecto PBIP en dashboard/; reportes y capturas en su lugar, y fuera del repositorio lo binario, lo local y lo secreto. Con PBIP, cada cambio del modelo (una medida, una relación, una consulta M) aparece en el Pull Request como líneas de texto.');
+        prog.marcar('r2');
+      } else retro('#retro2', 'mal', `${malos.length ? `Tienes ${ARCHIVOS.length - malos.length} de ${ARCHIVOS.length} archivos bien acomodados.` : 'Los archivos están bien acomodados.'}<ul>${partes.join('')}</ul>`);
+    });
+    $('#r2-reiniciar').addEventListener('click', () => {
+      Object.keys(lugar).forEach(k => delete lugar[k]); seleccionado = null; revisado2 = false; formato = 'pbix';
+      document.querySelectorAll('input[name="r2-mc"]').forEach(r => { r.checked = false; });
+      pintarReto2(); pintarComparar(); retro('#retro2', '', '');
+    });
+    pintarReto2(); pintarComparar();
+
+    /* =========================================================
+       Reto 3 · Elegir el dataset
+       ========================================================= */
+    const CRITERIOS = ['disp', 'tam', 'rel'];
+    const CANDIDATOS = [
+      { id: 'A', n: 'Honeypot SSH (Kaggle)', d: 'CSV con 180 000 intentos de inicio de sesión de 3 meses: fecha, IP, país, usuario y contraseña probados. Licencia CC BY 4.0.',
+        v: { disp: true, tam: true, rel: true }, x: { disp: 'Es público, descargable y con licencia que permite usarlo y citarlo.', tam: '180 000 filas se cargan sin problema en Power BI Desktop y caben en un semestre de trabajo.', rel: 'Fuerza bruta (T1110) contra un servidor expuesto: un escenario que cualquier organización enfrenta.' } },
+      { id: 'B', n: 'Captura de tráfico (PCAP)', d: 'Tráfico completo de una red universitaria con ataques etiquetados: 250 GB en archivos PCAP.',
+        v: { disp: true, tam: false, rel: true }, x: { disp: 'Está publicado y se puede descargar.', tam: '250 GB en un formato binario de red: antes de Power BI habría que procesarlo con otras herramientas. No es manejable en el semestre.', rel: 'Tráfico de una red real con ataques: el escenario sí es creíble.' } },
+      { id: 'C', n: 'Logs del firewall del trabajo', d: 'Un integrante los copiaría de la empresa donde trabaja, sin autorización: 20 000 filas de los últimos 30 días.',
+        v: { disp: false, tam: true, rel: true }, x: { disp: 'Son datos confidenciales de un tercero: sin autorización no puedes sacarlos, subirlos al repositorio ni compartirlos con el docente (y hacerlo tiene implicaciones legales).', tam: '20 000 filas son manejables.', rel: 'Son logs de seguridad reales: relevantes, pero eso no los vuelve disponibles.' } },
+      { id: 'D', n: 'Ventas de una tienda en línea', d: 'Dataset público de Kaggle con 50 000 pedidos: producto, precio, ciudad y fecha.',
+        v: { disp: true, tam: true, rel: false }, x: { disp: 'Es público y descargable.', tam: '50 000 filas son manejables.', rel: 'No hay amenazas, eventos ni indicadores: no sirve para un dashboard de inteligencia de amenazas.' } }
+    ];
+    const NOM_CRIT = { disp: 'Disponibilidad real', tam: 'Tamaño manejable', rel: 'Relevancia organizacional' };
+    const marca = Object.fromEntries(CANDIDATOS.map(c => [c.id, { disp: null, tam: null, rel: null }]));
+    let revisado3 = false;
+    const JUSTIF = [
+      { v: 'j1', t: 'Elegimos los logs del honeypot SSH porque son públicos y con licencia abierta (podemos citarlos en el repositorio), su tamaño se puede limpiar y modelar en Power BI durante el semestre, y representan un escenario creíble: intentos de fuerza bruta (T1110) contra un servidor expuesto de una organización.', ok: true },
+      { v: 'j2', t: 'Elegimos el dataset más grande porque más datos siempre dan mejores resultados.', x: 'El tamaño no es un mérito en sí: tiene que ser manejable en diez semanas.' },
+      { v: 'j3', t: 'Elegimos los logs del firewall del trabajo porque son datos reales.', x: 'Reales, pero no disponibles: son confidenciales y no se pueden subir ni compartir.' },
+      { v: 'j4', t: 'Elegimos este dataset porque fue el primero que encontramos.', x: 'No usa ninguno de los criterios de la guía; el docente evaluará la pertinencia de la fuente.' }
+    ];
+    $('#r3-candidatos').replaceChildren(...CANDIDATOS.map(c => el('article', { class: 'ds-card' }, el('h3', {}, `${c.id}. ${c.n}`), el('p', {}, c.d))));
+    $('#r3-eleccion').replaceChildren(...CANDIDATOS.map(c => el('label', { class: 'opcion' }, el('input', { type: 'radio', name: 'r3-ds', value: c.id, onchange: pintarReadme }), el('span', {}, `${c.id}. ${c.n}`))));
+    $('#r3-justif').replaceChildren(...JUSTIF.map(j => el('label', { class: 'opcion' }, el('input', { type: 'radio', name: 'r3-j', value: j.v, onchange: pintarReadme }), el('span', {}, j.t))));
+    function pintarMatriz() {
+      $('#r3-matriz').replaceChildren(...CANDIDATOS.map(c => el('tr', {}, el('th', { scope: 'row' }, `${c.id}. ${c.n}`), CRITERIOS.map(k => {
+        const v = marca[c.id][k];
+        const estado = revisado3 && v !== null ? (v === c.v[k] ? ' correcto' : ' incorrecto') : '';
+        const g3 = el('div', { class: 'grupo-chips', role: 'group', 'aria-label': `${NOM_CRIT[k]} de ${c.n}` },
+          [[true, 'Cumple'], [false, 'No cumple']].map(([val, t]) => el('button', { type: 'button', class: 'chip' + (v === val ? estado : ''), 'aria-pressed': String(v === val), onclick: () => { marca[c.id][k] = val; revisado3 = false; pintarMatriz(); } }, t)));
+        return el('td', {}, g3, revisado3 && v !== null && v !== c.v[k] ? el('p', { class: 'nota', style: 'margin:4px 0 0' }, c.x[k]) : null);
+      }))));
+    }
+    function pintarReadme() {
+      const ds = document.querySelector('input[name="r3-ds"]:checked'), j = document.querySelector('input[name="r3-j"]:checked');
+      const c = ds ? CANDIDATOS.find(x => x.id === ds.value) : null;
+      const just = j ? JUSTIF.find(x => x.v === j.value).t : '(elige una justificación)';
+      const boceto = c && c.id === 'A' ? 'Hechos: intentos_ssh (fecha, ip, usuario_probado, resultado)\nDimensiones: ip_origen (país) · calendario · usuario_probado\nRelaciones: varios a uno, filtro único hacia intentos_ssh' : '(pendiente: depende del dataset)';
+      $('#r3-readme').textContent = `# PIA · Dashboard de inteligencia de amenazas\nEquipo: integrante 1, integrante 2\n\n## Dataset\n${c ? `${c.n}. ${c.d}` : '(elige un dataset)'}\n\n## Justificación\n${just}\n\n## Boceto del modelo\n${boceto}`;
+    }
+    $('#r3-revisar').addEventListener('click', () => {
+      const vacias = CANDIDATOS.reduce((s, c) => s + CRITERIOS.filter(k => marca[c.id][k] === null).length, 0);
+      if (vacias) { retro('#retro3', 'aviso', `Te faltan ${vacias} casillas de la matriz por evaluar.`); return; }
+      revisado3 = true; pintarMatriz();
+      const malas = CANDIDATOS.reduce((s, c) => s + CRITERIOS.filter(k => marca[c.id][k] !== c.v[k]).length, 0);
+      const ds = document.querySelector('input[name="r3-ds"]:checked'), j = document.querySelector('input[name="r3-j"]:checked');
+      const partes = [];
+      if (malas) partes.push(`<li>✗ ${malas === 1 ? '1 casilla de la matriz no coincide; lee la nota debajo de ella' : `${malas} casillas de la matriz no coinciden; lee la nota debajo de cada una marcada con ✗`}.</li>`);
+      if (!ds) partes.push('<li>Elige el dataset del equipo.</li>');
+      else if (ds.value !== 'A') { const c = CANDIDATOS.find(x => x.id === ds.value); const falla = CRITERIOS.filter(k => !c.v[k]).map(k => NOM_CRIT[k].toLowerCase()); partes.push(`<li>✗ ${c.n} no cumple: ${falla.join(', ')}. Solo un candidato cumple los tres criterios.</li>`); }
+      if (!j) partes.push('<li>Elige la justificación para el README.</li>');
+      else { const o = JUSTIF.find(x => x.v === j.value); if (!o.ok) partes.push(`<li>✗ Justificación: ${o.x}</li>`); }
+      if (!partes.length) { retro('#retro3', 'ok', '<strong>¡Decisión bien fundamentada!</strong> El honeypot SSH es el único candidato que cumple los tres criterios, y tu justificación los nombra explícitamente: eso es lo que el docente busca en el punto (b) del checkpoint. El boceto del README cubre el punto (c).'); prog.marcar('r3'); }
+      else retro('#retro3', 'mal', `<ul>${partes.join('')}</ul>`);
+    });
+    $('#r3-reiniciar').addEventListener('click', () => {
+      CANDIDATOS.forEach(c => CRITERIOS.forEach(k => { marca[c.id][k] = null; }));
+      revisado3 = false;
+      document.querySelectorAll('input[name="r3-ds"], input[name="r3-j"]').forEach(r => { r.checked = false; });
+      pintarMatriz(); pintarReadme(); retro('#retro3', '', '');
+    });
+    pintarMatriz(); pintarReadme();
+  </script>
+</body>
+</html>

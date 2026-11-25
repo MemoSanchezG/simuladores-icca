@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 8 · CALCULATE y el contexto de filtro | Simuladores ICCA</title>
+  <meta name="description" content="Mueve segmentadores y observa cómo CALCULATE agrega, reemplaza o elimina filtros; define un umbral de alerta y distingue emulación, pentesting y red teaming.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > *, .segs > *, .kpis > *, .umbral > * { min-width: 0; }
+    p, li, dd, label, legend, summary { overflow-wrap: anywhere; }
+    .segs { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
+    .segs select { width: 100%; }
+    .kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 12px 0; }
+    .kpis .kpi { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+    .kpis .kpi .valor { font-size: 1.6rem; }
+    .ctx td { white-space: normal; min-width: 150px; }
+    .ctx td:first-child, .ctx th:first-child { min-width: 90px; font-weight: 600; }
+    .si { color: var(--ok); font-weight: 700; }
+    .no { color: var(--bad); font-weight: 700; }
+    .cambia { color: var(--warn); font-weight: 700; }
+    .nota { color: var(--muted); font-size: .92rem; }
+    .mision { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin: 12px 0; background: var(--surface); }
+    .mision h4 { margin: 0 0 6px; }
+    .mision.hecha { border-color: var(--ok); }
+    fieldset { border: 0; padding: 0; margin: 6px 0; min-width: 0; }
+    legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
+    .opcion { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; font-weight: 400; }
+    .opcion input { margin-top: 5px; }
+    .umbral { display: grid; gap: 12px; grid-template-columns: 2fr 1fr; align-items: end; }
+    @media (max-width: 560px) { .umbral { grid-template-columns: 1fr; } }
+    .alerta-txt { font-weight: 700; }
+    .escenario { border: 1px solid var(--border); border-left: 5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--surface); }
+    .escenario.bien { border-left-color: var(--ok); }
+    .escenario.revisar { border-left-color: var(--bad); }
+    .escenario > p { margin: 0 0 6px; }
+    .chip[aria-pressed="true"]::before { content: "●"; }
+    .estado { font-size: .92rem; margin-top: 6px; }
+    .estado:empty { display: none; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 8 · CALCULATE y el contexto de filtro</h1>
+      <p class="subtitulo">Así como la emulación del adversario aísla un escenario controlado («¿qué pasa si el actor X ataca?»), <code>CALCULATE</code> aísla un escenario de los datos («¿qué pasa si solo miro los eventos críticos?»). Aquí ves qué filtros conserva, reemplaza o elimina.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás explicar cómo <code>CALCULATE</code> modifica el contexto de filtro de una medida, construir un umbral de alerta con una condición de filtro y distinguir la emulación del adversario del pentesting y del red teaming.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Reto 1: mueve los segmentadores y lee la tabla de contexto; resuelve las tres misiones.</li>
+          <li>Reto 2: ajusta el umbral y el operador; identifica qué hosts quedan en ALERTA.</li>
+          <li>Reto 3: clasifica cada escenario como pentesting, red teaming o emulación.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Mini reporte con segmentadores</h2>
+      <p>La tabla <code>Eventos</code> tiene <strong>150 filas</strong> de septiembre de 2026 (País es el de la IP externa relacionada con cada evento). Estas son las medidas del reporte:</p>
+      <pre class="codigo" id="r1-medidas"></pre>
+      <label class="opcion"><input type="checkbox" id="r1-keep"> Variante: envolver el filtro de [Eventos críticos] en <code>KEEPFILTERS</code></label>
+      <div class="segs" role="group" aria-label="Segmentadores del reporte">
+        <div class="campo"><label for="r1-tec">Técnica</label><select id="r1-tec"></select></div>
+        <div class="campo"><label for="r1-pais">País</label><select id="r1-pais"></select></div>
+        <div class="campo"><label for="r1-sev">Severidad</label><select id="r1-sev"></select></div>
+        <div class="campo"><label for="r1-desde">Desde</label><select id="r1-desde"></select></div>
+        <div class="campo"><label for="r1-hasta">Hasta</label><select id="r1-hasta"></select></div>
+      </div>
+      <div class="acciones"><button type="button" id="r1-limpiar">Quitar todos los filtros</button></div>
+      <p id="r1-aviso" class="nota" aria-live="polite"></p>
+      <div class="kpis" id="r1-kpis" aria-live="polite"></div>
+      <h3>¿Qué filtros ve cada medida en las tarjetas?</h3>
+      <div class="tabla-scroll"><table class="datos ctx" id="r1-ctx"></table></div>
+      <h3>Tabla por País</h3>
+      <div class="tabla-scroll"><table class="datos" id="r1-tabla"></table></div>
+      <p class="nota">En cada fila el visual agrega el filtro <code>Eventos[País] = fila</code>. <code>ALL ( Eventos[País] )</code> también lo quita, por eso [Eventos todos los países] repite el mismo valor en todas las filas y [% del total] muestra la participación de cada país.</p>
+
+      <div class="mision" id="r1-mA">
+        <h4>Misión A</h4>
+        <p>Deja el reporte mostrando solo <strong>T1110 (Brute Force)</strong> en <strong>Brasil</strong>, con todas las severidades y todo el mes. ¿Qué porcentaje de los eventos de fuerza bruta aportó Brasil?</p>
+        <fieldset id="r1-optA"><legend>Elige una respuesta</legend></fieldset>
+        <button type="button" class="primario" id="r1-compA">Comprobar misión A</button>
+        <div class="retro" id="r1-retroA"></div>
+      </div>
+      <div class="mision" id="r1-mB">
+        <h4>Misión B</h4>
+        <p>Presiona <strong>Quitar todos los filtros</strong>, deja <code>KEEPFILTERS</code> desactivado y elige solo <strong>Severidad = Alta</strong>. Compara las tarjetas de [Eventos] y [Eventos críticos]. ¿Qué le pasó al filtro de severidad dentro de [Eventos críticos]?</p>
+        <fieldset id="r1-optB"><legend>Elige una respuesta</legend>
+          <label class="opcion"><input type="radio" name="r1-b" value="a"> Se intersectó con «Crítica» y por eso la tarjeta queda en blanco.</label>
+          <label class="opcion"><input type="radio" name="r1-b" value="b"> CALCULATE lo reemplazó por Severidad = «Crítica»: la tarjeta sigue mostrando los eventos críticos.</label>
+          <label class="opcion"><input type="radio" name="r1-b" value="c"> La tarjeta ahora cuenta los eventos de severidad Alta.</label>
+        </fieldset>
+        <button type="button" class="primario" id="r1-compB">Comprobar misión B</button>
+        <div class="retro" id="r1-retroB"></div>
+      </div>
+      <div class="mision" id="r1-mC">
+        <h4>Misión C</h4>
+        <p>¿Por qué [Eventos todos los países] cambia cuando eliges otra técnica, pero no cuando eliges otro país?</p>
+        <fieldset><legend>Elige una respuesta</legend>
+          <label class="opcion"><input type="radio" name="r1-c" value="a"> Porque ALL quita todos los filtros del reporte.</label>
+          <label class="opcion"><input type="radio" name="r1-c" value="b"> Porque ALL ( Eventos[País] ) solo quita los filtros de la columna País; los demás siguen activos.</label>
+          <label class="opcion"><input type="radio" name="r1-c" value="c"> Porque la medida se calcula una sola vez, al cargar los datos.</label>
+        </fieldset>
+        <button type="button" class="primario" id="r1-compC">Comprobar misión C</button>
+        <div class="retro" id="r1-retroC"></div>
+      </div>
+      <div class="acciones"><button type="button" id="r1-reiniciar">Reiniciar reto 1</button></div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Umbral de alerta por host</h2>
+      <p>Usa todo septiembre (sin segmentadores). La medida <code>[Alerta]</code> compara <code>[Eventos críticos]</code> de cada host contra un umbral.</p>
+      <div class="umbral">
+        <div class="campo">
+          <label for="r2-umbral">Umbral: <span id="r2-umbral-val">5</span> eventos críticos</label>
+          <input type="range" id="r2-umbral" min="0" max="12" step="1" value="5">
+        </div>
+        <div class="campo">
+          <label for="r2-op">Operador</label>
+          <select id="r2-op"><option value=">">&gt; (supera)</option><option value=">=">&gt;= (alcanza o supera)</option></select>
+        </div>
+      </div>
+      <pre class="codigo" id="r2-codigo"></pre>
+      <p id="r2-resumen" class="alerta-txt" aria-live="polite"></p>
+      <div class="dos-columnas">
+        <div class="tabla-scroll"><table class="datos" id="r2-tabla"></table></div>
+        <div id="r2-grafica"></div>
+      </div>
+      <p id="r2-nota" class="nota"></p>
+      <div class="caja alerta" style="margin-top:12px">
+        <p style="margin:0"><strong>Misión:</strong> el turno nocturno del SOC solo puede atender <strong>3 hosts en ALERTA</strong>. Con el operador <code>&gt;</code>, deja el umbral en el valor <strong>más bajo</strong> que produzca como máximo 3 hosts en ALERTA. Después responde: con ese mismo umbral, si cambiaras <code>&gt;</code> por <code>&gt;=</code>, ¿cuántos hosts quedarían en ALERTA?</p>
+      </div>
+      <div class="campo" style="max-width:260px">
+        <label for="r2-resp">Hosts en ALERTA con &gt;=</label>
+        <input type="number" id="r2-resp" min="0" max="8" step="1">
+      </div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r2-comprobar">Comprobar</button>
+        <button type="button" id="r2-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · ¿Pentesting, red teaming o emulación del adversario?</h2>
+      <p>Las tres son pruebas ofensivas autorizadas, pero responden preguntas distintas. Clasifica cada escenario (ficticio).</p>
+      <div class="rejilla" id="r3-lista"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-comprobar">Comprobar</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+      <p class="nota">Ética y alcance: toda emulación se ejecuta en un entorno de laboratorio aislado y con autorización explícita y por escrito; nunca en producción sin un proceso formal de aprobación.</p>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li>Con la tabla <code>Eventos</code> seleccionada elige <strong>Herramientas de tabla › Nueva medida</strong> y crea <code>Eventos críticos = CALCULATE ( [Eventos], Eventos[Severidad] = "Crítica" )</code>.</li>
+        <li>Crea <code>Eventos todos los países = CALCULATE ( [Eventos], ALL ( Eventos[País] ) )</code> y <code>% del total = DIVIDE ( [Eventos], [Eventos todos los países] )</code>; en <strong>Herramientas de medidas</strong> cambia el formato a <strong>Porcentaje</strong>.</li>
+        <li>Para el umbral usa una variable (<code>VAR Umbral = 5</code>) o un parámetro: <strong>Modelado › Nuevo parámetro › Rango numérico</strong> crea una tabla con la serie de valores, su segmentador y una medida que lee el valor elegido con <code>SELECTEDVALUE</code>; úsala en lugar del número fijo.</li>
+        <li>Inserta un <strong>Gráfico de columnas agrupadas</strong> con <code>Eventos[Host]</code> en el eje X y <code>[Eventos]</code> y <code>[Eventos críticos]</code> en el eje Y: el valor filtrado junto al total, como pide la actividad 2.2.</li>
+        <li>En una tabla, aplica <strong>Formato condicional › Color de fondo</strong> a <code>[Eventos críticos]</code> con una regla igual a tu umbral, para que el color refuerce (no sustituya) el texto de <code>[Alerta]</code>.</li>
+        <li>Entrega: captura la fórmula con <code>CALCULATE</code> en la barra de fórmulas y el visual comparativo; agrega la insignia de <em>Modify DAX filter context in semantic models</em>.</li>
+      </ol>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Define con tu compañero un umbral de alerta justificado (capacidad de atención del equipo y la severidad que construiste en la Semana 7) e impleméntalo con <code>CALCULATE</code>, mostrando el valor filtrado junto al total. Documenta el criterio en el README. Como ejercicio de emulación «en papel», elige un actor documentado en ATT&amp;CK y anota qué de sus técnicas cubre tu dataset y cuáles no: esa tabla enriquece la vista de detalle técnico del <strong>checkpoint-2 (Semana 10)</strong>. Guarda en PBIP y haz commit en tu rama.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(8);
+    const { $, el, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+    const hechos = new Set();
+    function marcar(id) { hechos.add(id); prog.marcar(id); }
+    function desmarcar(id) { if (hechos.delete(id)) { prog.reiniciar(); hechos.forEach(h => prog.marcar(h)); } }
+    function aleatorio(s) {
+      return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function dax(t) {
+      return esc(t).replace(/("[^"\n]*")|(\/\/[^\n]*)|\b(VAR|RETURN)\b|\b([A-Z][A-Z0-9]*)(?=\s*\()/g,
+        (m, s, c, k, f) => s ? `<span class="str">${s}</span>` : c ? `<span class="cmt">${c}</span>` : k ? `<span class="kw">${k}</span>` : `<span class="fn">${f}</span>`);
+    }
+    const pct = x => x === null ? '(en blanco)' : num(x * 100, 1) + ' %';
+    const val = x => x === null ? '(en blanco)' : num(x);
+
+    /* ---------- Datos ficticios: 150 eventos de septiembre de 2026 ---------- */
+    const TECS = { 'T1110': 'Brute Force', 'T1566.001': 'Spearphishing Attachment', 'T1059.001': 'PowerShell', 'T1071.001': 'Web Protocols', 'T1021.001': 'Remote Desktop Protocol', 'T1486': 'Data Encrypted for Impact' };
+    const PAISES = ['México', 'Estados Unidos', 'Brasil', 'Países Bajos', 'Alemania', 'Singapur'];
+    const SEVS = ['Baja', 'Media', 'Alta', 'Crítica'];
+    const PLAN = {
+      'T1110': { n: 40, sev: [3, 4, 2, 1], hosts: ['SRV-DC-01', 'SRV-DC-01', 'SRV-DC-01', 'SRV-WEB-01', 'SRV-WEB-01'], pais: [1, 2, 3, 4, 2, 1] },
+      'T1566.001': { n: 28, sev: [2, 4, 3, 1], hosts: ['WS-FIN-03', 'WS-RH-11', 'WS-VEN-07', 'WS-TI-02'], pais: [3, 3, 2, 1, 1, 1] },
+      'T1059.001': { n: 25, sev: [1, 3, 4, 2], hosts: ['WS-FIN-03', 'WS-VEN-07', 'WS-TI-02', 'SRV-ARCH-02'], pais: [1, 2, 1, 2, 2, 1] },
+      'T1071.001': { n: 22, sev: [1, 2, 4, 3], hosts: ['WS-RH-11', 'WS-VEN-07', 'WS-FIN-03'], pais: [0, 2, 1, 3, 2, 2] },
+      'T1021.001': { n: 20, sev: [1, 3, 3, 2], hosts: ['SRV-ARCH-02', 'SRV-SQL-04', 'SRV-DC-01'], pais: [3, 2, 1, 1, 1, 1] },
+      'T1486': { n: 15, sev: [0, 0, 1, 4], hosts: ['SRV-ARCH-02', 'SRV-SQL-04'], pais: [1, 1, 1, 1, 1, 1] }
+    };
+    const rnd = aleatorio(808);
+    function porPeso(p) { let r = rnd() * p.reduce((a, b) => a + b, 0); for (let i = 0; i < p.length; i++) { r -= p[i]; if (r < 0) return i; } return p.length - 1; }
+    const DATOS = [];
+    Object.entries(PLAN).forEach(([tec, p]) => {
+      for (let k = 0; k < p.n; k++) DATOS.push({ tec, sev: SEVS[porPeso(p.sev)], host: p.hosts[Math.floor(rnd() * p.hosts.length)], pais: PAISES[porPeso(p.pais)], dia: 1 + Math.floor(rnd() * 30) });
+    });
+    const HOSTS = [...new Set(DATOS.map(f => f.host))].sort();
+
+    /* ---------- Motor de filtros: cada filtro es {col, valores} ---------- */
+    const COLS = { tec: 'Técnica', pais: 'País', sev: 'Severidad', dia: 'Fecha' };
+    function filtrosSegmentadores() {
+      const f = {};
+      const t = $('#r1-tec').value, p = $('#r1-pais').value, s = $('#r1-sev').value;
+      const d = parseInt($('#r1-desde').value, 10) || 1, h = parseInt($('#r1-hasta').value, 10) || 30;
+      if (t) f.tec = { eq: t };
+      if (p) f.pais = { eq: p };
+      if (s) f.sev = { eq: s };
+      if (d !== 1 || h !== 30) f.dia = { desde: d, hasta: h };
+      return f;
+    }
+    function cumple(fila, filtros) {
+      return Object.entries(filtros).every(([c, v]) => v.vacio ? false : v.eq !== undefined ? fila[c] === v.eq : fila[c] >= v.desde && fila[c] <= v.hasta);
+    }
+    const contar = filtros => { const n = DATOS.filter(f => cumple(f, filtros)).length; return n || null; };
+    // Medidas: reciben el contexto de filtro y devuelven número o null (BLANK)
+    function mEventos(ctx) { return contar(ctx); }
+    function mCriticos(ctx, keep) {
+      const c = Object.assign({}, ctx);
+      if (keep && c.sev) c.sev = c.sev.eq === 'Crítica' ? { eq: 'Crítica' } : { vacio: true };   // KEEPFILTERS: intersección
+      else c.sev = { eq: 'Crítica' };                                                              // CALCULATE: reemplazo
+      return contar(c);
+    }
+    function mTodos(ctx) { const c = Object.assign({}, ctx); delete c.pais; return contar(c); }        // ALL ( Eventos[País] )
+    function mPct(ctx) { const a = mEventos(ctx), b = mTodos(ctx); return a === null || b === null ? null : a / b; }   // DIVIDE
+
+    function pintarMedidas() {
+      const keep = $('#r1-keep').checked;
+      $('#r1-medidas').innerHTML = dax(`Eventos = COUNTROWS ( Eventos )\n\nEventos críticos =\nCALCULATE ( [Eventos], ${keep ? 'KEEPFILTERS ( Eventos[Severidad] = "Crítica" )' : 'Eventos[Severidad] = "Crítica"'} )\n\nEventos todos los países =\nCALCULATE ( [Eventos], ALL ( Eventos[País] ) )\n\n% del total = DIVIDE ( [Eventos], [Eventos todos los países] )`);
+    }
+    function llenarSegmentadores() {
+      const op = (v, t) => el('option', { value: v }, t);
+      $('#r1-tec').replaceChildren(op('', 'Todas'), ...Object.entries(TECS).map(([k, n]) => op(k, `${k} · ${n}`)));
+      $('#r1-pais').replaceChildren(op('', 'Todos'), ...PAISES.map(p => op(p, p)));
+      $('#r1-sev').replaceChildren(op('', 'Todas'), ...SEVS.map(s => op(s, s)));
+      const dias = Array.from({ length: 30 }, (_, i) => i + 1);
+      $('#r1-desde').replaceChildren(...dias.map(d => op(String(d), `${d} sep`)));
+      $('#r1-hasta').replaceChildren(...dias.map(d => op(String(d), `${d} sep`)));
+      $('#r1-desde').value = '1'; $('#r1-hasta').value = '30';
+    }
+    function textoFiltro(c, v) { return v.vacio ? 'vacío' : v.eq !== undefined ? `${COLS[c]} = ${v.eq}` : `${v.desde} al ${v.hasta} de sep`; }
+
+    function pintar1() {
+      pintarMedidas();
+      const keep = $('#r1-keep').checked;
+      const ctx = filtrosSegmentadores();
+      if (ctx.dia && ctx.dia.desde > ctx.dia.hasta) ctx.dia = { vacio: true };
+      const k = [['[Eventos]', val(mEventos(ctx))], ['[Eventos críticos]', val(mCriticos(ctx, keep))], ['[Eventos todos los países]', val(mTodos(ctx))], ['[% del total]', pct(mPct(ctx))]];
+      $('#r1-kpis').replaceChildren(...k.map(([e, v]) => el('div', { class: 'kpi' }, el('span', { class: 'valor' }, v), el('span', { class: 'etiqueta' }, e))));
+      // Tabla de contexto
+      const celda = (txt, cls) => el('td', {}, el('span', { class: cls || '' }, txt));
+      const filas = ['tec', 'pais', 'sev', 'dia'].map(c => {
+        const v = ctx[c];
+        const base = v ? celda('✓ se aplica: ' + textoFiltro(c, v), 'si') : celda('— sin filtro');
+        let crit = base, todos = base;
+        if (c === 'sev') {
+          if (!v) crit = celda('➕ CALCULATE agrega: Severidad = Crítica', 'cambia');
+          else if (keep) crit = celda(v.eq === 'Crítica' ? '∩ se intersecta: Crítica ∩ Crítica = Crítica' : `∩ se intersecta: ${v.eq} ∩ Crítica = vacío`, 'cambia');
+          else crit = celda(v.eq === 'Crítica' ? '↻ reemplazado por el mismo valor (Crítica)' : `↻ reemplazado: ${v.eq} → Crítica`, 'cambia');
+        }
+        if (c === 'pais') todos = v ? celda(`✗ eliminado por ALL ( Eventos[País] )`, 'no') : celda('— (ALL no tiene nada que quitar)');
+        return el('tr', {}, el('td', {}, COLS[c]), base, crit, todos);
+      });
+      $('#r1-ctx').replaceChildren(el('thead', {}, el('tr', {}, ...['Filtro', '[Eventos]', '[Eventos críticos]', '[Eventos todos los países]'].map(h => el('th', { scope: 'col' }, h)))), el('tbody', {}, ...filas));
+      // Tabla por país: solo países con eventos en el contexto de los segmentadores (como hace el visual)
+      const paises = PAISES.filter(p => (!ctx.pais || ctx.pais.eq === p) && mEventos(Object.assign({}, ctx, { pais: { eq: p } })) !== null);
+      const filasT = paises.map(p => { const c = Object.assign({}, ctx, { pais: { eq: p } }); return { p, e: mEventos(c), c, keep }; })
+        .sort((a, b) => b.e - a.e || a.p.localeCompare(b.p))
+        .map(x => [x.p, val(x.e), val(mCriticos(x.c, keep)), val(mTodos(x.c)), pct(mPct(x.c))]);
+      const total = ['Total', val(mEventos(ctx)), val(mCriticos(ctx, keep)), val(mTodos(ctx)), pct(mPct(ctx))];
+      $('#r1-aviso').textContent = ctx.dia && ctx.dia.vacio ? '⚠ El rango de fechas está invertido («Desde» es posterior a «Hasta»): ninguna fila cumple el filtro y las medidas quedan en blanco.' : '';
+      $('#r1-tabla').replaceChildren(el('thead', {}, el('tr', {}, ...['País', '[Eventos]', '[Eventos críticos]', '[Eventos todos los países]', '[% del total]'].map(h => el('th', { scope: 'col' }, h)))),
+        el('tbody', {}, ...(filasT.length ? filasT : [['(sin filas)', '', '', '', '']]).map(r => el('tr', {}, ...r.map((x, i) => el('td', { class: i ? 'num' : '' }, x)))),
+          el('tr', {}, ...total.map((x, i) => el('td', { class: i ? 'num' : '', style: 'font-weight:700' }, x)))));
+    }
+    ['#r1-tec', '#r1-pais', '#r1-sev', '#r1-desde', '#r1-hasta', '#r1-keep'].forEach(s => $(s).addEventListener('change', pintar1));
+    $('#r1-limpiar').addEventListener('click', () => { ['#r1-tec', '#r1-pais', '#r1-sev'].forEach(s => { $(s).value = ''; }); $('#r1-desde').value = '1'; $('#r1-hasta').value = '30'; pintar1(); });
+
+    // Misión A: opciones calculadas con los datos (la correcta y errores conceptuales típicos)
+    const nT = DATOS.filter(f => f.tec === 'T1110').length, nTB = DATOS.filter(f => f.tec === 'T1110' && f.pais === 'Brasil').length;
+    const nB = DATOS.filter(f => f.pais === 'Brasil').length;
+    const opcA = [
+      { v: 'ok', x: nTB / nT, exp: '' },
+      { v: 'pb', x: nB / DATOS.length, exp: 'ese es el porcentaje de <em>todos</em> los eventos que vienen de Brasil: falta el filtro de técnica T1110.' },
+      { v: 'pt', x: nTB / DATOS.length, exp: 'ahí dividiste entre todos los eventos de todas las técnicas; [Eventos todos los países] conserva el filtro de técnica.' },
+      { v: 'cien', x: 1, exp: '100 % sería el resultado si el denominador no usara ALL: con el filtro País = Brasil, numerador y denominador serían iguales.' }
+    ].filter((o, i, a) => a.findIndex(b => Math.abs(b.x - o.x) < 1e-9) === i);
+    ICCA.barajar(opcA, 3).forEach(o => $('#r1-optA').append(el('label', { class: 'opcion' }, el('input', { type: 'radio', name: 'r1-a', value: o.v }), ' ' + pct(o.x))));
+    const misiones = { A: false, B: false, C: false };
+    const elegida = n => { const r = document.querySelector(`input[name="${n}"]:checked`); return r ? r.value : ''; };
+    function cerrarMision(m, ok, html) {
+      misiones[m] = ok;
+      retro(`#r1-retro${m}`, ok ? 'ok' : 'mal', html);
+      $(`#r1-m${m}`).classList.toggle('hecha', ok);
+      if (misiones.A && misiones.B && misiones.C) { retro('#retro1', 'ok', '<strong>¡Reto 1 completo!</strong> Ya sabes leer el contexto de filtro: los segmentadores lo crean, cada fila del visual lo refina y <code>CALCULATE</code> lo modifica (agrega, reemplaza o, con ALL, elimina filtros).'); marcar('reto1'); }
+      else { retro('#retro1', '', ''); desmarcar('reto1'); }
+    }
+    $('#r1-compA').addEventListener('click', () => {
+      const c = filtrosSegmentadores();
+      const estadoOk = c.tec && c.tec.eq === 'T1110' && c.pais && c.pais.eq === 'Brasil' && !c.sev && !c.dia;
+      const r = elegida('r1-a');
+      if (!estadoOk) return cerrarMision('A', false, 'Primero deja los segmentadores en Técnica = T1110, País = Brasil, Severidad = Todas y del 1 al 30 de septiembre.');
+      if (!r) return cerrarMision('A', false, 'Elige una respuesta.');
+      if (r === 'ok') return cerrarMision('A', true, `✓ ${pct(nTB / nT)}: [Eventos] = ${nTB} (T1110 en Brasil) entre [Eventos todos los países] = ${nT} (T1110 en todos los países). El numerador respeta todos los filtros; el denominador conserva Técnica pero quita País.`);
+      cerrarMision('A', false, 'No: ' + opcA.find(o => o.v === r).exp);
+    });
+    $('#r1-compB').addEventListener('click', () => {
+      const c = filtrosSegmentadores(), r = elegida('r1-b');
+      if (!c.sev || c.sev.eq !== 'Alta' || c.tec || c.pais || c.dia || $('#r1-keep').checked) return cerrarMision('B', false, 'Primero quita todos los filtros, elige solo Severidad = Alta en el segmentador y deja KEEPFILTERS desactivado.');
+      if (!r) return cerrarMision('B', false, 'Elige una respuesta.');
+      if (r === 'b') return cerrarMision('B', true, `✓ Exacto: [Eventos] = ${val(mEventos(c))} (los de severidad Alta), pero [Eventos críticos] = ${val(mCriticos(c, false))}, los mismos que sin segmentador. Una condición como <code>Eventos[Severidad] = "Crítica"</code> dentro de CALCULATE equivale a <code>FILTER ( ALL ( Eventos[Severidad] ), … )</code>: quita el filtro que traía la columna y pone el suyo. Prueba activar KEEPFILTERS: entonces sí se intersecta (Alta ∩ Crítica = vacío) y la tarjeta queda en blanco.`);
+      cerrarMision('B', false, r === 'a' ? 'No: eso pasaría con KEEPFILTERS. Sin él, CALCULATE reemplaza el filtro de la misma columna. Mira la tabla de contexto.' : 'No: mira la tabla de contexto, la columna [Eventos críticos] dice qué pasó con el filtro de Severidad.');
+    });
+    $('#r1-compC').addEventListener('click', () => {
+      const r = elegida('r1-c');
+      if (!r) return cerrarMision('C', false, 'Elige una respuesta.');
+      if (r === 'b') return cerrarMision('C', true, '✓ ALL recibe una columna y solo quita los filtros de esa columna. Si quisieras ignorar todos los filtros de la tabla usarías <code>ALL ( Eventos )</code>; y para quitar todos menos uno, <code>ALLEXCEPT</code>.');
+      cerrarMision('C', false, r === 'a' ? 'No: mira la tabla de contexto. Técnica, Severidad y Fecha siguen con «✓ se aplica» en [Eventos todos los países].' : 'No: las medidas se recalculan cada vez que cambia un segmentador; por eso la tarjeta cambia al elegir otra técnica.');
+    });
+    $('#r1-reiniciar').addEventListener('click', () => {
+      Object.keys(misiones).forEach(m => { misiones[m] = false; retro(`#r1-retro${m}`, '', ''); $(`#r1-m${m}`).classList.remove('hecha'); });
+      document.querySelectorAll('input[name="r1-a"], input[name="r1-b"], input[name="r1-c"]').forEach(r => { r.checked = false; });
+      $('#r1-keep').checked = false;
+      $('#r1-limpiar').click();
+      retro('#retro1', '', ''); desmarcar('reto1');
+    });
+    llenarSegmentadores(); pintar1();
+
+    /* ---------- Reto 2 ---------- */
+    const critPorHost = h => mCriticos({ host: { eq: h } }, false);
+    const evPorHost = h => mEventos({ host: { eq: h } });
+    const enAlerta = (h, u, op) => { const c = critPorHost(h) || 0; return op === '>' ? c > u : c >= u; };   // DAX compara BLANK como 0
+    const nAlerta = (u, op) => HOSTS.filter(h => enAlerta(h, u, op)).length;
+    function minimoUmbral() { let u = 0; while (nAlerta(u, '>') > 3) u++; return u; }
+    function pintar2() {
+      const u = parseInt($('#r2-umbral').value, 10) || 0, op = $('#r2-op').value || '>';
+      $('#r2-umbral-val').textContent = String(u);
+      $('#r2-codigo').innerHTML = dax(`Alerta =\nVAR Umbral = ${u}\nRETURN\n    IF ( [Eventos críticos] ${op} Umbral, "ALERTA", "OK" )`);
+      const filas = HOSTS.map(h => ({ h, e: evPorHost(h), c: critPorHost(h), a: enAlerta(h, u, op) })).sort((a, b) => (b.c || 0) - (a.c || 0) || a.h.localeCompare(b.h));
+      $('#r2-tabla').replaceChildren(el('thead', {}, el('tr', {}, ...['Host', '[Eventos]', '[Eventos críticos]', '[Alerta]'].map(t => el('th', { scope: 'col' }, t)))),
+        el('tbody', {}, ...filas.map(x => el('tr', { class: x.a ? 'resaltado' : '' }, el('td', {}, x.h), el('td', { class: 'num' }, val(x.e)), el('td', { class: 'num' }, val(x.c)), el('td', {}, el('strong', {}, x.a ? '⚠ ALERTA' : '✓ OK'))))));
+      ICCA.barras('#r2-grafica', filas.map(x => ({ etiqueta: x.h, valor: x.c || 0, resaltar: x.a })), { titulo: '[Eventos críticos] por host (en rojo: ALERTA)' });
+      const n = filas.filter(x => x.a).length;
+      $('#r2-resumen').textContent = `Hosts en ALERTA: ${n} de ${HOSTS.length}`;
+      const sinCrit = filas.filter(x => x.c === null).length;
+      $('#r2-nota').textContent = op === '>=' && u === 0
+        ? 'Ojo: con >= 0 todos los hosts quedan en ALERTA; incluso uno sin eventos críticos cumpliría, porque [Eventos críticos] devolvería BLANK y DAX compara BLANK como si fuera 0.'
+        : sinCrit ? 'Los hosts sin eventos críticos muestran «(en blanco)»: COUNTROWS de una tabla vacía devuelve BLANK, y en la comparación DAX lo trata como 0.'
+          : 'Tip: con el mismo umbral, alterna entre > y >= para ver qué hosts empatan exactamente con él.';
+    }
+    $('#r2-umbral').addEventListener('input', pintar2);
+    $('#r2-op').addEventListener('change', pintar2);
+    $('#r2-comprobar').addEventListener('click', () => {
+      const u = parseInt($('#r2-umbral').value, 10) || 0, umin = minimoUmbral(), n = nAlerta(u, '>');
+      const resp = $('#r2-resp').value.trim(), esperado = nAlerta(umin, '>=');
+      if (n > 3) { retro('#retro2', 'mal', `Con umbral ${u} y el operador &gt; quedan <strong>${n}</strong> hosts en ALERTA: el turno no puede atenderlos. Sube el umbral.`); desmarcar('reto2'); return; }
+      if (u > umin) { retro('#retro2', 'aviso', `Cumples el límite, pero ${u} no es el umbral más bajo: con ${u - 1} seguirías en 3 hosts o menos. Un umbral demasiado alto deja pasar hosts que sí merecían atención.`); desmarcar('reto2'); return; }
+      if (resp === '') { retro('#retro2', 'aviso', `✓ Umbral correcto (${umin}). Ahora responde: con <code>&gt;=</code> en lugar de <code>&gt;</code>, ¿cuántos hosts quedarían en ALERTA? Puedes probarlo con el selector de operador.`); desmarcar('reto2'); return; }
+      if (parseInt(resp, 10) !== esperado) { retro('#retro2', 'mal', `No son ${esc(resp)}. Cambia el operador a <code>&gt;=</code> con el umbral en ${umin} y cuenta las filas con ⚠ ALERTA. Pista: importan los hosts con exactamente ${umin} eventos críticos.`); desmarcar('reto2'); return; }
+      const empates = HOSTS.filter(h => (critPorHost(h) || 0) === umin);
+      retro('#retro2', 'ok', `<strong>¡Correcto!</strong> Umbral mínimo con &gt;: ${umin} (${nAlerta(umin, '>')} hosts en ALERTA). Con &gt;= serían ${esperado}${empates.length ? `, porque ${empates.join(' y ')} ${empates.length > 1 ? 'tienen' : 'tiene'} exactamente ${umin} eventos críticos` : ''}. La diferencia entre «supera» y «alcanza» es una decisión del equipo: escríbela en la documentación de tu regla de alerta.`);
+      marcar('reto2');
+    });
+    $('#r2-reiniciar').addEventListener('click', () => { $('#r2-umbral').value = '5'; $('#r2-op').value = '>'; $('#r2-resp').value = ''; retro('#retro2', '', ''); pintar2(); desmarcar('reto2'); });
+    pintar2();
+
+    /* ---------- Reto 3 ---------- */
+    const TIPOS = [['pen', 'Pentesting'], ['red', 'Red teaming'], ['emu', 'Emulación del adversario']];
+    const ESC = [
+      { t: 'Una empresa contrata a un equipo durante dos semanas para encontrar y explotar el mayor número posible de vulnerabilidades en su portal web de clientes y entregar un reporte con su severidad (CVSS).', r: 'pen',
+        exp: 'Busca debilidades técnicas en un alcance definido y las prioriza. No imita a un actor concreto ni evalúa la respuesta del SOC.' },
+      { t: 'Durante un mes, un equipo ofensivo intenta llegar a la base de datos de nómina sin ser detectado, combinando phishing, una credencial robada e ingeniería social en la recepción; el SOC no sabe cuándo ocurrirá.', r: 'red',
+        exp: 'Tiene un objetivo de negocio y evalúa a la organización de punta a punta (tecnología, personas y procesos) sin aviso al SOC.' },
+      { t: 'Con base en un reporte de CTI sobre FIN7 (G0046), el equipo reproduce en un laboratorio aislado, técnica por técnica, sus TTP documentados (por ejemplo, T1566.001 y T1059.001) para comprobar si las detecciones los capturan.', r: 'emu',
+        exp: 'Replica el comportamiento documentado de un actor específico, mapeado a ATT&CK, para validar la cobertura de detección frente a ese actor.' },
+      { t: 'Antes de liberar una app móvil se contrata una prueba para identificar fallas del OWASP Top 10, como inyección SQL o autenticación débil, y demostrar si son explotables.', r: 'pen',
+        exp: 'Evalúa vulnerabilidades técnicas de un sistema concreto y demuestra si se pueden explotar.' },
+      { t: 'Tras leer que un ransomware usa T1003.001 y T1053.005, el equipo ejecuta las pruebas atómicas de Atomic Red Team para esas técnicas en una máquina virtual aislada y revisa si el SIEM genera alertas.', r: 'emu',
+        exp: 'Parte de los TTP documentados de una amenaza concreta y prueba técnica por técnica si se detectan; Atomic Red Team es una biblioteca de pruebas mapeadas a ATT&CK.' },
+      { t: 'La dirección pide comprobar si un atacante podría llegar a los servidores financieros por cualquier vía; el equipo elige sus técnicas sobre la marcha y al final se evalúa también cómo respondieron las personas y los procesos.', r: 'red',
+        exp: 'Objetivo de negocio, libertad para elegir el camino y evaluación de personas y procesos.' },
+      { t: 'El equipo usa MITRE Caldera para encadenar automáticamente las técnicas documentadas de APT29 (G0016) en un entorno de laboratorio y medir qué porcentaje detecta el EDR.', r: 'emu',
+        exp: 'Automatiza la réplica de los TTP de un actor conocido para medir la cobertura de detección; Caldera es una plataforma de emulación.' },
+      { t: 'Se escanea toda la red interna con un escáner de vulnerabilidades, se verifica manualmente qué fallas son explotables y se prioriza la aplicación de parches.', r: 'pen',
+        exp: 'Busca y valida vulnerabilidades técnicas en un alcance amplio; no hay un actor que imitar ni un objetivo de negocio que alcanzar.' }
+    ];
+    const resp3 = ESC.map(() => '');
+    ESC.forEach((e, i) => {
+      const grupo = el('div', { role: 'group', 'aria-label': `Escenario ${i + 1}` });
+      TIPOS.forEach(([v, t]) => grupo.append(el('button', { type: 'button', class: 'chip', 'aria-pressed': 'false', 'data-v': v, onclick: () => {
+        resp3[i] = v; grupo.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+      } }, t)));
+      $('#r3-lista').append(el('article', { class: 'escenario', id: `r3-es-${i}` }, el('p', {}, el('strong', {}, `${i + 1}. `), e.t), grupo, el('div', { class: 'estado', id: `r3-est-${i}` })));
+    });
+    $('#r3-comprobar').addEventListener('click', () => {
+      let bien = 0;
+      ESC.forEach((e, i) => {
+        const card = $(`#r3-es-${i}`), est = $(`#r3-est-${i}`);
+        if (!resp3[i]) { card.className = 'escenario revisar'; est.innerHTML = '<span class="no">✗ Sin responder.</span>'; return; }
+        const ok = resp3[i] === e.r; bien += ok;
+        card.className = 'escenario ' + (ok ? 'bien' : 'revisar');
+        est.innerHTML = ok ? `<span class="si">✓ ${TIPOS.find(x => x[0] === e.r)[1]}.</span> ${esc(e.exp)}`
+          : `<span class="no">✗ Revisa.</span> Pregúntate: ¿imita a un actor concreto y conocido? ¿persigue un objetivo de negocio de punta a punta? ¿o busca vulnerabilidades técnicas?`;
+      });
+      if (bien === ESC.length) { retro('#retro3', 'ok', '<strong>¡8 de 8!</strong> Pentesting: ¿qué vulnerabilidades tengo? Red teaming: ¿podría un atacante lograr este objetivo de negocio? Emulación: ¿detectaría a <em>este</em> actor, técnica por técnica? Esta última conecta directamente con el mapeo ATT&amp;CK de la Semana 6.'); marcar('reto3'); }
+      else { retro('#retro3', 'mal', `Llevas <strong>${bien} de ${ESC.length}</strong>. La pista está en el propósito: vulnerabilidades técnicas, objetivo de negocio o comportamiento de un actor documentado.`); desmarcar('reto3'); }
+    });
+    $('#r3-reiniciar').addEventListener('click', () => {
+      resp3.fill('');
+      document.querySelectorAll('#r3-lista .chip').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      ESC.forEach((e, i) => { $(`#r3-es-${i}`).className = 'escenario'; $(`#r3-est-${i}`).innerHTML = ''; });
+      retro('#retro3', '', ''); desmarcar('reto3');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 3 · Taller de Power Query | Simuladores ICCA</title>
+  <meta name="description" content="Clasifica fuentes de datos de CTI, limpia una tabla de accesos con un editor de Power Query simulado (Pasos aplicados y código M en vivo) y descubre por qué el orden de los pasos importa.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > * { min-width: 0; }
+    .nota { font-size: .88rem; color: var(--muted); }
+    .fila { display: grid; grid-template-columns: 1fr minmax(9rem, 11rem) minmax(10rem, 12rem); gap: 8px; align-items: start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin: 8px 0; }
+    .fila.bien { border-color: var(--ok); background: var(--ok-soft); }
+    .fila.malo { border-color: var(--bad); background: var(--bad-soft); }
+    .fila p { margin: 0; }
+    .fila select { width: 100%; }
+    .fila .explica { grid-column: 1 / -1; font-size: .92rem; }
+    .fila .explica:empty { display: none; }
+    @media (max-width: 680px) { .fila { grid-template-columns: 1fr 1fr; } .fila > p:first-child { grid-column: 1 / -1; } }
+    @media (max-width: 480px) { .fila { grid-template-columns: 1fr; } }
+    .matriz td, .matriz th { white-space: normal; vertical-align: top; min-width: 6.5rem; }
+    .editor { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; }
+    @media (max-width: 860px) { .editor { grid-template-columns: 1fr; } }
+    .cinta { display: grid; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface-2); margin-bottom: 10px; }
+    .cinta .grupo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .cinta .grupo > strong { font-size: .85rem; color: var(--muted); min-width: 7.5rem; }
+    .cinta button { min-height: 36px; padding: 6px 10px; }
+    .cinta select, .cinta input[type="text"] { min-height: 36px; padding: 5px 8px; max-width: 11rem; }
+    .cinta label.chk { font-weight: 400; font-size: .88rem; display: inline-flex; gap: 6px; align-items: center; }
+    .tabla-pq { max-height: 360px; overflow: auto; }
+    .tabla-pq th { padding: 4px 6px; vertical-align: top; }
+    .col-btn { min-height: 32px; padding: 4px 8px; border-radius: 6px; font-size: .88rem; white-space: nowrap; }
+    .col-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-2); }
+    .tipo { display: inline-block; font: 700 .68rem var(--mono); padding: 1px 4px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); margin-right: 4px; }
+    .calidad { display: block; font: 400 .7rem var(--font); color: var(--muted); margin-top: 3px; }
+    td.sel { background: var(--accent-soft) !important; }
+    .nulo { color: var(--muted); font-style: italic; }
+    .err { color: var(--bad); font-weight: 700; }
+    .esp { color: var(--warn); font-weight: 700; }
+    .val { white-space: pre; }
+    .pasos-pq { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+    .pasos-pq li { display: flex; gap: 4px; align-items: stretch; }
+    .pasos-pq .paso { flex: 1; text-align: left; min-height: 34px; padding: 5px 9px; font-weight: 500; font-size: .9rem; }
+    .pasos-pq .paso[aria-current="step"] { background: var(--accent-soft); border-color: var(--accent-2); font-weight: 700; }
+    .pasos-pq .quitar { min-height: 34px; padding: 4px 10px; }
+    .checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: .92rem; }
+    .checklist li { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
+    .checklist li.si { border-color: var(--ok); background: var(--ok-soft); }
+    .checklist .det { display: block; font-size: .82rem; color: var(--muted); }
+    .aviso-vista { border: 1px dashed var(--warn); background: var(--warn-soft); border-radius: 8px; padding: 6px 10px; margin: 0 0 8px; font-size: .9rem; }
+    .orden { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+    .orden li { display: grid; grid-template-columns: 2rem 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; background: var(--surface); }
+    .orden .pos { width: 1.8rem; height: 1.8rem; border-radius: 50%; display: grid; place-items: center; background: var(--accent-2); color: var(--surface); font-weight: 700; }
+    .orden .flechas { display: flex; gap: 4px; }
+    .orden .flechas button { min-width: 44px; padding: 6px 10px; }
+    fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 12px 0 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    .opcion { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; font-weight: 400; }
+    .opcion input { margin-top: 5px; }
+    .resumen-pq { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .9rem; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 3 · Taller de Power Query</h1>
+      <p class="subtitulo">Los datos de seguridad casi nunca llegan limpios: espacios, mayúsculas mezcladas, duplicados y columnas combinadas. Aquí aprenderás a reconocer de dónde viene cada dato y a limpiarlo paso a paso, como en el Editor de Power Query.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás <strong>clasificar</strong> fuentes de datos como internas o externas y por su grado de estructura, <strong>aplicar</strong> transformaciones de Power Query (quitar duplicados, recortar, dividir, cambiar tipo, reemplazar y filtrar) leyendo su código M, y <strong>justificar</strong> el orden de los pasos.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>En el Reto 1 clasifica cada fuente y observa cómo se llena la matriz.</li>
+          <li>En el Reto 2 selecciona una columna, aplica transformaciones y vigila la lista de verificación hasta que la tabla quede lista. Puedes ver cualquier paso anterior o quitar el último.</li>
+          <li>En el Reto 3 prueba distintos órdenes de pasos y compara el resultado.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · ¿De dónde viene y qué forma tiene?</h2>
+      <p><strong>Interna</strong>: la genera y controla tu organización. <strong>Externa</strong>: viene del ecosistema (feeds, proveedores, foros). <strong>Estructurada</strong>: filas y columnas fijas. <strong>Semiestructurada</strong>: campos con nombre pero flexibles o anidados (JSON, XML). <strong>No estructurada</strong>: texto libre o documentos.</p>
+      <div id="r1-lista"></div>
+      <h3>Tu matriz de fuentes</h3>
+      <div class="tabla-scroll">
+        <table class="datos matriz">
+          <caption class="oculto-visual">Fuentes asignadas por origen y estructura</caption>
+          <thead><tr><th scope="col">Origen</th><th scope="col">Estructurada</th><th scope="col">Semiestructurada</th><th scope="col">No estructurada</th></tr></thead>
+          <tbody id="r1-matriz"></tbody>
+          <tfoot><tr><th scope="row">Camino a Power BI</th><td>Directo: se carga tal cual</td><td>Se expande en columnas en Power Query</td><td>Requiere extraer los datos antes de modelar</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r1-revisar">Revisar clasificación</button>
+        <button type="button" id="r1-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Editor de Power Query: limpia accesos.csv</h2>
+      <p>La consulta <code>accesos</code> llegó con todas las columnas como texto (<span class="tipo">ABC</span>) porque la detección automática de tipos está desactivada. Los espacios sobrantes se marcan con <span class="esp">·</span>. Déjala lista para analizar: la lista de verificación te dice qué falta.</p>
+      <div class="editor">
+        <div style="min-width:0">
+          <div class="cinta" id="r2-cinta">
+            <div class="grupo"><strong>Tabla</strong>
+              <button type="button" data-op="distinct">Quitar duplicados</button>
+              <button type="button" data-op="blancos">Quitar filas en blanco</button>
+            </div>
+            <div class="grupo"><strong><label for="r2-col">Columna</label></strong>
+              <select id="r2-col"></select>
+              <button type="button" data-op="recortar">Recortar</button>
+              <button type="button" data-op="minus">minúsculas</button>
+              <button type="button" data-op="mayus">MAYÚSCULAS</button>
+              <button type="button" data-op="nulos">Filtrar nulos y vacíos</button>
+            </div>
+            <div class="grupo"><strong><label for="r2-delim">Dividir columna</label></strong>
+              <select id="r2-delim"><option value=" ">Espacio</option><option value=":">Dos puntos (:)</option><option value=",">Coma</option><option value="-">Guion (-)</option></select>
+              <button type="button" data-op="dividir">Por delimitador</button>
+            </div>
+            <div class="grupo"><strong><label for="r2-tipo">Tipo de datos</label></strong>
+              <select id="r2-tipo"><option value="texto">Texto</option><option value="int">Número entero</option><option value="date">Fecha</option><option value="time">Hora</option><option value="datetime">Fecha/hora</option></select>
+              <button type="button" data-op="tipo">Cambiar tipo</button>
+            </div>
+            <div class="grupo"><strong>Reemplazar valores</strong>
+              <input type="text" id="r2-buscar" aria-label="Valor que buscar" placeholder="Valor que buscar">
+              <input type="text" id="r2-con" aria-label="Reemplazar con" placeholder="Reemplazar con">
+              <label class="chk"><input type="checkbox" id="r2-celda"> Coincidir con todo el contenido de la celda</label>
+              <button type="button" data-op="reemplazar">Reemplazar</button>
+            </div>
+            <div class="grupo"><strong><label for="r2-nombre">Cambiar nombre</label></strong>
+              <input type="text" id="r2-nombre" placeholder="Nuevo nombre de la columna">
+              <button type="button" data-op="renombrar">Cambiar nombre</button>
+            </div>
+          </div>
+          <div id="r2-aviso-vista"></div>
+          <div class="resumen-pq" id="r2-resumen"></div>
+          <div class="tabla-scroll tabla-pq" id="r2-tabla"></div>
+        </div>
+        <div style="min-width:0">
+          <h3 style="margin-top:0">Pasos aplicados</h3>
+          <ol class="pasos-pq" id="r2-pasos"></ol>
+          <div class="campo" style="margin-top:10px">
+            <label for="r2-nombre-paso">Cambiar nombre del paso seleccionado</label>
+            <input type="text" id="r2-nombre-paso" placeholder="p. ej., usuario sin espacios">
+          </div>
+          <button type="button" id="r2-renombrar-paso">Renombrar paso</button>
+          <h3>Lista de verificación</h3>
+          <ul class="checklist" id="r2-check"></ul>
+        </div>
+      </div>
+      <h3>Editor avanzado (código M)</h3>
+      <pre class="codigo" id="r2-m"></pre>
+      <div class="acciones"><button type="button" id="r2-reiniciar">Reiniciar consulta</button></div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · ¿Importa el orden de los pasos?</h2>
+      <p>Mismos cinco pasos, distinto orden, distinto resultado. Acomódalos con ↑ y ↓, pulsa «Probar este orden» y observa la tabla que sale. Luego responde la pregunta.</p>
+      <div class="dos-columnas">
+        <ol class="orden" id="r3-lista"></ol>
+        <div>
+          <p class="nota" style="margin-top:0">Muestra de entrada (6 filas):</p>
+          <div class="tabla-scroll" id="r3-entrada"></div>
+          <p class="nota">Resultado con tu orden:</p>
+          <div class="tabla-scroll" id="r3-salida"><p class="nota" style="margin:8px">Pulsa «Probar este orden».</p></div>
+        </div>
+      </div>
+      <p id="r3-anuncio" class="oculto-visual" aria-live="polite"></p>
+      <div class="acciones"><button type="button" class="primario" id="r3-probar">Probar este orden</button></div>
+      <fieldset>
+        <legend>¿Por qué conviene cambiar el tipo hasta después de dividir y limpiar?</legend>
+        <div id="r3-mc"></div>
+      </fieldset>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-comprobar">Comprobar respuesta</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li><strong>Inicio › Transformar datos</strong> abre el Editor de Power Query. Selecciona la columna haciendo clic en su encabezado.</li>
+        <li><strong>Inicio › Quitar filas › Quitar duplicados</strong> o <strong>Quitar filas en blanco</strong>. Para filtrar nulos, abre la flecha del encabezado y desmarca <em>(null)</em>.</li>
+        <li><strong>Transformar › Formato › Recortar</strong>, <strong>minúsculas</strong> o <strong>MAYÚSCULAS</strong>; <strong>Inicio › Dividir columna › Por delimitador</strong>; <strong>Inicio › Reemplazar valores</strong>; <strong>Transformar › Tipo de datos</strong>. Doble clic en el encabezado para cambiar su nombre.</li>
+        <li>Cada acción agrega un paso en <strong>Configuración de la consulta › Pasos aplicados</strong>. Clic derecho en un paso › <strong>Cambiar nombre</strong> para describirlo (la actividad de la semana lo pide). <strong>Vista › Editor avanzado</strong> muestra el código M completo.</li>
+        <li>Activa <strong>Vista › Calidad de columna</strong> para ver el porcentaje de valores válidos, con error y vacíos. Al terminar, <strong>Inicio › Cerrar y aplicar</strong>.</li>
+      </ol>
+      <pre class="codigo"><span class="cmt">// Ejemplo de consulta limpia (fragmento)</span>
+<span class="kw">let</span>
+    Origen = <span class="fn">Csv.Document</span>(<span class="fn">File.Contents</span>(<span class="str">"C:\ICCA\accesos.csv"</span>), [Delimiter=<span class="str">","</span>, Columns=5, Encoding=65001, QuoteStyle=<span class="fn">QuoteStyle.None</span>]),
+    #"Encabezados promovidos" = <span class="fn">Table.PromoteHeaders</span>(Origen, [PromoteAllScalars=<span class="kw">true</span>]),
+    #"usuario sin espacios" = <span class="fn">Table.TransformColumns</span>(#"Encabezados promovidos", {{<span class="str">"usuario"</span>, <span class="fn">Text.Trim</span>, <span class="kw">type</span> text}}),
+    #"Fecha y hora separadas" = <span class="fn">Table.SplitColumn</span>(#"usuario sin espacios", <span class="str">"FechaHora"</span>, <span class="fn">Splitter.SplitTextByDelimiter</span>(<span class="str">" "</span>, <span class="fn">QuoteStyle.Csv</span>), {<span class="str">"Fecha"</span>, <span class="str">"Hora"</span>}),
+    #"Tipos definidos" = <span class="fn">Table.TransformColumnTypes</span>(#"Fecha y hora separadas", {{<span class="str">"Fecha"</span>, <span class="kw">type</span> date}, {<span class="str">"Hora"</span>, <span class="kw">type</span> time}})
+<span class="kw">in</span>
+    #"Tipos definidos"</pre>
+      <p class="nota">Si la detección automática de tipos está activa, después de dividir Power BI agrega un paso «Tipo cambiado» por su cuenta: revísalo, no lo des por bueno. En el <code>eventos.csv</code> del curso, la columna <code>status</code> trae Success, SUCCESS, Failure, FAILED…: el mismo problema que <code>resultado</code> aquí.</p>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Anota en el reporte del PIA cada transformación que apliques a tu dataset y qué problema resolvía (duplicados, valores inconsistentes, columnas combinadas, tipos). Renombra los pasos para que tu compañero de equipo entienda la consulta: al guardar como PBIP, el código M queda en archivos de texto del modelo semántico y GitHub mostrará exactamente qué paso cambió en cada commit.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(3);
+    const { el, $, $$, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+    const escHtml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    /* =========================================================
+       Reto 1 · Clasificar fuentes
+       ========================================================= */
+    const FUENTES = [
+      { t: 'Logs del firewall perimetral de la FCFM exportados a CSV.', o: 'Interna', e: 'Estructurada', x: 'Lo genera tu propia infraestructura y tiene columnas fijas (fecha, origen, destino, puerto, acción).' },
+      { t: 'Feed OSINT de indicadores de compromiso descargado en JSON.', o: 'Externa', e: 'Semiestructurada', x: 'Viene de una comunidad externa; JSON tiene campos con nombre, pero anidados u opcionales: en Power Query se expande a columnas.' },
+      { t: 'Cuerpo de los correos de phishing que los usuarios reportan al SOC.', o: 'Interna', e: 'No estructurada', x: 'Lo recolecta tu organización (sus usuarios lo reportan); el cuerpo del mensaje es texto libre: hay que extraer URLs y remitentes antes de analizar.' },
+      { t: 'Informe en PDF de un proveedor de seguridad sobre una campaña de ransomware.', o: 'Externa', e: 'No estructurada', x: 'Lo produce un tercero y es un documento narrativo: los IOCs y TTPs hay que extraerlos a mano o con herramientas antes de modelarlos.' },
+      { t: 'Inventario de activos de TI en una tabla de Excel.', o: 'Interna', e: 'Estructurada', x: 'Lo mantiene tu área de TI y ya está en filas y columnas: se carga directo.' },
+      { t: 'Eventos de Sysmon de los servidores exportados en XML.', o: 'Interna', e: 'Semiestructurada', x: 'Telemetría de tus propios endpoints; XML tiene etiquetas con nombre y anidamiento, por eso es semiestructurado.' },
+      { t: 'Publicación en un foro con IOCs pegados en medio del texto.', o: 'Externa', e: 'No estructurada', x: 'Fuente externa (y de confiabilidad por evaluar); los indicadores vienen mezclados con texto libre.' },
+      { t: 'Matriz MITRE ATT&amp;CK en formato STIX (JSON).', o: 'Externa', e: 'Semiestructurada', x: 'Catálogo externo de comportamiento adversario; STIX es JSON con objetos y relaciones anidadas.' }
+    ];
+    const ORIG = ['Interna', 'Externa'], ESTR = ['Estructurada', 'Semiestructurada', 'No estructurada'];
+    const r1 = FUENTES.map(() => ({ o: '', e: '' }));
+    function pintarReto1() {
+      $('#r1-lista').replaceChildren(...FUENTES.map((f, i) => {
+        const cambio = () => { $(`#r1-fila-${i}`).classList.remove('bien', 'malo'); $(`#r1-exp-${i}`).textContent = ''; pintarMatriz(); };
+        const so = el('select', { id: `r1-o-${i}`, 'aria-label': `Origen de la fuente ${i + 1}`, onchange: e => { r1[i].o = e.target.value; cambio(); } }, el('option', { value: '' }, '— Origen —'), ORIG.map(v => el('option', { value: v }, v)));
+        const se = el('select', { id: `r1-e-${i}`, 'aria-label': `Estructura de la fuente ${i + 1}`, onchange: e => { r1[i].e = e.target.value; cambio(); } }, el('option', { value: '' }, '— Estructura —'), ESTR.map(v => el('option', { value: v }, v)));
+        so.value = r1[i].o; se.value = r1[i].e;
+        return el('div', { class: 'fila', id: `r1-fila-${i}` }, el('p', { html: `<strong>${i + 1}.</strong> ${f.t}` }), so, se, el('p', { class: 'explica', id: `r1-exp-${i}` }));
+      }));
+      pintarMatriz();
+    }
+    function pintarMatriz() {
+      $('#r1-matriz').replaceChildren(...ORIG.map(o => el('tr', {}, el('th', { scope: 'row' }, o),
+        ESTR.map(e => { const n = r1.map((r, i) => r.o === o && r.e === e ? `#${i + 1}` : null).filter(Boolean); return el('td', {}, n.length ? n.join(', ') : '—'); }))));
+    }
+    $('#r1-revisar').addEventListener('click', () => {
+      let bien = 0, vacias = 0;
+      FUENTES.forEach((f, i) => {
+        const fila = $(`#r1-fila-${i}`), ex = $(`#r1-exp-${i}`);
+        fila.classList.remove('bien', 'malo');
+        if (!r1[i].o || !r1[i].e) { vacias++; ex.textContent = 'Elige el origen y la estructura.'; return; }
+        const okO = r1[i].o === f.o, okE = r1[i].e === f.e;
+        if (okO && okE) { bien++; fila.classList.add('bien'); ex.innerHTML = `<strong>✓ ${f.o} · ${f.e}.</strong> ${f.x}`; }
+        else { fila.classList.add('malo'); ex.innerHTML = `<strong>✗ Es ${f.o.toLowerCase()} y ${f.e.toLowerCase()}${okO ? ' (el origen sí lo tenías)' : okE ? ' (la estructura sí la tenías)' : ''}.</strong> ${f.x}`; }
+      });
+      if (bien === FUENTES.length) { retro('#retro1', 'ok', '<strong>¡Matriz correcta!</strong> Observa la última fila de la tabla: entre más estructurada la fuente, más corto es su camino a Power BI. Las no estructuradas también aportan inteligencia valiosa, pero exigen trabajo de extracción antes de entrar al modelo.'); prog.marcar('r1'); }
+      else retro('#retro1', vacias ? 'aviso' : 'mal', `Llevas <strong>${bien} de ${FUENTES.length}</strong>${vacias ? ` y ${vacias} incompletas` : ''}. Pregúntate: ¿quién generó el dato?, ¿tiene columnas fijas, campos con nombre flexibles o es texto libre?`);
+    });
+    $('#r1-reiniciar').addEventListener('click', () => { r1.forEach(r => { r.o = ''; r.e = ''; }); pintarReto1(); retro('#retro1', '', ''); });
+    pintarReto1();
+
+    /* =========================================================
+       Reto 2 · Editor de Power Query simulado
+       ========================================================= */
+    const CAB = ['FechaHora', 'usuario', 'host', 'ip_puerto', 'resultado'];
+    const CRUDO = [
+      ['2026-08-17 07:58:12', 'jgomez', 'FCFM-ESC-02', '10.10.2.11:443', 'Éxito'],
+      ['2026-08-17 08:03:40', ' mrivera', 'FCFM-ESC-01', '10.10.2.12:443', 'ÉXITO'],
+      ['2026-08-17 08:15:05', 'LSANTOS', 'FCFM-BIB-01', '10.10.4.21:443', 'éxito'],
+      ['2026-08-17 09:22:31', 'agarcia ', 'FCFM-ADM-01', '10.10.8.31:443', 'Fallo'],
+      ['2026-08-17 09:22:58', 'agarcia', 'FCFM-ADM-01', '10.10.8.31:443', 'Éxito'],
+      ['2026-08-17 10:41:17', 'jtrevino', 'FCFM-ESC-02', '10.10.2.13:443', 'Éxito'],
+      ['', '', '', '', ''],
+      ['2026-08-17 11:05:44', null, 'FCFM-LAB-03', '10.10.30.21:445', 'FALLIDO'],
+      ['2026-08-17 12:30:09', 'flopez', 'FCFM-POS-01', '10.10.6.61:443', 'Éxito'],
+      ['2026-08-17 22:47:51', 'eramirez', 'FCFM-VIN-01', '203.0.113.9:1194', 'Fallo'],
+      ['2026-08-17 22:49:30', 'eramirez', 'FCFM-VIN-01', '203.0.113.9:1194', 'Éxito'],
+      ['2026-08-18 02:11:03', 'rmartinez', 'FCFM-TI-01', '198.51.100.77:22', 'FALLO'],
+      ['2026-08-18 02:11:03', 'rmartinez', 'FCFM-TI-01', '198.51.100.77:22', 'FALLO'],
+      ['2026-08-18 02:13:55', 'JCANTU', 'FCFM-TI-01', '198.51.100.77:22', 'Fallido'],
+      ['2026-08-18 02:16:20', 'shernandez', 'FCFM-TI-01', '198.51.100.77:22', 'fallo'],
+      ['2026-08-18 02:19:42', '  cvillarreal', 'FCFM-TI-01', '198.51.100.77:22', 'FALLIDO'],
+      ['2026-08-18 02:19:42', 'cvillarreal', 'FCFM-TI-01', '198.51.100.77:22', 'FALLIDO'],
+      ['2026-08-18 07:45:00', 'pgonzalez', 'FCFM-BIB-02', '10.10.4.22:443', 'Éxito'],
+      ['2026-08-18 08:02:33', 'jgomez', 'FCFM-ESC-02', '10.10.2.11:443', 'Éxito'],
+      ['2026-08-18 08:02:33', 'jgomez', 'FCFM-ESC-02', '10.10.2.11:443', 'Éxito'],
+      ['', '', '', '', ''],
+      ['2026-08-18 09:10:27', 'MRivera', 'FCFM-ESC-01', '10.10.2.12:443', 'fallo'],
+      ['2026-08-18 09:10:51', 'mrivera', 'FCFM-ESC-01', '10.10.2.12:443', 'Éxito'],
+      ['2026-08-18 13:37:08', null, 'FCFM-LAB-03', '10.10.30.21:445', 'FALLIDO'],
+      ['2026-08-18 18:20:15', 'dcastillo', 'FCFM-LAB-05', '10.10.30.5:3389', 'Éxito'],
+      ['2026-08-19 03:02:10', 'svc_respaldo', 'FCFM-TI-02', '10.10.0.5:22', 'Éxito'],
+      ['2026-08-19 08:55:49', 'LMENDOZA', 'FCFM-POS-02', '10.10.6.62:443', 'Éxito'],
+      ['2026-08-19 08:55:49', 'lmendoza', 'FCFM-POS-02', '10.10.6.62:443', 'ÉXITO'],
+      ['2026-08-19 10:14:36', 'ksalinas ', 'FCFM-DIR-02', '10.10.1.52:443', 'Fallido'],
+      ['2026-08-19 10:15:02', 'ksalinas', 'FCFM-DIR-02', '10.10.1.52:443', 'Éxito'],
+      ['2026-08-19 10:15:02', 'ksalinas', 'FCFM-DIR-02', '10.10.1.52:443', 'Éxito']
+    ];
+    const ERR = Object.freeze({ error: true });
+    const esErr = v => v === ERR;
+    const vacio = v => v === null || v === '';
+    const RX = { fecha: /^\d{4}-\d{2}-\d{2}$/, hora: /^\d{2}:\d{2}:\d{2}$/, fh: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, ip: /^\d{1,3}(\.\d{1,3}){3}$/, ipPuerto: /^\d{1,3}(\.\d{1,3}){3}:\d+$/, entero: /^-?\d+$/ };
+    const TIPO_TXT = { texto: 'Texto', int: 'Número entero', date: 'Fecha', time: 'Hora', datetime: 'Fecha/hora' };
+    const TIPO_ICONO = { texto: 'ABC', int: '123', date: 'FECHA', time: 'HORA', datetime: 'F/H' };
+    const TIPO_M = { texto: 'type text', int: 'Int64.Type', date: 'type date', time: 'type time', datetime: 'type datetime' };
+
+    const tablaBase = () => ({ cols: CAB.map(n => ({ id: n, nombre: n, tipo: 'texto' })), filas: CRUDO.map(r => r.slice()) });
+    const clonar = t => ({ cols: t.cols.map(c => Object.assign({}, c)), filas: t.filas.map(r => r.slice()) });
+    const idx = (t, nombre) => t.cols.findIndex(c => c.nombre === nombre);
+    const clave = r => r.map(v => esErr(v) ? '\u0000E' : v === null ? '\u0000N' : String(v)).join('\u0001');
+    function mapCol(t, nombre, fn) { const k = idx(t, nombre); t.filas.forEach(r => { r[k] = esErr(r[k]) ? ERR : fn(r[k]); }); }
+
+    function convertir(v, tipo) {
+      if (esErr(v)) return ERR;
+      if (vacio(v)) return null;
+      const s = String(v);
+      if (tipo === 'texto') return s;
+      if (tipo === 'int') return RX.entero.test(s) ? Number(s) : ERR;
+      if (tipo === 'date') return RX.fecha.test(s) ? s : ERR;
+      if (tipo === 'time') return RX.hora.test(s) ? s : ERR;
+      if (tipo === 'datetime') return RX.fh.test(s) ? s : RX.fecha.test(s) ? s + ' 00:00:00' : ERR;
+      return ERR;
+    }
+    const OPS = {
+      distinct: { n: 'Duplicados quitados', ap: t => { const vistos = new Set(); t.filas = t.filas.filter(r => { const k = clave(r); if (vistos.has(k)) return false; vistos.add(k); return true; }); },
+        m: (p, a) => `Table.Distinct(${a})`, d: () => 'Se quitaron las filas idénticas en todas las columnas.' },
+      blancos: { n: 'Filas en blanco quitadas', ap: t => { t.filas = t.filas.filter(r => !r.every(vacio)); },
+        m: (p, a) => `Table.SelectRows(${a}, each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null})))`, d: () => 'Se quitaron las filas en las que todos los valores están vacíos o son null.' },
+      nulos: { n: 'Filas filtradas', ap: (t, p) => { const k = idx(t, p.col); t.filas = t.filas.filter(r => !vacio(r[k])); },
+        m: (p, a) => `Table.SelectRows(${a}, each [${p.col}] <> null and [${p.col}] <> "")`, d: p => `Se conservaron solo las filas con ${p.col} no nulo ni vacío.` },
+      recortar: { n: 'Texto recortado', texto: true, ap: (t, p) => mapCol(t, p.col, v => v === null ? null : String(v).trim()),
+        m: (p, a) => `Table.TransformColumns(${a}, {{${mStr(p.col)}, Text.Trim, type text}})`, d: p => `Se quitaron los espacios al inicio y al final de ${p.col}.` },
+      minus: { n: 'Texto en minúsculas', texto: true, ap: (t, p) => mapCol(t, p.col, v => v === null ? null : String(v).toLowerCase()),
+        m: (p, a) => `Table.TransformColumns(${a}, {{${mStr(p.col)}, Text.Lower, type text}})`, d: p => `${p.col} quedó en minúsculas.` },
+      mayus: { n: 'Texto en mayúsculas', texto: true, ap: (t, p) => mapCol(t, p.col, v => v === null ? null : String(v).toUpperCase()),
+        m: (p, a) => `Table.TransformColumns(${a}, {{${mStr(p.col)}, Text.Upper, type text}})`, d: p => `${p.col} quedó en MAYÚSCULAS.` },
+      dividir: { n: 'Dividir columna por delimitador', texto: true,
+        ap: (t, p) => {
+          const k = idx(t, p.col);
+          const nuevas = p.nuevas.map(n => ({ id: n, nombre: n, tipo: 'texto' }));
+          t.cols.splice(k, 1, ...nuevas);
+          t.filas = t.filas.map(r => { const v = r[k]; const partes = esErr(v) ? p.nuevas.map(() => ERR) : v === null ? [] : String(v).split(p.delim); const fila = r.slice(); fila.splice(k, 1, ...p.nuevas.map((_, i) => esErr(v) ? ERR : partes[i] === undefined ? null : partes[i])); return fila; });
+        },
+        m: (p, a) => `Table.SplitColumn(${a}, ${mStr(p.col)}, Splitter.SplitTextByDelimiter(${mStr(p.delim)}, QuoteStyle.Csv), {${p.nuevas.map(mStr).join(', ')}})`,
+        d: p => `${p.col} se dividió en ${p.nuevas.join(' y ')}. Ponles nombres descriptivos.` },
+      tipo: { n: 'Tipo cambiado', ap: (t, p) => { const k = idx(t, p.col); t.cols[k].tipo = p.tipo; t.filas.forEach(r => { r[k] = convertir(r[k], p.tipo); }); },
+        m: (p, a) => `Table.TransformColumnTypes(${a}, {{${mStr(p.col)}, ${TIPO_M[p.tipo]}}})`, d: p => `${p.col} ahora es de tipo ${TIPO_TXT[p.tipo]}.` },
+      reemplazar: { n: 'Valor reemplazado', texto: true, ap: (t, p) => mapCol(t, p.col, v => v === null ? null : p.celda ? (v === p.buscar ? p.con : v) : String(v).split(p.buscar).join(p.con)),
+        m: (p, a) => `Table.ReplaceValue(${a}, ${mStr(p.buscar)}, ${mStr(p.con)}, ${p.celda ? 'Replacer.ReplaceValue' : 'Replacer.ReplaceText'}, {${mStr(p.col)}})`, d: p => `En ${p.col}, «${p.buscar}» se reemplazó por «${p.con}».` },
+      renombrar: { n: 'Columnas con nombre cambiado', ap: (t, p) => { t.cols[idx(t, p.col)].nombre = p.nuevo; },
+        m: (p, a) => `Table.RenameColumns(${a}, {{${mStr(p.col)}, ${mStr(p.nuevo)}}})`, d: p => `${p.col} ahora se llama ${p.nuevo}.` }
+    };
+    const mStr = s => `"${String(s).replace(/"/g, '""')}"`;
+    const mId = n => /^[A-Za-z_][A-Za-z0-9_]*$/.test(n) && !['let', 'in', 'each', 'type', 'and', 'or', 'not', 'if', 'then', 'else'].includes(n) ? n : `#${mStr(n)}`;
+
+    let pasos = [];      // pasos del usuario
+    let vista = null;    // índice del paso que se está viendo (null = el último)
+    let colSel = 'usuario';
+
+    function tablaHasta(n) { // n = número de pasos del usuario a aplicar
+      const t = tablaBase();
+      pasos.slice(0, n).forEach(p => OPS[p.op].ap(t, p));
+      return t;
+    }
+    function tablaOrigen() { return { cols: CAB.map((c, i) => ({ id: c, nombre: `Column${i + 1}`, tipo: 'texto' })), filas: [CAB.slice(), ...CRUDO.map(r => r.slice())] }; }
+    const totalPasos = () => pasos.length + 2;
+    const indiceVista = () => vista === null ? totalPasos() - 1 : vista;
+    const viendoUltimo = () => indiceVista() === totalPasos() - 1;
+    function nombreUnico(base) {
+      const usados = new Set(['Origen', 'Encabezados promovidos', ...pasos.map(p => p.nombre)]);
+      if (!usados.has(base)) return base;
+      let k = 1; while (usados.has(base + k)) k++;
+      return base + k;
+    }
+
+    function validar(op, t, p) {
+      const k = p.col !== undefined ? idx(t, p.col) : -1;
+      if (p.col !== undefined && k < 0) return 'Selecciona una columna.';
+      if (OPS[op].texto && t.cols[k].tipo !== 'texto') return `${OPS[op].n.split(' ')[0] === 'Texto' ? 'Esta transformación de formato' : 'Esta transformación'} solo funciona con columnas de texto, y ${p.col} es de tipo ${TIPO_TXT[t.cols[k].tipo]}.`;
+      if (op === 'dividir') {
+        const max = Math.max(0, ...t.filas.map(r => (typeof r[k] === 'string' ? r[k].split(p.delim).length : 0)));
+        if (max < 2) return `El delimitador «${p.delim === ' ' ? 'espacio' : p.delim}» no aparece en ${p.col}: no hay nada que dividir.`;
+        p.nuevas = Array.from({ length: max }, (_, i) => `${p.col}.${i + 1}`);
+        if (p.nuevas.some(n => idx(t, n) >= 0)) return 'Ya existe una columna con ese nombre; cambia el nombre de la anterior primero.';
+      }
+      if (op === 'tipo' && p.tipo === 'date' && t.filas.some(r => typeof r[k] === 'string' && RX.fh.test(r[k])))
+        return `${p.col} mezcla fecha y hora. Si la conviertes a Fecha, la hora deja de estar disponible para el análisis (o aparecen errores, según el formato). Divídela primero por el espacio o usa Fecha/hora.`;
+      if (op === 'reemplazar' && !p.buscar) return 'Escribe el valor que quieres buscar.';
+      if (op === 'renombrar') {
+        if (!p.nuevo) return 'Escribe el nuevo nombre de la columna.';
+        if (idx(t, p.nuevo) >= 0) return `Ya existe una columna llamada ${p.nuevo}.`;
+      }
+      return null;
+    }
+
+    $('#r2-cinta').addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-op]');
+      if (!b) return;
+      if (!viendoUltimo()) { retro('#retro2', 'aviso', 'Estás viendo un paso anterior. Pulsa «Ir al último paso» para seguir transformando.'); return; }
+      const op = b.dataset.op;
+      const t = tablaHasta(pasos.length);
+      const p = { op };
+      if (!['distinct', 'blancos'].includes(op)) p.col = $('#r2-col').value;
+      if (op === 'dividir') p.delim = $('#r2-delim').value;
+      if (op === 'tipo') p.tipo = $('#r2-tipo').value;
+      if (op === 'reemplazar') { p.buscar = $('#r2-buscar').value; p.con = $('#r2-con').value; p.celda = $('#r2-celda').checked; }
+      if (op === 'renombrar') p.nuevo = $('#r2-nombre').value.trim();
+      const error = validar(op, t, p);
+      if (error) { retro('#retro2', 'aviso', error); return; }
+      p.nombre = nombreUnico(OPS[op].n);
+      const antes = t.filas.length;
+      const contarErr = tb => tb.filas.reduce((s, r) => s + r.filter(esErr).length, 0);
+      const erroresAntes = contarErr(t);
+      pasos.push(p);
+      vista = null;
+      if (op === 'dividir') colSel = p.nuevas[0];
+      if (op === 'renombrar') { colSel = p.nuevo; $('#r2-nombre').value = ''; }
+      const t2 = tablaHasta(pasos.length);
+      const nuevosErr = contarErr(t2) - erroresAntes;
+      const quitadas = antes - t2.filas.length;
+      pintarEditor();
+      const fin = revisarFin();
+      if (fin) return;
+      if (op === 'tipo' && nuevosErr > 0) retro('#retro2', 'mal', `<strong>Paso «${p.nombre}» agregado, pero aparecieron ${nuevosErr} celdas con Error.</strong> Power Query no puede convertir texto como «${ejemploError(p.col)}» a ${TIPO_TXT[p.tipo]}. Quita el paso con ✕, limpia o divide primero y vuelve a cambiar el tipo.`);
+      else retro('#retro2', '', `<strong>Paso agregado: ${p.nombre}.</strong> ${OPS[op].d(p)}${quitadas > 0 ? ` Se quitaron ${quitadas} filas.` : ['distinct', 'blancos', 'nulos'].includes(op) ? ' No se quitó ninguna fila.' : ''}`);
+    });
+    $('#r2-col').addEventListener('change', e => { colSel = e.target.value; pintarEditor(); });
+    function ejemploError(col) {
+      const k = idx(tablaHasta(pasos.length - 1), col);
+      const fila = tablaHasta(pasos.length - 1).filas.find(r => typeof r[k] === 'string' && convertir(r[k], pasos[pasos.length - 1].tipo) === ERR);
+      return fila ? fila[k] : col;
+    }
+
+    function mostrar(v, tipo) {
+      if (esErr(v)) return '<span class="err">Error</span>';
+      if (v === null) return '<span class="nulo">null</span>';
+      if (tipo === 'date') { const [y, m, d] = v.split('-'); return `${d}/${m}/${y}`; }
+      if (tipo === 'datetime') { const [f, h] = v.split(' '); const [y, m, d] = f.split('-'); return `${d}/${m}/${y} ${h}`; }
+      if (tipo === 'int') return String(v);
+      const s = escHtml(v);
+      return `<span class="val">${s.replace(/^ +| +$/g, m => `<span class="esp" title="espacio">${'·'.repeat(m.length)}</span>`)}</span>`;
+    }
+    function calidad(t, k) {
+      const n = t.filas.length || 1;
+      const err = t.filas.filter(r => esErr(r[k])).length, vac = t.filas.filter(r => vacio(r[k])).length;
+      const p = x => Math.round(100 * x / n);
+      return `Válido ${p(n - err - vac)} % · Error ${p(err)} % · Vacío ${p(vac)} %`;
+    }
+    function pintarEditor() {
+      const iv = indiceVista();
+      const t = iv === 0 ? tablaOrigen() : tablaHasta(iv - 1);
+      const tFinal = tablaHasta(pasos.length);
+      if (idx(tFinal, colSel) < 0) colSel = tFinal.cols[0].nombre;
+      // selector de columna
+      $('#r2-col').replaceChildren(...tFinal.cols.map(c => el('option', { value: c.nombre }, c.nombre)));
+      $('#r2-col').value = colSel;
+      // controles bloqueados si se ve un paso anterior
+      $$('#r2-cinta button, #r2-cinta select, #r2-cinta input').forEach(c => { c.disabled = !viendoUltimo(); });
+      $('#r2-aviso-vista').replaceChildren(...(viendoUltimo() ? [] : [el('p', { class: 'aviso-vista' }, `Estás viendo el paso «${nombrePaso(iv)}». Las transformaciones se agregan al final de la consulta. `,
+        el('button', { type: 'button', onclick: () => { vista = null; pintarEditor(); $('#r2-col').focus(); } }, 'Ir al último paso'))]));
+      // resumen
+      $('#r2-resumen').replaceChildren(el('span', {}, `Filas: ${t.filas.length}`), el('span', {}, `Columnas: ${t.cols.length}`), el('span', {}, `Transformaciones aplicadas: ${pasos.length} (la actividad pide al menos 3)`));
+      // tabla
+      const kSel = idx(t, colSel);
+      const thead = el('thead', {}, el('tr', {}, t.cols.map((c, k) => el('th', { scope: 'col' },
+        el('button', { type: 'button', class: 'col-btn', 'aria-pressed': String(k === kSel && viendoUltimo()), disabled: !viendoUltimo() || iv === 0,
+          onclick: () => { colSel = c.nombre; pintarEditor(); } }, el('span', { class: 'tipo', title: TIPO_TXT[c.tipo] }, TIPO_ICONO[c.tipo]), c.nombre),
+        el('span', { class: 'calidad' }, calidad(t, k))))));
+      const tbody = el('tbody', {}, t.filas.map(r => el('tr', {}, r.map((v, k) => el('td', { class: (k === kSel && viendoUltimo() ? 'sel' : '') + (t.cols[k].tipo === 'int' ? ' num' : ''), html: mostrar(v, t.cols[k].tipo) })))));
+      $('#r2-tabla').replaceChildren(el('table', { class: 'datos' }, el('caption', { class: 'oculto-visual' }, `Vista previa en el paso ${nombrePaso(iv)}`), thead, tbody));
+      // pasos aplicados
+      const nombres = ['Origen', 'Encabezados promovidos', ...pasos.map(p => p.nombre)];
+      $('#r2-pasos').replaceChildren(...nombres.map((n, i) => el('li', {},
+        el('button', { type: 'button', class: 'paso', 'aria-current': i === iv ? 'step' : null, onclick: () => { vista = i === totalPasos() - 1 ? null : i; pintarEditor(); const b = $$('#r2-pasos .paso')[i]; if (b) b.focus(); } }, n),
+        i === nombres.length - 1 && i >= 2 ? el('button', { type: 'button', class: 'quitar', 'aria-label': `Quitar el paso ${n}`, onclick: quitarUltimo }, '✕') : null)));
+      pintarM();
+      pintarChecklist(tFinal);
+    }
+    function nombrePaso(i) { return i === 0 ? 'Origen' : i === 1 ? 'Encabezados promovidos' : pasos[i - 2].nombre; }
+    function quitarUltimo() {
+      const p = pasos.pop();
+      vista = null;
+      pintarEditor();
+      retro('#retro2', '', `Quitaste el paso «${p.nombre}». La vista previa volvió al estado anterior.`);
+      const ult = $$('#r2-pasos .paso').pop(); if (ult) ult.focus();
+    }
+    $('#r2-renombrar-paso').addEventListener('click', () => {
+      const iv = indiceVista(), nuevo = $('#r2-nombre-paso').value.trim();
+      if (iv < 2) { retro('#retro2', 'aviso', 'Selecciona uno de tus pasos (los dos primeros los crea Power Query al conectarse).'); return; }
+      if (!nuevo) { retro('#retro2', 'aviso', 'Escribe el nuevo nombre del paso.'); return; }
+      if (['Origen', 'Encabezados promovidos', ...pasos.map(p => p.nombre)].includes(nuevo)) { retro('#retro2', 'aviso', 'Ya hay un paso con ese nombre.'); return; }
+      const anterior = pasos[iv - 2].nombre;
+      pasos[iv - 2].nombre = nuevo;
+      $('#r2-nombre-paso').value = '';
+      pintarEditor();
+      retro('#retro2', 'ok', `Paso renombrado: «${escHtml(anterior)}» → «${escHtml(nuevo)}». Un nombre que explica el porqué ayuda a tu equipo a leer la consulta (y en la actividad de la semana se califica).`);
+    });
+    function resaltarM(codigo) {
+      return codigo.replace(/(#"(?:[^"]|"")*")|("(?:[^"]|"")*")|\b(let|in|each|and|not|type|null|true)\b|\b([A-Z][A-Za-z0-9]*\.[A-Z][A-Za-z0-9]*)\b|([^#"A-Za-z]+|[A-Za-z0-9_]+|.)/g,
+        (m, id, str, kw, fn, otro) => id ? escHtml(id) : str ? `<span class="str">${escHtml(str)}</span>` : kw ? `<span class="kw">${kw}</span>` : fn ? `<span class="fn">${fn}</span>` : escHtml(m));
+    }
+    function pintarM() {
+      const lineas = ['let', '    Origen = Csv.Document(File.Contents("C:\\ICCA\\accesos.csv"), [Delimiter=",", Columns=5, Encoding=65001, QuoteStyle=QuoteStyle.None]),', '    #"Encabezados promovidos" = Table.PromoteHeaders(Origen, [PromoteAllScalars=true])'];
+      let anterior = '#"Encabezados promovidos"';
+      pasos.forEach(p => { lineas[lineas.length - 1] += ','; const id = mId(p.nombre); lineas.push(`    ${id} = ${OPS[p.op].m(p, anterior)}`); anterior = id; });
+      lineas.push('in', `    ${anterior}`);
+      $('#r2-m').innerHTML = resaltarM(lineas.join('\n'));
+    }
+
+    function evaluar(t) {
+      const colPorId = id => t.cols.findIndex(c => c.id === id);
+      const valores = k => t.filas.map(r => r[k]).filter(v => !vacio(v) && !esErr(v));
+      const todas = (k, rx) => { const v = valores(k); return v.length > 0 && v.every(x => rx.test(String(x))); };
+      const buscar = rx => t.cols.findIndex((c, k) => todas(k, rx));
+      const kU = colPorId('usuario'), kR = colPorId('resultado');
+      const blancas = t.filas.filter(r => r.every(vacio)).length;
+      const usuNulos = kU < 0 ? 0 : t.filas.filter(r => vacio(r[kU])).length;
+      const usuSucios = kU < 0 ? -1 : valores(kU).filter(v => v !== String(v).trim().toLowerCase()).length;
+      const res = kR < 0 ? [] : [...new Set(valores(kR))];
+      const resOk = res.length === 2 && res.map(v => String(v).toUpperCase()).sort().join('|') === ['FALLO', 'ÉXITO'].sort().join('|');
+      const kF = buscar(RX.fecha), kH = buscar(RX.hora), kIP = buscar(RX.ip);
+      const kP = t.cols.findIndex((c, k) => c.id.startsWith('ip_puerto') && valores(k).length && valores(k).every(v => RX.entero.test(String(v))));
+      const combinadaFH = t.cols.some((c, k) => valores(k).some(v => RX.fh.test(String(v))));
+      const combinadaIP = t.cols.some((c, k) => valores(k).some(v => RX.ipPuerto.test(String(v))));
+      const malNombre = t.cols.filter(c => /\.\d+$/.test(c.nombre)).map(c => c.nombre);
+      const errores = t.filas.reduce((s, r) => s + r.filter(esErr).length, 0);
+      const vistos = new Set(); let dup = 0; t.filas.forEach(r => { const k = clave(r); if (vistos.has(k)) dup++; else vistos.add(k); });
+      const tiposOk = kF >= 0 && t.cols[kF].tipo === 'date' && kH >= 0 && t.cols[kH].tipo === 'time' && kP >= 0 && t.cols[kP].tipo === 'int';
+      return [
+        { ok: blancas === 0, t: 'Sin filas en blanco', d: blancas ? `Quedan ${blancas}.` : '' },
+        { ok: kU >= 0 && usuNulos === 0, t: 'Sin usuarios nulos o vacíos', d: kU < 0 ? 'No encuentro la columna de usuario.' : usuNulos ? `Quedan ${usuNulos} filas sin usuario.` : '' },
+        { ok: usuSucios === 0, t: 'usuario recortado y en minúsculas', d: usuSucios > 0 ? `${usuSucios} valores con espacios o mayúsculas.` : '' },
+        { ok: resOk, t: 'resultado con solo dos valores (ÉXITO y FALLO)', d: kR < 0 ? 'No encuentro la columna resultado.' : resOk ? '' : `Hoy tiene ${res.length} valores distintos: ${res.slice(0, 8).join(', ')}.` },
+        { ok: !combinadaFH && kF >= 0 && kH >= 0, t: 'Fecha y hora en columnas separadas', d: combinadaFH ? 'Todavía hay una columna con fecha y hora juntas.' : '' },
+        { ok: !combinadaIP && kIP >= 0 && kP >= 0, t: 'IP y puerto en columnas separadas', d: combinadaIP ? 'Todavía hay valores como 203.0.113.9:1194.' : '' },
+        { ok: malNombre.length === 0, t: 'Columnas con nombres descriptivos', d: malNombre.length ? `Renombra: ${malNombre.join(', ')}.` : '' },
+        { ok: tiposOk, t: 'Tipos: fecha (Fecha), hora (Hora) y puerto (Número entero)', d: tiposOk ? '' : 'Asigna el tipo a cada columna cuando ya esté limpia.' },
+        { ok: errores === 0, t: 'Sin celdas con Error', d: errores ? `Hay ${errores}. Quita el paso que los generó.` : '' },
+        { ok: dup === 0, t: 'Sin filas duplicadas', d: dup ? `Hay ${dup} filas repetidas.` : '' }
+      ];
+    }
+    function pintarChecklist(t) {
+      $('#r2-check').replaceChildren(...evaluar(t).map(c => el('li', { class: c.ok ? 'si' : '' }, `${c.ok ? '✓' : '✗'} ${c.t}`, c.d ? el('span', { class: 'det' }, c.d) : null)));
+    }
+    function revisarFin() {
+      const t = tablaHasta(pasos.length);
+      if (evaluar(t).every(c => c.ok)) {
+        retro('#retro2', 'ok', `<strong>¡Consulta lista!</strong> De ${CRUDO.length} filas crudas quedaron ${t.filas.length} filas limpias y tipadas, con ${pasos.length} pasos aplicados. Fíjate en la lista de pasos y en el código M: es exactamente lo que verías en Pasos aplicados y en el Editor avanzado. Si quitaste duplicados antes de recortar y unificar mayúsculas, habrás notado que reaparecieron: el orden importa (lo verás en el Reto 3).`);
+        prog.marcar('r2');
+        return true;
+      }
+      return false;
+    }
+    $('#r2-reiniciar').addEventListener('click', () => { pasos = []; vista = null; colSel = 'usuario'; pintarEditor(); retro('#retro2', '', ''); });
+    pintarEditor();
+
+    /* =========================================================
+       Reto 3 · Orden de los pasos
+       ========================================================= */
+    const PASOS3 = [
+      { id: 'A', n: 'Quitar filas en blanco' },
+      { id: 'B', n: 'Recortar y poner en minúsculas usuario' },
+      { id: 'C', n: 'Quitar duplicados' },
+      { id: 'D', n: 'Dividir ip_puerto por «:» en ip_origen y puerto' },
+      { id: 'E', n: 'Cambiar el tipo del puerto a Número entero' }
+    ];
+    const MUESTRA = [['jgomez', '203.0.113.5:443'], ['jgomez ', '203.0.113.5:443'], ['MRIVERA', '198.51.100.7:22'], ['mrivera', '198.51.100.7:22'], ['', ''], ['lsantos', '10.10.4.21:3389']];
+    const INICIAL3 = ['E', 'C', 'D', 'B', 'A'];
+    let orden3 = INICIAL3.slice(), probado3 = false, valido3 = false;
+    const paso3 = id => PASOS3.find(p => p.id === id);
+    function ejecutar3(orden) {
+      let t = { cols: [{ n: 'usuario', tipo: 'texto' }, { n: 'ip_puerto', tipo: 'texto' }], filas: MUESTRA.map(r => r.slice()) };
+      const k = n => t.cols.findIndex(c => c.n === n);
+      orden.forEach(id => {
+        if (id === 'A') t.filas = t.filas.filter(r => !r.every(vacio));
+        if (id === 'B') t.filas.forEach(r => { if (typeof r[0] === 'string') r[0] = r[0].trim().toLowerCase(); });
+        if (id === 'C') { const v = new Set(); t.filas = t.filas.filter(r => { const c = clave(r); if (v.has(c)) return false; v.add(c); return true; }); }
+        if (id === 'D') {
+          const j = k('ip_puerto');
+          t.cols.splice(j, 1, { n: 'ip_origen', tipo: 'texto' }, { n: 'puerto', tipo: t.cols[j].tipo });
+          t.filas = t.filas.map(r => { const v = r[j]; const [a, b] = esErr(v) ? [ERR, ERR] : vacio(v) ? [v, null] : String(v).split(':'); const f = r.slice(); f.splice(j, 1, a, b === undefined ? null : b); return f; });
+        }
+        if (id === 'E') { const j = k('puerto') >= 0 ? k('puerto') : k('ip_puerto'); t.cols[j].tipo = 'int'; t.filas.forEach(r => { r[j] = convertir(r[j], 'int'); }); }
+      });
+      return t;
+    }
+    const tablaMini = t => `<table class="datos"><thead><tr>${t.cols.map(c => `<th scope="col"><span class="tipo">${TIPO_ICONO[c.tipo]}</span>${c.n}</th>`).join('')}</tr></thead><tbody>${t.filas.map(r => `<tr>${r.map((v, j) => `<td${t.cols[j].tipo === 'int' ? ' class="num"' : ''}>${mostrar(v, t.cols[j].tipo)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    $('#r3-entrada').innerHTML = tablaMini({ cols: [{ n: 'usuario', tipo: 'texto' }, { n: 'ip_puerto', tipo: 'texto' }], filas: MUESTRA });
+
+    function mover3(i, d) {
+      const j = i + d;
+      if (j < 0 || j >= orden3.length) return;
+      [orden3[i], orden3[j]] = [orden3[j], orden3[i]];
+      probado3 = false;
+      pintarOrden3();
+      $('#r3-anuncio').textContent = `«${paso3(orden3[j]).n}» ahora es el paso ${j + 1}.`;
+      const b = $(`#r3-${d < 0 ? 'sube' : 'baja'}-${j}`), alt = $(`#r3-${d < 0 ? 'baja' : 'sube'}-${j}`);
+      (b && !b.disabled ? b : alt).focus();
+    }
+    function pintarOrden3() {
+      $('#r3-lista').replaceChildren(...orden3.map((id, i) => el('li', {},
+        el('span', { class: 'pos', 'aria-hidden': 'true' }, String(i + 1)), el('span', {}, paso3(id).n),
+        el('span', { class: 'flechas' },
+          el('button', { type: 'button', id: `r3-sube-${i}`, 'aria-label': `Subir «${paso3(id).n}» (paso ${i + 1})`, disabled: i === 0, onclick: () => mover3(i, -1) }, '↑'),
+          el('button', { type: 'button', id: `r3-baja-${i}`, 'aria-label': `Bajar «${paso3(id).n}» (paso ${i + 1})`, disabled: i === orden3.length - 1, onclick: () => mover3(i, 1) }, '↓')))));
+    }
+    $('#r3-probar').addEventListener('click', () => {
+      const t = ejecutar3(orden3);
+      $('#r3-salida').innerHTML = tablaMini(t);
+      const pos = id => orden3.indexOf(id);
+      const vistos = new Set(); let dup = 0; t.filas.forEach(r => { const c = clave(r); if (vistos.has(c)) dup++; else vistos.add(c); });
+      const errores = t.filas.reduce((s, r) => s + r.filter(esErr).length, 0);
+      const reglas = [];
+      if (pos('B') > pos('C')) reglas.push(`Quedaron <strong>${dup} filas duplicadas</strong>: quitaste duplicados antes de recortar y unificar mayúsculas, y para Power Query «jgomez » y «jgomez» son valores distintos.`);
+      if (pos('D') > pos('E')) reglas.push(`Aparecieron <strong>${errores} celdas con Error</strong>: cambiaste a Número entero cuando la columna todavía decía «203.0.113.5:443». Dividir un Error solo produce más errores.`);
+      probado3 = true;
+      valido3 = reglas.length === 0;
+      if (valido3) retro('#retro3', 'ok', `<strong>✓ Orden válido:</strong> ${t.filas.length} filas, sin duplicados ni errores. Las reglas clave: normalizar el texto <em>antes</em> de quitar duplicados, y dividir <em>antes</em> de cambiar el tipo. Ahora responde la pregunta.`);
+      else retro('#retro3', 'mal', `<strong>✗ Con este orden la tabla queda mal.</strong><ul>${reglas.map(r => `<li>${r}</li>`).join('')}</ul>Reacomoda los pasos y vuelve a probar.`);
+    });
+    const MC3 = [
+      { v: 'a', t: 'Porque convertir a número o fecha falla (Error) mientras el texto aún trae caracteres de más, como «:443» o espacios; al dividir y limpiar primero, la conversión es limpia.', ok: true, x: 'Exacto: el tipo es una promesa sobre el contenido de la columna, y solo se cumple cuando el contenido ya está limpio.' },
+      { v: 'b', t: 'Porque Cambiar tipo borra los pasos anteriores de la consulta.', x: 'No: cada paso se agrega después de los anteriores; ninguno borra a los demás.' },
+      { v: 'c', t: 'Porque Power Query solo permite cambiar el tipo una vez por consulta.', x: 'No: puedes cambiar el tipo cuantas veces quieras (de hecho, Power BI agrega un «Tipo cambiado» automático al conectarse).' },
+      { v: 'd', t: 'Porque los tipos de datos solo importan en la vista de informe.', x: 'No: los tipos importan desde Power Query; sin ellos no hay ejes de tiempo, sumas ni relaciones correctas.' }
+    ];
+    $('#r3-mc').replaceChildren(...MC3.map(o => el('label', { class: 'opcion' }, el('input', { type: 'radio', name: 'r3-mc', value: o.v }), el('span', {}, o.t))));
+    $('#r3-comprobar').addEventListener('click', () => {
+      const m = document.querySelector('input[name="r3-mc"]:checked');
+      if (!probado3 || !valido3) { retro('#retro3', 'aviso', 'Primero encuentra un orden válido y pruébalo con «Probar este orden».'); return; }
+      if (!m) { retro('#retro3', 'aviso', 'Elige una respuesta.'); return; }
+      const o = MC3.find(x => x.v === m.value);
+      if (o.ok) { retro('#retro3', 'ok', `<strong>✓ ¡Correcto!</strong> ${o.x} Regla práctica en Power Query: limpiar → dividir → normalizar → quitar duplicados → asignar tipos.`); prog.marcar('r3'); }
+      else retro('#retro3', 'mal', `<strong>✗</strong> ${o.x}`);
+    });
+    $('#r3-reiniciar').addEventListener('click', () => {
+      orden3 = INICIAL3.slice(); probado3 = false; valido3 = false;
+      pintarOrden3();
+      $('#r3-salida').innerHTML = '<p class="nota" style="margin:8px">Pulsa «Probar este orden».</p>';
+      document.querySelectorAll('input[name="r3-mc"]').forEach(r => { r.checked = false; });
+      retro('#retro3', '', '');
+    });
+    pintarOrden3();
+  </script>
+</body>
+</html>

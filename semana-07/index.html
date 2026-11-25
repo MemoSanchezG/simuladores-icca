@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 7 · Columnas calculadas, medidas y SWITCH | Simuladores ICCA</title>
+  <meta name="description" content="Decide entre columna calculada y medida, construye una columna de severidad con SWITCH, normaliza usuarios y enriquece IPs con una tabla de referencia.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > *, .kpis > * { min-width: 0; }
+    p, li, dd, label, legend, summary { overflow-wrap: anywhere; }
+    .escenario { border: 1px solid var(--border); border-left: 5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--surface); }
+    .escenario.bien { border-left-color: var(--ok); }
+    .escenario.revisar { border-left-color: var(--bad); }
+    .escenario > p { margin: 0 0 6px; }
+    .chip[aria-pressed="true"]::before { content: "●"; }
+    .estado { font-size: .92rem; margin-top: 6px; }
+    .estado:empty { display: none; }
+    .si { color: var(--ok); font-weight: 700; }
+    .no { color: var(--bad); font-weight: 700; }
+    .nota { color: var(--muted); font-size: .92rem; }
+    .conds { list-style: none; padding: 0; margin: 8px 0; }
+    .conds li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin: 6px 0; background: var(--surface); font-family: var(--mono); font-size: .92rem; }
+    .conds li .n { font-family: var(--font); font-weight: 700; color: var(--muted); min-width: 1.6em; }
+    .conds input { width: 5.5em; }
+    .conds .mover { display: flex; gap: 6px; margin-left: auto; font-family: var(--font); }
+    .conds .mover button { min-height: 36px; padding: 4px 10px; }
+    .kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin: 10px 0; }
+    .kpis .kpi { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--surface); }
+    .kpis .kpi .valor { font-size: 1.5rem; }
+    .tabla-alta { max-height: 320px; overflow: auto; }
+    .pasos-pq { list-style: none; padding: 0; margin: 8px 0; }
+    .pasos-pq li { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin: 6px 0; background: var(--surface); }
+    .pasos-pq label { display: flex; gap: 8px; align-items: flex-start; }
+    .pasos-pq input { margin-top: 5px; }
+    .pasos-pq small { display: block; font-weight: 400; color: var(--muted); }
+    .esp { color: var(--warn); font-weight: 700; }
+    fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 12px 0; min-width: 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    .opcion { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; font-weight: 400; }
+    .opcion input { margin-top: 5px; }
+    details { margin: 8px 0; }
+    summary { cursor: pointer; font-weight: 600; }
+    .campo select { width: 100%; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 7 · Columnas calculadas, medidas y SWITCH</h1>
+      <p class="subtitulo">Los datos crudos llegan con nombres inconsistentes y sin contexto. Normalizarlos y enriquecerlos (con columnas calculadas, relaciones y medidas) es lo que convierte «la IP X intentó entrar» en inteligencia accionable.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás decidir cuándo usar una columna calculada y cuándo una medida, escribir una columna de severidad con <code>SWITCH ( TRUE (), … )</code> en el orden correcto y enriquecer eventos con una tabla de referencia para resumirlos con una medida de agregación.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Reto 1: clasifica 8 necesidades como columna o medida.</li>
+          <li>Reto 2: ordena las condiciones del SWITCH y ajusta los umbrales; la tabla y la gráfica se recalculan fila por fila.</li>
+          <li>Retos 3 y 4: normaliza los nombres de usuario y enriquece las IPs con país y ASN; luego resume con <code>[Total intentos]</code>.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · ¿Columna calculada o medida?</h2>
+      <p>Regla de oro: una <strong>columna calculada</strong> se calcula fila por fila al actualizar los datos y se guarda en el modelo (sirve para segmentar, agrupar o poner en un eje); una <strong>medida</strong> se calcula al momento, dentro del contexto de filtro de cada visual (sirve para agregar y responder a los segmentadores).</p>
+      <div class="rejilla" id="r1-lista"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r1-comprobar">Comprobar</button>
+        <button type="button" id="r1-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Constructor de la columna Severidad</h2>
+      <p>La tabla <code>Eventos</code> tiene <strong>80 filas</strong> de ráfagas de inicio de sesión fallido (septiembre de 2026); <code>Intentos</code> es el número de intentos de cada ráfaga. Tu columna calculada asigna una severidad a cada fila. <code>SWITCH ( TRUE (), … )</code> revisa las condiciones <strong>en orden</strong> y devuelve el resultado de la <strong>primera</strong> que sea verdadera.</p>
+      <p class="nota">Usa los botones Subir y Bajar para reordenar las condiciones y escribe los umbrales.</p>
+      <ol class="conds" id="r2-conds"></ol>
+      <p id="r2-aviso" class="nota" aria-live="polite"></p>
+      <pre class="codigo" id="r2-codigo"></pre>
+      <details><summary>Ver el equivalente con IF anidados</summary><pre class="codigo" id="r2-if"></pre></details>
+      <div class="kpis" id="r2-kpis"></div>
+      <div class="dos-columnas">
+        <div id="r2-grafica"></div>
+        <div>
+          <p style="margin:0 0 4px;font-weight:600">Medidas que resumen la columna</p>
+          <pre class="codigo" id="r2-medidas"></pre>
+        </div>
+      </div>
+      <h3>Resultado fila por fila (ordenado por Intentos)</h3>
+      <div class="tabla-scroll tabla-alta"><table class="datos" id="r2-tabla"></table></div>
+      <div class="caja alerta" style="margin-top:12px">
+        <p style="margin:0"><strong>Misión:</strong> el equipo de respuesta solo puede atender de inmediato al <strong>10 %</strong> de los eventos (8 de 80). Corrige el orden de las condiciones y fija el umbral de «Crítica» en el valor <strong>más bajo</strong> con el que, como máximo, 8 eventos queden como Crítica. Mantén Crítica &gt; Alta &gt; Media.</p>
+      </div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r2-comprobar">Comprobar</button>
+        <button type="button" id="r2-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Normaliza los nombres de usuario</h2>
+      <p>La columna <code>Usuario</code> llegó de tres sistemas distintos: la misma persona aparece escrita de varias formas (<span class="esp">␣</span> marca un espacio). En la organización hay <strong>5 personas</strong>: jperez (Juan Pérez), jperezm (José Pérez Molina), aramirez, lgarza y mtorres. Activa los pasos de Power Query necesarios para unificar las variantes <strong>sin mezclar a personas distintas</strong>.</p>
+      <div class="dos-columnas">
+        <div>
+          <p style="margin:0;font-weight:600">Pasos aplicados</p>
+          <ul class="pasos-pq" id="r3-pasos"></ul>
+          <div class="kpis" id="r3-kpis"></div>
+        </div>
+        <div class="tabla-scroll tabla-alta"><table class="datos" id="r3-tabla"></table></div>
+      </div>
+      <details><summary>Ver el código M de la consulta</summary><pre class="codigo" id="r3-m"></pre></details>
+      <p class="nota">¿Y en DAX? La columna calculada equivalente sería <code>Usuario normalizado = SUBSTITUTE ( LOWER ( TRIM ( Eventos[Usuario] ) ), ".", "" )</code>, pero ojo: el motor de Power BI no distingue mayúsculas al comparar texto, así que «JPEREZ» y «jperez» ya se agrupan como un mismo valor (con la grafía que aparezca primero), pero «j.perez» sigue siendo otro. Por eso conviene normalizar en Power Query, que distingue cada variante y te deja ver exactamente qué cambió.</p>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-comprobar">Comprobar</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto4">
+      <h2 id="reto4">Reto 4 · Enriquece las IPs y resume con una medida</h2>
+      <p>La tabla de referencia <code>GeoIP</code> (ficticia) tiene una fila por IP con <code>País</code>, <code>ASN</code> y <code>Organización</code>. Agrega a <code>Eventos</code> una columna calculada con el país de cada IP.</p>
+      <div class="dos-columnas">
+        <fieldset style="margin:0">
+          <legend>Método</legend>
+          <label class="opcion"><input type="radio" name="r4-metodo" value="related"> RELATED (usa una relación)</label>
+          <label class="opcion"><input type="radio" name="r4-metodo" value="lookup"> LOOKUPVALUE (busca sin relación)</label>
+          <label class="opcion"><input type="radio" name="r4-metodo" value="vlookup"> VLOOKUP, como en Excel</label>
+        </fieldset>
+        <div>
+          <label class="opcion"><input type="checkbox" id="r4-rel"> Relación creada en la vista de modelo: <code>GeoIP[IP]</code> (1) → <code>Eventos[IP]</code> (*)</label>
+          <div class="campo">
+            <label for="r4-col">Columna que traes de GeoIP</label>
+            <select id="r4-col"><option value="pais">País</option><option value="asn">ASN</option></select>
+          </div>
+        </div>
+      </div>
+      <pre class="codigo" id="r4-codigo"></pre>
+      <div class="acciones"><button type="button" class="primario" id="r4-agregar">Agregar columna</button></div>
+      <div class="retro" id="r4-retroA"></div>
+      <div id="r4-resultado" hidden>
+        <div class="dos-columnas">
+          <div class="campo">
+            <label for="r4-medida">Medida en el gráfico</label>
+            <select id="r4-medida"><option value="eventos">[Eventos] = COUNTROWS ( Eventos )</option><option value="intentos">[Total intentos] = SUM ( Eventos[Intentos] )</option></select>
+          </div>
+          <p id="r4-cobertura" class="nota"></p>
+        </div>
+        <div class="dos-columnas">
+          <div id="r4-grafica"></div>
+          <div class="tabla-scroll tabla-alta"><table class="datos" id="r4-tabla"></table></div>
+        </div>
+      </div>
+      <div class="campo" style="max-width:420px">
+        <label for="r4-resp">Pregunta: ¿qué país concentra más <strong>intentos</strong> de inicio de sesión fallido?</label>
+        <select id="r4-resp"></select>
+      </div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r4-comprobar">Comprobar</button>
+        <button type="button" id="r4-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro4"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li>En la vista de tabla selecciona <code>Eventos</code> y elige <strong>Herramientas de tabla › Nueva columna</strong>. Escribe la columna <code>Severidad</code> con <code>SWITCH ( TRUE (), … )</code>, del umbral más alto al más bajo.</li>
+        <li>Elige <strong>Nueva medida</strong> y crea <code>Eventos = COUNTROWS ( Eventos )</code>. Inserta un <strong>Gráfico de columnas agrupadas</strong> con <code>Eventos[Severidad]</code> en el eje X y <code>[Eventos]</code> en el eje Y.</li>
+        <li>Para que las categorías no salgan en orden alfabético crea <code>Orden severidad = SWITCH ( Eventos[Severidad], "Crítica", 1, "Alta", 2, "Media", 3, 4 )</code>, selecciona la columna Severidad y usa <strong>Herramientas de columna › Ordenar por columna</strong>.</li>
+        <li>Normaliza en <strong>Inicio › Transformar datos</strong>: selecciona la columna Usuario y usa <strong>Transformar › Formato › Recortar</strong> y <strong>minúsculas</strong>, y luego <strong>Reemplazar los valores</strong> «.» por nada.</li>
+        <li>Para enriquecer, carga la tabla de referencia, crea la relación en la <strong>vista de modelo</strong> (arrastra <code>GeoIP[IP]</code> sobre <code>Eventos[IP]</code>, de uno a varios) y agrega la columna <code>País = RELATED ( GeoIP[País] )</code>. Sin relación: <code>LOOKUPVALUE ( GeoIP[País], GeoIP[IP], Eventos[IP] )</code>.</li>
+        <li>Actividad ponderada 2.1: captura en la barra de fórmulas tu columna calculada y la medida que la resume, y súbelas a Teams con la insignia de <em>Create DAX calculations in semantic models</em>.</li>
+      </ol>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Agrega a tu modelo al menos una columna de enriquecimiento (severidad, país o ASN, táctica ATT&amp;CK) y una medida que la resuma. En el README del repositorio documenta qué normalizaste y la <strong>cobertura</strong> del enriquecimiento (cuántas filas quedaron en blanco y por qué). Haz commit de los archivos del proyecto <strong>PBIP</strong> en tu rama: estas columnas y medidas forman parte del dataset definitivo que se revisa en el <strong>checkpoint-2 (Semana 10)</strong>.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(7);
+    const { $, el, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 4);
+    const hechos = new Set();
+    function marcar(id) { hechos.add(id); prog.marcar(id); }
+    function desmarcar(id) { if (hechos.delete(id)) { prog.reiniciar(); hechos.forEach(h => prog.marcar(h)); } }
+    function aleatorio(s) {
+      return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function dax(t) {
+      return esc(t).replace(/("[^"\n]*")|(\/\/[^\n]*)|\b(VAR|RETURN|let|in)\b|(#?\b[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z]*)?)(?=\s*\()/g,
+        (m, s, c, k, f) => s ? `<span class="str">${s}</span>` : c ? `<span class="cmt">${c}</span>` : k ? `<span class="kw">${k}</span>` : `<span class="fn">${f}</span>`);
+    }
+    const visible = u => esc(u).replace(/ /g, '<span class="esp" aria-label="espacio">␣</span>');
+
+    /* ---------- Datos ficticios (80 filas, generadas con semilla) ---------- */
+    const rnd = aleatorio(707);
+    const ent = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+    const elegir = arr => arr[Math.floor(rnd() * arr.length)];
+    const USUARIOS = {
+      jperez: ['jperez', 'JPEREZ', ' jperez', 'j.perez', 'JPerez ', 'J.Perez'],
+      aramirez: ['aramirez', 'ARamirez', 'a.ramirez ', 'ARAMIREZ'],
+      lgarza: ['lgarza', 'LGarza', ' l.garza'],
+      mtorres: ['mtorres', 'MTORRES', 'm.torres'],
+      jperezm: ['jperezm', 'JPEREZM', ' j.perezm']
+    };
+    const CANON = Object.keys(USUARIOS);
+    const CANON_DE = {};
+    CANON.forEach(c => USUARIOS[c].forEach(v => { CANON_DE[v] = c; }));
+    const GEO = [
+      ['198.51.100.10', 'México', 'AS64496', 'Red Hogar MX'], ['198.51.100.11', 'México', 'AS64496', 'Red Hogar MX'],
+      ['198.51.100.12', 'México', 'AS64496', 'Red Hogar MX'], ['198.51.100.13', 'México', 'AS64497', 'Cable Norte'],
+      ['198.51.100.20', 'México', 'AS64497', 'Cable Norte'], ['203.0.113.45', 'Países Bajos', 'AS64500', 'NubeVPS B.V.'],
+      ['203.0.113.46', 'Países Bajos', 'AS64500', 'NubeVPS B.V.'], ['203.0.113.80', 'Alemania', 'AS64501', 'Hosting Rin GmbH'],
+      ['192.0.2.77', 'Estados Unidos', 'AS64502', 'CloudHost LLC'], ['192.0.2.31', 'Estados Unidos', 'AS64502', 'CloudHost LLC'],
+      ['192.0.2.200', 'Brasil', 'AS64503', 'Provedor Sul'], ['198.51.100.77', 'Singapur', 'AS64504', 'Asia Edge Pte.']
+    ];
+    const GEO_DE = Object.fromEntries(GEO.map(g => [g[0], { pais: g[1], asn: g[2], org: g[3] }]));
+    const CASA = { jperez: '198.51.100.10', aramirez: '198.51.100.11', lgarza: '198.51.100.12', mtorres: '198.51.100.13', jperezm: '198.51.100.20' };
+    const ATAQUES = [['203.0.113.45', 7, 40, 140], ['203.0.113.46', 5, 35, 120], ['203.0.113.80', 5, 15, 60], ['192.0.2.77', 3, 10, 45], ['192.0.2.31', 2, 8, 30], ['192.0.2.200', 3, 5, 25], ['198.51.100.77', 2, 6, 20], ['203.0.113.99', 2, 4, 30], ['192.0.2.150', 2, 3, 18]];
+    const filas0 = [];
+    const legitimo = (c, usuario) => filas0.push({ usuario, ip: CASA[c], intentos: ent(1, 3) + (rnd() < 0.25 ? ent(1, 3) : 0) });
+    CANON.forEach(c => USUARIOS[c].forEach(v => legitimo(c, v)));          // cada variante aparece al menos una vez
+    while (filas0.length < 49) { const c = elegir(CANON); legitimo(c, elegir(USUARIOS[c])); }
+    ATAQUES.forEach(([ip, n, a, b]) => { for (let k = 0; k < n; k++) filas0.push({ usuario: elegir(USUARIOS[elegir(CANON)]), ip, intentos: ent(a, b) }); });
+    const DATOS = ICCA.barajar(filas0, 77).map((f, i) => Object.assign(f, { id: i + 1, fecha: `${String(1 + (i * 7) % 21).padStart(2, '0')}/09/2026` }));
+    const TOTAL = DATOS.length;
+
+    /* ---------- Reto 1 ---------- */
+    const ESCENARIOS = [
+      { t: 'Necesitas un segmentador para filtrar todo el reporte por nivel de severidad (Baja, Media, Alta, Crítica) calculado a partir de los intentos.', r: 'col',
+        exp: 'Los segmentadores, ejes, filas y leyendas necesitan un valor guardado en cada fila; una medida no puede ir en un segmentador. Columna: Severidad = SWITCH ( TRUE (), … ).' },
+      { t: 'Quieres la tasa de inicios de sesión fallidos (fallidos entre totales) y que cambie al filtrar por país o por fecha.', r: 'med',
+        exp: 'Una tasa se calcula después de agregar, en el contexto de cada filtro: DIVIDE ( SUM ( Eventos[Fallidos] ), SUM ( Eventos[Totales] ) ). Una columna calcularía la tasa fila por fila y sumarlas no tendría sentido.' },
+      { t: 'Quieres extraer la hora del día de la marca de tiempo para ponerla en el eje de un gráfico de 0 a 23 h.', r: 'col',
+        exp: 'El eje necesita un valor por fila. Columna: Hora = HOUR ( Eventos[FechaHora] ).' },
+      { t: 'Quieres una tarjeta con el total de intentos fallidos del periodo elegido en el segmentador de fechas.', r: 'med',
+        exp: 'Es una agregación que debe responder al segmentador: Total intentos = SUM ( Eventos[Intentos] ).' },
+      { t: 'Quieres marcar cada IP como «Interna» o «Externa» según si empieza con 10. para poder filtrar por ese atributo.', r: 'col',
+        exp: 'Es un atributo fijo de cada fila que usarás para filtrar: Origen = IF ( LEFT ( Eventos[IP], 3 ) = "10.", "Interna", "Externa" ).' },
+      { t: 'Quieres saber cuántos usuarios distintos fueron atacados y que el número responda a los segmentadores.', r: 'med',
+        exp: 'Contar valores distintos dentro del contexto actual es trabajo de una medida: Usuarios atacados = DISTINCTCOUNT ( Eventos[Usuario normalizado] ).' },
+      { t: 'Quieres etiquetar cada host como «Ruidoso» cuando su total de eventos en el periodo filtrado supere 50.', r: 'med',
+        exp: 'Depende del periodo filtrado: una columna calculada se calcula al actualizar los datos y no se entera de los segmentadores. Necesitas una medida: IF ( [Eventos] > 50, "Ruidoso", "Normal" ).' },
+      { t: 'Quieres una etiqueta «T1110 · Brute Force» que una el ID y el nombre de la técnica para usarla en el eje de un gráfico.', r: 'col',
+        exp: 'Es texto fijo por fila para un eje: Técnica etiqueta = Eventos[IdTécnica] & " · " & Eventos[Técnica].' }
+    ];
+    const resp1 = ESCENARIOS.map(() => '');
+    ESCENARIOS.forEach((e, i) => {
+      const grupo = el('div', { role: 'group', 'aria-label': `Escenario ${i + 1}: columna calculada o medida` });
+      [['col', 'Columna calculada'], ['med', 'Medida']].forEach(([v, t]) => grupo.append(el('button', { type: 'button', class: 'chip', 'aria-pressed': 'false', 'data-v': v, onclick: () => {
+        resp1[i] = v; grupo.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+      } }, t)));
+      $('#r1-lista').append(el('article', { class: 'escenario', id: `r1-es-${i}` }, el('p', {}, el('strong', {}, `${i + 1}. `), e.t), grupo, el('div', { class: 'estado', id: `r1-est-${i}` })));
+    });
+    $('#r1-comprobar').addEventListener('click', () => {
+      let bien = 0;
+      ESCENARIOS.forEach((e, i) => {
+        const card = $(`#r1-es-${i}`), est = $(`#r1-est-${i}`);
+        if (!resp1[i]) { card.className = 'escenario revisar'; est.innerHTML = '<span class="no">✗ Sin responder.</span>'; return; }
+        const ok = resp1[i] === e.r; bien += ok;
+        card.className = 'escenario ' + (ok ? 'bien' : 'revisar');
+        est.innerHTML = `<span class="${ok ? 'si' : 'no'}">${ok ? '✓ Correcto' : '✗ Revisa'}: es ${e.r === 'col' ? 'una columna calculada' : 'una medida'}.</span> ${esc(e.exp)}`;
+      });
+      if (bien === ESCENARIOS.length) { retro('#retro1', 'ok', '<strong>¡8 de 8!</strong> Pregunta clave: ¿necesito un valor fijo por fila para segmentar o agrupar (columna) o un resultado que cambie con los filtros (medida)? Ante la duda, prefiere medidas: no ocupan memoria por fila.'); marcar('reto1'); }
+      else { retro('#retro1', 'mal', `Llevas <strong>${bien} de ${ESCENARIOS.length}</strong>. Fíjate si el resultado debe responder a segmentadores (medida) o si es un atributo de cada fila (columna). Corrige y vuelve a comprobar.`); desmarcar('reto1'); }
+    });
+    $('#r1-reiniciar').addEventListener('click', () => {
+      resp1.fill('');
+      document.querySelectorAll('#r1-lista .chip').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      ESCENARIOS.forEach((e, i) => { $(`#r1-es-${i}`).className = 'escenario'; $(`#r1-est-${i}`).innerHTML = ''; });
+      retro('#retro1', '', ''); desmarcar('reto1');
+    });
+
+    /* ---------- Reto 2 ---------- */
+    const SEVS = ['Crítica', 'Alta', 'Media', 'Baja'];
+    const COND0 = { crit: 50, alta: 20, media: 5 };
+    const ETQ = { crit: 'Crítica', alta: 'Alta', media: 'Media' };
+    const umbral = Object.assign({}, COND0);
+    let orden = ['media', 'alta', 'crit'];
+    const MAX_CRIT = Math.floor(TOTAL * 0.10);
+
+    function clasificar(n, ord) {
+      for (let i = 0; i < ord.length; i++) if (n >= umbral[ord[i]]) return { s: ETQ[ord[i]], c: i };
+      return { s: 'Baja', c: -1 };
+    }
+    const ordenCorrecto = () => [...orden].sort((a, b) => umbral[b] - umbral[a]);
+    const enOrden = () => orden.every((k, i) => umbral[k] >= (orden[i + 1] ? umbral[orden[i + 1]] : 0)) && new Set(orden.map(k => umbral[k])).size === 3;
+    const validos = () => umbral.crit > umbral.alta && umbral.alta > umbral.media && umbral.media >= 1;
+    const cuenta = (t) => DATOS.filter(f => f.intentos >= t).length;
+    function minimoCritico() { let t = 1; while (cuenta(t) > MAX_CRIT) t++; return t; }
+
+    function pintarConds(focoId) {
+      const ol = $('#r2-conds');
+      ol.replaceChildren(...orden.map((k, i) => {
+        const inp = el('input', { type: 'number', min: 1, max: 200, step: 1, value: String(umbral[k]), id: `r2-u-${k}`, 'aria-label': `Umbral de ${ETQ[k]}` });
+        inp.addEventListener('input', () => { const v = parseInt(inp.value, 10); if (!isNaN(v)) { umbral[k] = Math.min(200, Math.max(1, v)); actualizar2(); } });
+        const sub = el('button', { type: 'button', id: `r2-sub-${k}`, 'aria-label': `Subir la condición ${ETQ[k]}`, disabled: i === 0, onclick: () => mover(k, -1, `r2-sub-${k}`) }, '↑ Subir');
+        const baj = el('button', { type: 'button', id: `r2-baj-${k}`, 'aria-label': `Bajar la condición ${ETQ[k]}`, disabled: i === orden.length - 1, onclick: () => mover(k, 1, `r2-baj-${k}`) }, '↓ Bajar');
+        return el('li', {}, el('span', { class: 'n' }, `${i + 1}.`), el('span', {}, 'Eventos[Intentos] >='), inp, el('span', {}, `→ "${ETQ[k]}"`), el('span', { class: 'mover' }, sub, baj));
+      }), el('li', {}, el('span', { class: 'n' }, '—'), el('span', {}, 'si ninguna es verdadera → "Baja"')));
+      if (focoId) {
+        let b = document.getElementById(focoId);
+        if (b && b.disabled) b = document.getElementById(focoId.replace(/sub|baj/, m => m === 'sub' ? 'baj' : 'sub'));
+        if (b) b.focus();
+      }
+    }
+    function mover(k, d, focoId) {
+      const i = orden.indexOf(k), j = i + d;
+      if (j < 0 || j >= orden.length) return;
+      [orden[i], orden[j]] = [orden[j], orden[i]];
+      pintarConds(focoId); actualizar2();
+    }
+    function actualizar2() {
+      const lineas = orden.map(k => `    Eventos[Intentos] >= ${umbral[k]}, "${ETQ[k]}",`).join('\n');
+      $('#r2-codigo').innerHTML = dax(`Severidad =\nSWITCH (\n    TRUE (),\n${lineas}\n    "Baja"\n)`);
+      $('#r2-if').innerHTML = dax('Severidad =\n' + orden.map((k, i) => `${'    '.repeat(i)}IF ( Eventos[Intentos] >= ${umbral[k]}, "${ETQ[k]}",`).join('\n') + `\n${'    '.repeat(orden.length)}"Baja"\n` + orden.map((k, i) => `${'    '.repeat(orden.length - 1 - i)})`).join('\n'));
+      const res = DATOS.map(f => Object.assign({ f }, clasificar(f.intentos, orden)));
+      const conteo = Object.fromEntries(SEVS.map(s => [s, res.filter(r => r.s === s).length]));
+      const pct = conteo['Crítica'] / TOTAL;
+      $('#r2-kpis').replaceChildren(...SEVS.map(s => el('div', { class: 'kpi' }, el('span', { class: 'valor' }, String(conteo[s])), el('span', { class: 'etiqueta' }, s))),
+        el('div', { class: 'kpi' }, el('span', { class: 'valor' }, num(pct * 100, 1) + ' %'), el('span', { class: 'etiqueta' }, '[% críticos]')));
+      ICCA.barras('#r2-grafica', SEVS.map(s => ({ etiqueta: s, valor: conteo[s], resaltar: s === 'Crítica' })), { titulo: '[Eventos] por Severidad' });
+      $('#r2-medidas').innerHTML = dax('Eventos = COUNTROWS ( Eventos )\n\n% críticos =\nDIVIDE (\n    COUNTROWS ( FILTER ( Eventos, Eventos[Severidad] = "Crítica" ) ),\n    COUNTROWS ( Eventos )\n)');
+      const aviso = $('#r2-aviso');
+      if (!validos()) aviso.innerHTML = '<span class="no">⚠ Los umbrales deben cumplir Crítica &gt; Alta &gt; Media ≥ 1.</span>';
+      else if (!enOrden()) {
+        const sombra = orden.map((k, i) => ({ k, j: orden.slice(0, i).find(p => umbral[p] <= umbral[k]) })).filter(x => x.j);
+        aviso.innerHTML = '<span class="no">⚠ Orden peligroso:</span> ' + sombra.map(x => `«${ETQ[x.k]}» nunca aparece, porque toda fila con <code>Intentos &gt;= ${umbral[x.k]}</code> ya cumplió antes <code>Intentos &gt;= ${umbral[x.j]}</code> («${ETQ[x.j]}»)`).join('; ') + '. SWITCH se queda con la primera condición verdadera.';
+      } else aviso.innerHTML = '<span class="si">✓ Condiciones del umbral más alto al más bajo:</span> cada fila cae en la categoría más grave que cumple.';
+      const ordenadas = res.slice().sort((a, b) => b.f.intentos - a.f.intentos || a.f.id - b.f.id);
+      $('#r2-tabla').replaceChildren(el('thead', {}, el('tr', {}, ...['IdEvento', 'Usuario', 'IP', 'Intentos', 'Severidad', 'Primera condición verdadera'].map(h => el('th', { scope: 'col' }, h)))),
+        el('tbody', {}, ...ordenadas.map(r => {
+          const tr = el('tr', {}, el('td', { class: 'num' }, String(r.f.id)), el('td', { html: visible(r.f.usuario) }), el('td', {}, r.f.ip), el('td', { class: 'num' }, String(r.f.intentos)), el('td', {}, el('strong', {}, r.s)),
+            el('td', {}, r.c < 0 ? 'ninguna → "Baja"' : `${r.c + 1}.ª: Intentos >= ${umbral[orden[r.c]]}`));
+          return tr;
+        })));
+    }
+    $('#r2-comprobar').addEventListener('click', () => {
+      const tmin = minimoCritico();
+      if (!validos()) { retro('#retro2', 'mal', 'Primero arregla los umbrales: deben cumplir Crítica &gt; Alta &gt; Media ≥ 1. Si Alta fuera mayor que Crítica, la categoría «Crítica» perdería su significado.'); desmarcar('reto2'); return; }
+      if (!enOrden()) { retro('#retro2', 'mal', `El orden todavía no es correcto. SWITCH ( TRUE (), … ) devuelve el resultado de la <strong>primera</strong> condición verdadera: si «Intentos &gt;= ${umbral[orden[0]]}» va primero, una ráfaga de 120 intentos también la cumple y nunca llega a revisar las demás. Ordena de mayor a menor: ${ordenCorrecto().map(k => ETQ[k]).join(', ')}.`); desmarcar('reto2'); return; }
+      const n = cuenta(umbral.crit);
+      if (n > MAX_CRIT) { retro('#retro2', 'aviso', `El orden ya es correcto ✓. Pero con <code>Intentos &gt;= ${umbral.crit}</code> quedan <strong>${n}</strong> eventos críticos (${num(100 * n / TOTAL, 1)} %), más de los ${MAX_CRIT} que el equipo puede atender. Sube el umbral de Crítica y observa el conteo.`); desmarcar('reto2'); return; }
+      if (umbral.crit > tmin) { retro('#retro2', 'aviso', `Cumples el límite (${n} críticos), pero ${umbral.crit} no es el umbral más bajo posible: con un valor menor seguirías en ${MAX_CRIT} o menos. Bájalo de uno en uno hasta que el conteo supere ${MAX_CRIT} y regresa un paso.`); desmarcar('reto2'); return; }
+      retro('#retro2', 'ok', `<strong>¡Columna lista!</strong> Orden correcto y umbral de Crítica = ${tmin}: quedan ${n} eventos críticos (${num(100 * n / TOTAL, 1)} %); con ${tmin - 1} serían ${cuenta(tmin - 1)}. Así se calibra una severidad con un criterio operativo (capacidad del equipo) y no a ojo. La medida <code>[Eventos]</code> en el gráfico resume tu nueva columna: eso pide la actividad 2.1.`);
+      marcar('reto2');
+    });
+    $('#r2-reiniciar').addEventListener('click', () => { Object.assign(umbral, COND0); orden = ['media', 'alta', 'crit']; pintarConds(); actualizar2(); retro('#retro2', '', ''); desmarcar('reto2'); });
+    pintarConds(); actualizar2();
+
+    /* ---------- Reto 3 ---------- */
+    const PASOS = [
+      { k: 'trim', t: 'Recortar', d: 'Quita los espacios al inicio y al final (Text.Trim).', fn: u => u.trim(), m: (p) => `Table.TransformColumns(${p}, {{"Usuario", Text.Trim, type text}})`, nombre: '#"Texto recortado"' },
+      { k: 'lower', t: 'Minúsculas', d: 'Convierte todo a minúsculas (Text.Lower).', fn: u => u.toLowerCase(), m: (p) => `Table.TransformColumns(${p}, {{"Usuario", Text.Lower, type text}})`, nombre: '#"Texto en minúscula"' },
+      { k: 'punto', t: 'Reemplazar «.» por nada', d: 'Elimina los puntos (Table.ReplaceValue).', fn: u => u.split('.').join(''), m: (p) => `Table.ReplaceValue(${p}, ".", "", Replacer.ReplaceText, {"Usuario"})`, nombre: '#"Valor reemplazado"' },
+      { k: 'seis', t: 'Conservar los primeros 6 caracteres', d: 'Corta cada valor a 6 caracteres (Text.Start).', fn: u => u.slice(0, 6), m: (p) => `Table.TransformColumns(${p}, {{"Usuario", each Text.Start(_, 6), type text}})`, nombre: '#"Primeros caracteres extraídos"' }
+    ];
+    const activos = new Set();
+    PASOS.forEach(p => {
+      const cb = el('input', { type: 'checkbox', id: `r3-p-${p.k}` });
+      cb.addEventListener('change', () => { if (cb.checked) activos.add(p.k); else activos.delete(p.k); pintar3(); });
+      $('#r3-pasos').append(el('li', {}, el('label', { for: `r3-p-${p.k}` }, cb, el('span', {}, p.t, el('small', {}, p.d)))));
+    });
+    const VARIANTES = [...new Set(DATOS.map(f => f.usuario))].sort((a, b) => CANON.indexOf(CANON_DE[a]) - CANON.indexOf(CANON_DE[b]) || a.localeCompare(b));
+    function normalizar(u) { return PASOS.reduce((x, p) => activos.has(p.k) ? p.fn(x) : x, u); }
+    function analisis3() {
+      const grupos = new Map();
+      VARIANTES.forEach(v => { const n = normalizar(v); if (!grupos.has(n)) grupos.set(n, new Set()); grupos.get(n).add(CANON_DE[v]); });
+      const mezclas = [...grupos].filter(([, s]) => s.size > 1);
+      const sinUnificar = CANON.filter(c => new Set(VARIANTES.filter(v => CANON_DE[v] === c).map(normalizar)).size > 1);
+      return { grupos, mezclas, sinUnificar };
+    }
+    function pintar3() {
+      const a = analisis3();
+      const filasPor = v => DATOS.filter(f => f.usuario === v).length;
+      $('#r3-tabla').replaceChildren(el('thead', {}, el('tr', {}, ...['Valor original', 'Resultado', 'Filas'].map(h => el('th', { scope: 'col' }, h)))),
+        el('tbody', {}, ...VARIANTES.map(v => el('tr', { class: a.mezclas.some(([n]) => n === normalizar(v)) ? 'resaltado' : '' },
+          el('td', { html: visible(v) }), el('td', { html: visible(normalizar(v)) }), el('td', { class: 'num' }, String(filasPor(v)))))));
+      $('#r3-kpis').replaceChildren(
+        el('div', { class: 'kpi' }, el('span', { class: 'valor' }, String(VARIANTES.length)), el('span', { class: 'etiqueta' }, 'Valores distintos al inicio')),
+        el('div', { class: 'kpi' }, el('span', { class: 'valor' }, String(a.grupos.size)), el('span', { class: 'etiqueta' }, 'Valores distintos ahora')),
+        el('div', { class: 'kpi' }, el('span', { class: 'valor' }, '5'), el('span', { class: 'etiqueta' }, 'Personas reales')));
+      let prev = 'Origen';
+      const lineas = ['    Origen = Eventos_crudos'];
+      PASOS.filter(p => activos.has(p.k)).forEach(p => { lineas.push(`    ${p.nombre} = ${p.m(prev)}`); prev = p.nombre; });
+      $('#r3-m').innerHTML = dax(`let\n${lineas.join(',\n')}\nin\n    ${prev}`);
+    }
+    $('#r3-comprobar').addEventListener('click', () => {
+      const a = analisis3();
+      if (!activos.size) { retro('#retro3', 'aviso', `Todavía no activas ningún paso: hay ${VARIANTES.length} valores distintos para 5 personas. Mira la tabla y decide qué diferencias hay que eliminar.`); desmarcar('reto3'); return; }
+      if (a.mezclas.length) {
+        const [n, s] = a.mezclas[0];
+        retro('#retro3', 'mal', `<strong>Cuidado:</strong> el valor «${esc(n)}» ahora mezcla a ${[...s].join(' y ')}, que son personas distintas. Normalizar de más destruye información: si investigas a jperez, también verías la actividad de jperezm. Desactiva el paso que corta caracteres (filas resaltadas).`);
+        desmarcar('reto3'); return;
+      }
+      if (a.sinUnificar.length) {
+        retro('#retro3', 'aviso', `Vas bien, pero ${a.sinUnificar.join(', ')} todavía ${a.sinUnificar.length > 1 ? 'aparecen' : 'aparece'} con más de un valor (hay ${a.grupos.size} valores para 5 personas). Revisa en la tabla qué diferencia queda: ¿espacios, mayúsculas o puntos?`);
+        desmarcar('reto3'); return;
+      }
+      retro('#retro3', 'ok', `<strong>¡Normalizado!</strong> Pasaste de ${VARIANTES.length} valores a 5, uno por persona, sin mezclar a jperez con jperezm. Ahora un conteo de usuarios distintos, un filtro o una relación con la tabla de empleados funcionarán. Ese es el valor de un vocabulario de datos común, igual que ATT&amp;CK lo es para el comportamiento del adversario.`);
+      marcar('reto3');
+    });
+    $('#r3-reiniciar').addEventListener('click', () => { activos.clear(); PASOS.forEach(p => { $(`#r3-p-${p.k}`).checked = false; }); pintar3(); retro('#retro3', '', ''); desmarcar('reto3'); });
+    pintar3();
+
+    /* ---------- Reto 4 ---------- */
+    let columna4 = null;    // { col: 'pais'|'asn' } cuando la columna se agregó sin error
+    const metodo4 = () => { const r = document.querySelector('input[name="r4-metodo"]:checked'); return r ? r.value : ''; };
+    const NOMBRE_COL = { pais: 'País', asn: 'ASN' };
+    function codigo4() {
+      const m = metodo4(), c = NOMBRE_COL[$('#r4-col').value] || 'País';
+      const cuerpo = m === 'related' ? `RELATED ( GeoIP[${c}] )` : m === 'lookup' ? `LOOKUPVALUE ( GeoIP[${c}], GeoIP[IP], Eventos[IP] )` : m === 'vlookup' ? `VLOOKUP ( Eventos[IP], GeoIP, ${c === 'País' ? 2 : 3}, FALSE )` : '¿método?';
+      $('#r4-codigo').innerHTML = dax(`${c} = ${cuerpo}`);
+    }
+    const PAISES = [...new Set(GEO.map(g => g[1]))];
+    $('#r4-resp').replaceChildren(el('option', { value: '' }, 'Elige un país…'), ...PAISES.map(p => el('option', { value: p }, p)));
+    function agrega(fn, filas) { return fn === 'intentos' ? filas.reduce((a, f) => a + f.intentos, 0) : filas.length; }
+    function pintar4() {
+      if (!columna4) { $('#r4-resultado').hidden = true; return; }
+      $('#r4-resultado').hidden = false;
+      const c = columna4.col, med = $('#r4-medida').value || 'eventos';
+      const valor = f => GEO_DE[f.ip] ? GEO_DE[f.ip][c] : '(en blanco)';
+      const grupos = new Map();
+      DATOS.forEach(f => { const k = valor(f); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(f); });
+      const datos = [...grupos].map(([k, fs]) => ({ etiqueta: k, valor: agrega(med, fs) })).sort((a, b) => b.valor - a.valor);
+      datos[0].resaltar = true;
+      ICCA.barras('#r4-grafica', datos.map(d => Object.assign({}, d, { etiqueta: d.etiqueta === 'Estados Unidos' ? 'EE. UU.' : d.etiqueta === 'Países Bajos' ? 'P. Bajos' : d.etiqueta })), { titulo: `${med === 'intentos' ? '[Total intentos]' : '[Eventos]'} por ${NOMBRE_COL[c]}` });
+      const ips = [...new Set(DATOS.map(f => f.ip))];
+      const filasIp = ips.map(ip => { const fs = DATOS.filter(f => f.ip === ip); return { ip, v: GEO_DE[ip] ? GEO_DE[ip][c] : '(en blanco)', e: fs.length, s: agrega('intentos', fs) }; }).sort((a, b) => b.s - a.s);
+      $('#r4-tabla').replaceChildren(el('thead', {}, el('tr', {}, ...['IP', NOMBRE_COL[c], 'Eventos', 'Total intentos'].map(h => el('th', { scope: 'col' }, h)))),
+        el('tbody', {}, ...filasIp.map(x => el('tr', { class: x.v === '(en blanco)' ? 'resaltado' : '' }, el('td', {}, x.ip), el('td', {}, x.v), el('td', { class: 'num' }, String(x.e)), el('td', { class: 'num' }, num(x.s))))));
+      const enc = ips.filter(ip => GEO_DE[ip]).length, blanco = DATOS.filter(f => !GEO_DE[f.ip]).length;
+      $('#r4-cobertura').textContent = `Cobertura del enriquecimiento: ${enc} de ${ips.length} IPs encontradas en GeoIP; ${blanco} eventos quedan con ${NOMBRE_COL[c]} en blanco (filas resaltadas).`;
+    }
+    $('#r4-agregar').addEventListener('click', () => {
+      const m = metodo4(), c = $('#r4-col').value || 'pais';
+      if (!m) { retro('#r4-retroA', 'aviso', 'Elige un método.'); return; }
+      if (m === 'vlookup') { columna4 = null; retro('#r4-retroA', 'mal', '<strong>Error:</strong> VLOOKUP (BUSCARV) es una función de Excel; DAX no la tiene. En DAX se usa RELATED (con una relación) o LOOKUPVALUE (sin relación).'); pintar4(); return; }
+      if (m === 'related' && !$('#r4-rel').checked) { columna4 = null; retro('#r4-retroA', 'mal', '<strong>Error:</strong> RELATED solo funciona si existe una relación activa de varios a uno desde Eventos hacia GeoIP; sin ella, Power BI marca que la columna de GeoIP no existe o no tiene relación con la tabla actual. Crea la relación (casilla) o usa LOOKUPVALUE.'); pintar4(); return; }
+      columna4 = { col: c };
+      retro('#r4-retroA', 'ok', m === 'related'
+        ? '✓ Columna agregada con RELATED: por cada fila de Eventos sigue la relación hasta la única fila de GeoIP con esa IP. Es la opción recomendada cuando el modelo ya tiene la relación.'
+        : '✓ Columna agregada con LOOKUPVALUE: busca en GeoIP la fila cuya IP coincide con la de cada evento. Útil cuando no conviene crear una relación; si no encuentra la IP, devuelve en blanco.');
+      pintar4();
+    });
+    document.querySelectorAll('input[name="r4-metodo"]').forEach(r => r.addEventListener('change', codigo4));
+    $('#r4-col').addEventListener('change', codigo4);
+    $('#r4-medida').addEventListener('change', pintar4);
+    function paisTop(fn) { const m = new Map(); DATOS.forEach(f => { if (GEO_DE[f.ip]) { const p = GEO_DE[f.ip].pais; m.set(p, (m.get(p) || 0) + agrega(fn, [f])); } }); return [...m].sort((a, b) => b[1] - a[1])[0]; }
+    $('#r4-comprobar').addEventListener('click', () => {
+      const [top, tot] = paisTop('intentos'), [topEv, totEv] = paisTop('eventos');
+      const r = $('#r4-resp').value;
+      if (!columna4 || columna4.col !== 'pais') { retro('#retro4', 'aviso', 'Primero agrega la columna <strong>País</strong> con un método válido: sin enriquecer, no puedes responder por país.'); desmarcar('reto4'); return; }
+      if (!r) { retro('#retro4', 'aviso', 'Elige un país en la pregunta.'); desmarcar('reto4'); return; }
+      if (r === top) { retro('#retro4', 'ok', `<strong>¡Correcto!</strong> ${top} suma ${num(tot)} intentos con la medida <code>Total intentos = SUM ( Eventos[Intentos] )</code>, aunque ${topEv} tiene más eventos (${totEv}). COUNTROWS responde «¿cuántas ráfagas?» y SUM «¿cuántos intentos?»: elige la agregación según la pregunta.`); marcar('reto4'); }
+      else if (r === topEv) { retro('#retro4', 'mal', `${topEv} tiene más <em>eventos</em> (${totEv} filas: usuarios legítimos que se equivocan una o dos veces), pero la pregunta es por <em>intentos</em>. Cambia la medida del gráfico a <code>[Total intentos]</code> y vuelve a mirar.`); desmarcar('reto4'); }
+      else { retro('#retro4', 'mal', `${esc(r)} no es el país con más intentos. Pon <code>[Total intentos]</code> en el gráfico por País y compara las barras.`); desmarcar('reto4'); }
+    });
+    $('#r4-reiniciar').addEventListener('click', () => {
+      columna4 = null;
+      document.querySelectorAll('input[name="r4-metodo"]').forEach(r => { r.checked = false; });
+      $('#r4-rel').checked = false; $('#r4-col').value = 'pais'; $('#r4-medida').value = 'eventos'; $('#r4-resp').value = '';
+      retro('#r4-retroA', '', ''); retro('#retro4', '', ''); codigo4(); pintar4(); desmarcar('reto4');
+    });
+    codigo4();
+  </script>
+</body>
+</html>

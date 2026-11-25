@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 11 · Calidad de datos y audiencia | Simuladores ICCA</title>
+  <meta name="description" content="Audita la calidad de un dataset de eventos por dimensión, empareja cada audiencia con su pregunta objetivo y genera el documento de audiencia de tu dashboard.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    table.datos select { min-height: 34px; padding: 3px 6px; font-size: .88rem; }
+    table.datos td.vacio { color: var(--muted); font-style: italic; }
+    table.datos tr.fila-ok td { background: var(--ok-soft); }
+    table.datos tr.fila-mal td { background: var(--bad-soft); }
+    table.datos td.resultado { white-space: normal; min-width: 240px; font-size: .86rem; }
+    table.ajustable th, table.ajustable td { white-space: normal; }
+    .tabla-scroll.alta { max-height: 520px; overflow-y: auto; }
+    .dims { margin: 0; padding-left: 18px; }
+    .dims li { margin: 4px 0; }
+    .tarjetas-aud { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .audiencia { border: 2px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface); }
+    .audiencia h3 { margin: 0 0 4px; }
+    .audiencia p { margin: 0 0 8px; color: var(--muted); font-size: .92rem; }
+    .audiencia select { width: 100%; }
+    .audiencia.ok { border-color: var(--ok); }
+    .audiencia.mal { border-color: var(--bad); }
+    .audiencia .veredicto { font-size: .9rem; margin-top: 8px; }
+    fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 14px 0; background: var(--surface); }
+    legend { font-weight: 700; padding: 0 6px; }
+    .opcion { display: flex; gap: 10px; align-items: flex-start; padding: 6px 4px; font-weight: 400; cursor: pointer; }
+    .opcion input { margin-top: 5px; flex: none; width: 18px; height: 18px; }
+    .criterios { list-style: none; padding: 0; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+    .criterios li { font-size: .85rem; border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; background: var(--surface-2); }
+    .criterios li.si { border-color: var(--ok); background: var(--ok-soft); }
+    .criterios li.no { border-color: var(--bad); background: var(--bad-soft); }
+    .explica { font-size: .92rem; margin: 6px 0 0; }
+    textarea { width: 100%; }
+    textarea.doc { font-family: var(--mono); font-size: .85rem; min-height: 280px; }
+    .pequeno { font-size: .88rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 11 · Calidad de datos y audiencia</h1>
+      <p class="subtitulo">Un dashboard con datos sucios o pensado para nadie en particular no ayuda a decidir. Hoy auditas la calidad de un extracto de eventos y defines para quién es cada vista y qué pregunta debe responder.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás clasificar problemas de calidad de datos en seis dimensiones y redactar, para cada vista del dashboard, una pregunta objetivo específica, accionable y medible dirigida a una audiencia concreta.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>En el Reto 1, revisa fila por fila y elige la dimensión del problema; luego pulsa <strong>Revisar auditoría</strong>.</li>
+          <li>En el Reto 2, asigna a cada audiencia su pregunta y su vista.</li>
+          <li>En el Reto 3, elige o escribe la mejor pregunta objetivo y genera tu documento de audiencia en Markdown.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Audita la calidad del dataset</h2>
+      <p>Este extracto de 30 eventos del SIEM está por cargarse al dashboard. Tiene <strong>12 problemas sembrados, dos por cada dimensión</strong>. En la columna <em>Problema</em> elige la dimensión de cada fila defectuosa y deja «Sin problema» en las demás. Las celdas <em>null</em> están vacías, como las muestra Power Query.</p>
+      <div class="dos-columnas">
+        <div class="caja">
+          <h3>Las seis dimensiones</h3>
+          <ul class="dims">
+            <li><strong>Completitud:</strong> ¿falta un valor obligatorio?</li>
+            <li><strong>Validez:</strong> ¿el valor respeta el formato o el dominio permitido?</li>
+            <li><strong>Unicidad:</strong> ¿el mismo evento aparece más de una vez?</li>
+            <li><strong>Consistencia:</strong> ¿el mismo dato se escribe igual en todas las filas?</li>
+            <li><strong>Exactitud:</strong> ¿el valor coincide con la realidad según una fuente autorizada?</li>
+            <li><strong>Oportunidad:</strong> ¿el dato llegó a tiempo para ser útil?</li>
+          </ul>
+        </div>
+        <div class="caja">
+          <h3>Reglas y fuente autorizada</h3>
+          <ul class="dims">
+            <li>Fechas en formato AAAA-MM-DD hh:mm (UTC).</li>
+            <li>Severidad: Baja, Media, Alta o Crítica.</li>
+            <li>Técnicas de este extracto: T1021, T1046, T1059, T1071, T1078, T1110, T1486, T1566.</li>
+            <li>Cada ID de evento es único; la ingesta debe ocurrir en menos de 24 h.</li>
+          </ul>
+          <p class="pequeno"><strong>CMDB (inventario oficial):</strong> WS-014 → 10.0.4.14 · WS-022 → 10.0.4.22 · SRV-DB01 → 10.0.1.10 · SRV-WEB02 → 10.0.1.20 · LAP-031 → 10.0.6.31</p>
+        </div>
+      </div>
+      <div class="tabla-scroll alta" tabindex="0" role="region" aria-label="Tabla de eventos a auditar">
+        <table class="datos">
+          <caption class="oculto-visual">Extracto de 30 eventos del SIEM con una columna para marcar el problema de calidad</caption>
+          <thead>
+            <tr><th scope="col">#</th><th scope="col">ID</th><th scope="col">Ocurrió (UTC)</th><th scope="col">Ingestado (UTC)</th><th scope="col">Host</th><th scope="col">IP del host</th><th scope="col">IP remota</th><th scope="col">Severidad</th><th scope="col">Técnica</th><th scope="col">Problema</th><th scope="col">Resultado</th></tr>
+          </thead>
+          <tbody id="cuerpoEventos"></tbody>
+        </table>
+      </div>
+      <p id="contador1" class="pequeno" aria-live="polite">Marcaste 0 filas.</p>
+      <div class="acciones">
+        <button type="button" class="primario" id="revisar1">Revisar auditoría</button>
+        <button type="button" id="solucion1">Ver solución</button>
+        <button type="button" id="reiniciar1">Reiniciar</button>
+      </div>
+      <div id="resumen1"></div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Cada audiencia, su pregunta y su vista</h2>
+      <p>Tu dashboard tendrá tres vistas: <strong>Resumen ejecutivo</strong>, <strong>Detalle técnico (ATT&amp;CK)</strong> y <strong>KPIs de seguimiento</strong>. Para cada audiencia elige la pregunta que de verdad necesita responder y la vista donde la encontrará. Una vista puede servir a más de una audiencia.</p>
+      <div class="tarjetas-aud" id="audiencias"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="revisar2">Comprobar</button>
+        <button type="button" id="reiniciar2">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · La pregunta objetivo de cada vista</h2>
+      <p>Una buena pregunta objetivo es <strong>específica</strong> (dice qué y de qué periodo), <strong>accionable</strong> (su respuesta lleva a una decisión) y <strong>medible</strong> (se responde con un dato del modelo). Elige la mejor opción para cada vista. Si quieres, escribe tu propia versión: un revisor automático te da pistas mientras escribes.</p>
+      <div id="preguntas"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="revisar3">Comprobar</button>
+        <button type="button" id="reiniciar3">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+
+      <h3>Tu documento de audiencia</h3>
+      <p>Genera el documento con lo que respondiste en los retos 2 y 3. Cópialo como <code class="codigo">docs/audiencia.md</code> en el repositorio de tu equipo.</p>
+      <div class="campo">
+        <label for="equipo">Nombre del equipo o del dashboard</label>
+        <input type="text" id="equipo" placeholder="p. ej., Equipo Halcón · Dashboard CTI">
+      </div>
+      <div class="acciones">
+        <button type="button" class="primario" id="generar">Generar documento</button>
+        <button type="button" id="copiar">Copiar Markdown</button>
+      </div>
+      <p id="estadoCopia" class="pequeno" aria-live="polite"></p>
+      <label for="doc" class="oculto-visual">Documento de audiencia en Markdown</label>
+      <textarea id="doc" class="doc" readonly placeholder="Pulsa «Generar documento»."></textarea>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol>
+        <li>En Power BI Desktop, abre <strong>Inicio → Transformar datos</strong> para entrar al Editor de Power Query.</li>
+        <li>En la pestaña <strong>Vista</strong>, activa <strong>Calidad de columna</strong>, <strong>Distribución de columnas</strong> y <strong>Perfil de columna</strong>. En la barra de estado cambia «Generación de perfiles de columnas basada en las primeras 1000 filas» a <strong>basada en todo el conjunto de datos</strong>; si no, los problemas de filas posteriores no aparecen.</li>
+        <li><strong>Completitud:</strong> el porcentaje «Vacío» de Calidad de columna te dice cuántos <em>null</em> hay. <strong>Validez:</strong> el porcentaje «Error» aparece al aplicar <strong>Cambiar tipo</strong> (una fecha imposible no se convierte).</li>
+        <li><strong>Unicidad:</strong> selecciona la columna ID y usa <strong>Inicio → Quitar filas → Quitar duplicados</strong>. <strong>Consistencia:</strong> <strong>Transformar → Formato → Poner en mayúsculas cada palabra</strong> o <strong>Reemplazar valores</strong>.</li>
+        <li><strong>Exactitud:</strong> <strong>Inicio → Combinar consultas</strong> con la tabla CMDB por Host y compara la IP. <strong>Oportunidad:</strong> agrega una columna personalizada con el retraso de ingesta:</li>
+      </ol>
+      <pre class="codigo"><span class="cmt">// Agregar columna → Columna personalizada (Power Query M)</span>
+= <span class="fn">Table.AddColumn</span>(TipoCambiado, <span class="str">"HorasRetraso"</span>,
+    <span class="kw">each</span> <span class="fn">Duration.TotalHours</span>([Ingestado] - [Ocurrió]), <span class="kw">type</span> number)</pre>
+      <p>Para la audiencia: crea una <strong>página</strong> del informe por vista, nómbrala igual que en tu documento y coloca la pregunta objetivo como título o cuadro de texto en la parte superior.</p>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Esta semana entregas el <strong>documento de audiencia</strong>: para cada una de las tres vistas obligatorias (resumen ejecutivo, detalle técnico con mapeo a MITRE ATT&amp;CK y KPIs de seguimiento) define la audiencia principal y su pregunta objetivo. Súbelo como <code class="codigo">docs/audiencia.md</code> mediante un Pull Request que revise tu compañero de equipo, y agrega una bitácora con los problemas de calidad que encontraste en tu dataset y el paso de Power Query que los corrige. Esa bitácora alimenta el criterio «pertinencia y calidad del dataset» de la rúbrica.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(11);
+    const { $, el, retro, barajar } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+
+    /* ================= Reto 1 · Auditor de calidad ================= */
+    const DIMS = {
+      completitud: 'Completitud', validez: 'Validez', unicidad: 'Unicidad',
+      consistencia: 'Consistencia', exactitud: 'Exactitud', oportunidad: 'Oportunidad'
+    };
+    const PREGUNTA_DIM = {
+      completitud: '¿Falta un valor obligatorio?', validez: '¿Respeta el formato o el dominio?',
+      unicidad: '¿El evento está repetido?', consistencia: '¿Se escribe igual en todas las filas?',
+      exactitud: '¿Coincide con la fuente autorizada?', oportunidad: '¿Llegó a tiempo?'
+    };
+    // [ID, Ocurrió, Ingestado, Host, IP del host, IP remota, Severidad, Técnica]
+    const EVENTOS = [
+      ['EV-1001', '2026-10-12 08:14', '2026-10-12 08:15', 'WS-014', '10.0.4.14', '203.0.113.45', 'Media', 'T1566'],
+      ['EV-1002', '2026-10-12 08:31', '2026-10-12 08:32', 'SRV-WEB02', '10.0.1.20', '198.51.100.23', 'Alta', 'T1110'],
+      ['EV-1003', '2026-10-12 09:02', '2026-10-12 09:03', 'SRV-WEB02', '10.0.1.20', '198.51.100.23', 'Alta', 'T1110'],
+      ['EV-1004', '2026-10-12 09:40', '2026-10-12 09:41', 'LAP-031', '10.0.6.31', '192.0.2.77', 'Baja', 'T1071'],
+      ['EV-1005', '2026-10-12 10:05', '2026-10-12 10:06', 'WS-022', '10.0.4.22', '203.0.113.300', 'Media', 'T1071'],
+      ['EV-1006', '2026-10-12 10:47', '2026-10-12 10:48', 'SRV-DB01', '10.0.1.10', '198.51.100.61', 'Crítica', 'T1078'],
+      ['EV-1007', '2026-10-12 11:20', '2026-10-12 11:21', 'WS-014', '10.0.4.14', '203.0.113.45', 'Media', 'T1059'],
+      ['EV-1007', '2026-10-12 11:20', '2026-10-12 11:21', 'WS-014', '10.0.4.14', '203.0.113.45', 'Media', 'T1059'],
+      ['EV-1008', '2026-10-12 12:03', '2026-10-12 12:04', 'SRV-WEB02', '10.0.1.20', '198.51.100.23', 'ALTA', 'T1110'],
+      ['EV-1009', '2026-10-12 13:15', '2026-10-18 09:40', 'LAP-031', '10.0.6.31', '192.0.2.77', 'Media', 'T1021'],
+      ['EV-1010', '2026-10-12 14:22', '2026-10-12 14:23', 'WS-014', '10.0.4.22', '203.0.113.45', 'Media', 'T1566'],
+      ['EV-1011', '2026-10-12 15:10', '2026-10-12 15:11', 'SRV-DB01', '10.0.1.10', '198.51.100.61', '', 'T1046'],
+      ['EV-1012', '2026-10-12 16:44', '2026-10-12 16:45', 'WS-022', '10.0.4.22', '203.0.113.9', 'Baja', 'T1071'],
+      ['EV-1013', '2026-10-13 07:58', '2026-10-13 07:59', 'SRV-WEB02', '10.0.1.20', '198.51.100.23', 'Alta', 'T9999'],
+      ['EV-1014', '2026-10-13 08:36', '2026-10-13 08:37', 'LAP-031', '10.0.6.31', '192.0.2.140', 'Media', 'T1566'],
+      ['EV-1015', '13/10/2026 09:12', '2026-10-13 09:13', 'WS-022', '10.0.4.22', '203.0.113.9', 'Baja', 'T1071'],
+      ['EV-1016', '2026-10-13 10:25', '2026-10-13 10:26', 'SRV-DB01', '10.0.1.10', '198.51.100.61', 'Crítica', 'T1486'],
+      ['EV-1017', '2026-10-13 11:03', '2026-10-13 11:04', '', '10.0.4.14', '203.0.113.45', 'Media', 'T1059'],
+      ['EV-1018', '2026-10-13 12:48', '2026-10-13 12:49', 'WS-014', '10.0.4.14', '203.0.113.45', 'Alta', 'T1078'],
+      ['EV-1019', '2026-10-13 13:30', '2026-10-13 13:31', 'SRV-WEB02', '10.0.1.20', '198.51.100.88', 'Alta', 'T1110'],
+      ['EV-1020', '2026-10-13 14:02', '2026-10-16 18:30', 'SRV-DB01', '10.0.1.10', '198.51.100.61', 'Alta', 'T1021'],
+      ['EV-1021', '2026-10-13 15:17', '2026-10-13 15:18', 'SRV-DB01', '10.0.1.20', '198.51.100.61', 'Media', 'T1046'],
+      ['EV-1022', '2026-10-13 16:40', '2026-10-13 16:41', 'LAP-031', '10.0.6.31', '192.0.2.77', 'Baja', 'T1071'],
+      ['EV-1019', '2026-10-13 13:30', '2026-10-13 13:31', 'SRV-WEB02', '10.0.1.20', '198.51.100.88', 'Alta', 'T1110'],
+      ['EV-1023', '2026-10-14 08:05', '2026-10-14 08:06', 'WS-022', '10.0.4.22', '203.0.113.9', 'Media', 'T1566'],
+      ['EV-1024', '2026-10-14 09:21', '2026-10-14 09:22', 'SRV-WEB02', '10.0.1.20', '198.51.100.23', 'Alta', 'T1110'],
+      ['EV-1025', '2026-10-14 10:10', '2026-10-14 10:11', 'WS-014', '10.0.4.14', '192.0.2.140', 'Baja', 'T1071'],
+      ['EV-1026', '2026-10-14 11:34', '2026-10-14 11:35', 'SRV-DB01', '10.0.1.10', '198.51.100.61', 'Crítica', 'T1486'],
+      ['EV-1027', '2026-10-14 12:50', '2026-10-14 12:51', 'LAP-031', '10.0.6.31', '192.0.2.77', 'Media', 'T1059'],
+      ['EV-1028', '2026-10-14 14:15', '2026-10-14 14:16', 'WS-022', '10.0.4.22', '203.0.113.9', 'Media', 'T1046']
+    ];
+    // filas: índices base 0; en los duplicados cualquiera de las dos filas cuenta.
+    const PROBLEMAS = [
+      { dim: 'validez', filas: [4], exp: '203.0.113.300 no es una IPv4 posible: cada octeto va de 0 a 255.' },
+      { dim: 'unicidad', filas: [6, 7], exp: 'EV-1007 aparece dos veces con los mismos valores: contarlo doble infla los KPI.' },
+      { dim: 'consistencia', filas: [8], exp: '«ALTA» en mayúsculas: Power BI la agruparía aparte de «Alta» en un segmentador o una gráfica.' },
+      { dim: 'oportunidad', filas: [9], exp: 'Ocurrió el 12 de octubre y se ingirió el 18: unas 140 horas tarde, ya no sirve para detectar a tiempo.' },
+      { dim: 'exactitud', filas: [10], exp: 'Según la CMDB, 10.0.4.22 es de WS-022, no de WS-014: el formato es válido, pero el dato no corresponde a la realidad.' },
+      { dim: 'completitud', filas: [11], exp: 'Severidad vacía: el evento desaparece de cualquier KPI por severidad.' },
+      { dim: 'validez', filas: [13], exp: 'T9999 no existe en MITRE ATT&CK: está fuera del dominio de valores permitidos.' },
+      { dim: 'consistencia', filas: [15], exp: 'La fecha viene como DD/MM/AAAA y las demás como AAAA-MM-DD: al cambiar el tipo puede fallar o leerse con día y mes invertidos.' },
+      { dim: 'completitud', filas: [17], exp: 'Host vacío: no sabes qué equipo atender ni puedes cruzarlo con la CMDB.' },
+      { dim: 'oportunidad', filas: [20], exp: 'Retraso de ingesta de unas 76 horas: rebasa la regla de 24 h.' },
+      { dim: 'exactitud', filas: [21], exp: 'Según la CMDB, 10.0.1.20 es de SRV-WEB02, no de SRV-DB01.' },
+      { dim: 'unicidad', filas: [19, 23], exp: 'EV-1019 se repite en las filas 20 y 24: los duplicados no siempre están juntos; ordena o agrupa por ID para verlos.' }
+    ];
+    const filaProblema = new Map();
+    PROBLEMAS.forEach((p, k) => p.filas.forEach(f => filaProblema.set(f, k)));
+    const selects = [];
+    let solucionVista = false;
+    let encontrados1 = 0;
+
+    const cuerpo = $('#cuerpoEventos');
+    EVENTOS.forEach((ev, i) => {
+      const sel = el('select', { 'aria-label': `Problema de la fila ${i + 1} (${ev[0]})`, onchange: contar1 },
+        el('option', { value: '' }, 'Sin problema'),
+        Object.entries(DIMS).map(([k, n]) => el('option', { value: k }, n)));
+      selects.push(sel);
+      cuerpo.append(el('tr', { id: 'fila' + i },
+        el('td', { class: 'num' }, i + 1),
+        ev.map(v => v === '' ? el('td', { class: 'vacio' }, 'null') : el('td', {}, v)),
+        el('td', {}, sel),
+        el('td', { class: 'resultado' })));
+    });
+
+    function contar1() {
+      const n = selects.filter(s => s.value).length;
+      $('#contador1').textContent = `Marcaste ${n} ${n === 1 ? 'fila' : 'filas'} de 30.`;
+    }
+
+    function evaluar1() {
+      const hallados = new Set();
+      let falsos = 0, otraDim = 0;
+      selects.forEach((s, i) => {
+        const tr = $('#fila' + i), celda = tr.lastElementChild, k = filaProblema.get(i);
+        tr.classList.remove('fila-ok', 'fila-mal');
+        celda.textContent = '';
+        if (!s.value) return;
+        if (k === undefined) {
+          falsos++; tr.classList.add('fila-mal');
+          celda.textContent = '✗ Esta fila cumple todas las reglas.';
+        } else if (PROBLEMAS[k].dim === s.value) {
+          hallados.add(k); tr.classList.add('fila-ok');
+          celda.textContent = '✓ ' + PROBLEMAS[k].exp;
+        } else {
+          otraDim++; tr.classList.add('fila-mal');
+          celda.textContent = '✗ Sí tiene un problema, pero de otra dimensión.';
+        }
+      });
+      encontrados1 = hallados.size;
+      // Resumen por dimensión
+      const filas = Object.keys(DIMS).map(d => {
+        const existen = PROBLEMAS.filter(p => p.dim === d).length;
+        const hallo = PROBLEMAS.filter((p, k) => p.dim === d && hallados.has(k)).length;
+        return el('tr', {},
+          el('th', { scope: 'row' }, DIMS[d]),
+          el('td', {}, PREGUNTA_DIM[d]),
+          el('td', { class: 'num' }, `${hallo} de ${existen}`),
+          el('td', {}, hallo === existen ? '✓ Completa' : `Faltan ${existen - hallo}`));
+      });
+      $('#resumen1').replaceChildren(el('h3', {}, 'Hallazgos por dimensión'),
+        el('div', { class: 'tabla-scroll' }, el('table', { class: 'datos ajustable' },
+          el('thead', {}, el('tr', {}, el('th', { scope: 'col' }, 'Dimensión'), el('th', { scope: 'col' }, 'Pregunta clave'),
+            el('th', { scope: 'col' }, 'Encontrados'), el('th', { scope: 'col' }, 'Estado'))),
+          el('tbody', {}, filas))));
+      return { n: hallados.size, falsos, otraDim };
+    }
+
+    $('#revisar1').addEventListener('click', () => {
+      const r = evaluar1();
+      if (r.n === PROBLEMAS.length && r.falsos === 0 && r.otraDim === 0) {
+        if (solucionVista) {
+          retro('#retro1', 'aviso', 'Así se ve la auditoría completa. Como abriste la solución, el reto no cuenta para tu progreso: pulsa <strong>Reiniciar</strong> e inténtalo por tu cuenta.');
+          return;
+        }
+        prog.marcar('reto1');
+        retro('#retro1', 'ok', '<strong>✓ ¡Auditoría completa!</strong> Encontraste los 12 problemas sin falsos positivos. Solo 18 de 30 filas (60 %) estaban limpias: si publicaras sin corregir, 4 de cada 10 eventos distorsionarían el dashboard. Observa que <em>validez</em> se revisa contra una regla y <em>exactitud</em> contra la realidad (la CMDB): un dato puede ser válido y aun así falso.');
+        return;
+      }
+      const partes = [`<strong>Llevas ${r.n} de ${PROBLEMAS.length} problemas.</strong>`];
+      if (r.otraDim) partes.push(`${r.otraDim} ${r.otraDim === 1 ? 'fila marcada tiene' : 'filas marcadas tienen'} un problema, pero de otra dimensión: pregúntate si el valor rompe una <em>regla</em> (validez), se escribe <em>distinto</em> (consistencia) o contradice a la <em>CMDB</em> (exactitud).`);
+      if (r.falsos) {
+        const gemelos = selects[1].value || selects[2].value;
+        partes.push(`${r.falsos} ${r.falsos === 1 ? 'fila marcada no tiene' : 'filas marcadas no tienen'} problemas: compárala con las reglas y con la CMDB antes de marcarla.` +
+          (gemelos ? ' Ojo: EV-1002 y EV-1003 se parecen, pero tienen horas distintas; son dos intentos reales de fuerza bruta, no un duplicado.' : ''));
+      }
+      if (r.n < PROBLEMAS.length) partes.push('Usa la tabla «Hallazgos por dimensión» para saber qué te falta buscar.');
+      retro('#retro1', r.falsos || r.otraDim ? 'mal' : 'aviso', partes.join(' '));
+    });
+
+    $('#solucion1').addEventListener('click', () => {
+      solucionVista = true;
+      selects.forEach(s => { s.value = ''; });
+      PROBLEMAS.forEach(p => { selects[p.filas[p.filas.length - 1]].value = p.dim; });
+      contar1();
+      evaluar1();
+      retro('#retro1', 'aviso', 'Solución mostrada: cada fila marcada explica su problema. Este intento ya no cuenta para tu progreso; pulsa <strong>Reiniciar</strong> para volver a intentarlo.');
+    });
+
+    $('#reiniciar1').addEventListener('click', () => {
+      solucionVista = false;
+      encontrados1 = 0;
+      selects.forEach((s, i) => {
+        s.value = '';
+        const tr = $('#fila' + i);
+        tr.classList.remove('fila-ok', 'fila-mal');
+        tr.lastElementChild.textContent = '';
+      });
+      contar1();
+      $('#resumen1').replaceChildren();
+      retro('#retro1', '', '');
+    });
+
+    /* ================= Reto 2 · Audiencias ================= */
+    const VISTAS = { resumen: 'Resumen ejecutivo', detalle: 'Detalle técnico (ATT&CK)', kpis: 'KPIs de seguimiento' };
+    const PREGUNTAS2 = {
+      q1: '¿Nuestro nivel de riesgo subió o bajó este mes y qué amenaza lo explica?',
+      q2: '¿Qué técnicas ATT&CK, IPs y hosts están detrás de las alertas críticas del turno?',
+      q3: '¿Qué porcentaje de incidentes críticos se atendió dentro del SLA de 4 horas este trimestre?',
+      q4: '¿Qué hosts concretos debo parchar o aislar hoy y por qué técnica se detectaron?'
+    };
+    const AUDIENCIAS = [
+      { id: 'ciso', nombre: 'Dirección / CISO', decide: 'presupuesto y prioridades de riesgo',
+        perfil: 'Decide presupuesto y prioridades; le dedica dos minutos a tu dashboard.', q: 'q1', v: 'resumen',
+        exp: 'La dirección necesita la conclusión y la tendencia del riesgo, no el detalle de cada alerta: eso es el resumen ejecutivo.' },
+      { id: 'soc', nombre: 'Analista del SOC', decide: 'qué alerta investigar y hacia dónde pivotar',
+        perfil: 'Investiga alertas en su turno y pivota entre IPs, hosts y técnicas.', q: 'q2', v: 'detalle',
+        exp: 'El analista pivota entre técnica, IP y host: necesita el detalle técnico con el mapeo a ATT&CK y filtros para profundizar.' },
+      { id: 'aud', nombre: 'Auditoría y cumplimiento', decide: 'si los procesos se cumplen y hay evidencia',
+        perfil: 'Verifica que los procesos se cumplan y que exista evidencia.', q: 'q3', v: 'kpis',
+        exp: 'Auditoría compara el desempeño contra una meta (el SLA) a lo largo del tiempo: eso es un KPI de seguimiento.' },
+      { id: 'ti', nombre: 'Equipo de TI', decide: 'qué equipos parchar, aislar o reconfigurar',
+        perfil: 'Aplica parches, aísla equipos y cambia configuraciones.', q: 'q4', v: 'detalle',
+        exp: 'TI necesita una lista accionable por host y técnica; el resumen ejecutivo nunca baja a ese nivel, así que su vista es el detalle técnico.' }
+    ];
+    const selAud = {};
+
+    function construir2() {
+      const cont = $('#audiencias');
+      cont.replaceChildren();
+      AUDIENCIAS.forEach((a, i) => {
+        const sq = el('select', { id: 'q-' + a.id },
+          el('option', { value: '' }, 'Elige una pregunta…'),
+          barajar(Object.keys(PREGUNTAS2), 7 + i).map(k => el('option', { value: k }, PREGUNTAS2[k])));
+        const sv = el('select', { id: 'v-' + a.id },
+          el('option', { value: '' }, 'Elige una vista…'),
+          Object.entries(VISTAS).map(([k, n]) => el('option', { value: k }, n)));
+        selAud[a.id] = { sq, sv };
+        cont.append(el('div', { class: 'audiencia', id: 'aud-' + a.id },
+          el('h3', {}, a.nombre),
+          el('p', {}, a.perfil),
+          el('div', { class: 'campo' }, el('label', { for: 'q-' + a.id }, 'Pregunta objetivo'), sq),
+          el('div', { class: 'campo' }, el('label', { for: 'v-' + a.id }, 'Vista del dashboard'), sv),
+          el('div', { class: 'veredicto', id: 'ver-' + a.id })));
+      });
+    }
+
+    $('#revisar2').addEventListener('click', () => {
+      let completas = 0, vacias = 0;
+      AUDIENCIAS.forEach(a => {
+        const { sq, sv } = selAud[a.id];
+        const tarjeta = $('#aud-' + a.id), ver = $('#ver-' + a.id);
+        tarjeta.classList.remove('ok', 'mal');
+        if (!sq.value || !sv.value) { vacias++; ver.textContent = 'Falta elegir pregunta y vista.'; return; }
+        const okQ = sq.value === a.q, okV = sv.value === a.v;
+        if (okQ && okV) completas++;
+        tarjeta.classList.add(okQ && okV ? 'ok' : 'mal');
+        let texto = `${okQ ? '✓' : '✗'} Pregunta · ${okV ? '✓' : '✗'} Vista. `;
+        if (okQ && okV) texto += a.exp;
+        else if (!okQ) texto += `Piensa qué decide esta audiencia: ${a.decide}. ¿Qué pregunta le ayuda a decidir eso?`;
+        else texto += 'La pregunta es correcta, pero ¿en qué vista vive esa respuesta? ' + (a.v === 'detalle' ? 'Necesita bajar a nivel de host, IP y técnica.' : 'Piensa en el nivel de detalle que necesita.');
+        ver.textContent = texto;
+      });
+      if (completas === AUDIENCIAS.length) {
+        prog.marcar('reto2');
+        retro('#retro2', 'ok', '<strong>✓ ¡Matriz de audiencias completa!</strong> Fíjate en que una misma vista (el detalle técnico) sirve a dos audiencias distintas, y en que cada pregunta nace de la decisión que toma su audiencia. Diseñar «para todos» suele terminar en un dashboard que no responde nada a nadie.');
+      } else {
+        retro('#retro2', vacias ? 'aviso' : 'mal', `<strong>${completas} de ${AUDIENCIAS.length} audiencias correctas.</strong> ${vacias ? `Te faltan ${vacias} por responder. ` : ''}Lee el veredicto de cada tarjeta: empieza por la decisión que toma esa persona y luego busca la pregunta y la vista que la sostienen.`);
+      }
+    });
+
+    $('#reiniciar2').addEventListener('click', () => { construir2(); retro('#retro2', '', ''); });
+
+    /* ================= Reto 3 · Pregunta objetivo ================= */
+    const CRIT = ['Específica', 'Accionable', 'Medible'];
+    const VISTAS3 = [
+      { id: 'resumen', titulo: 'Resumen ejecutivo', audiencia: 'Dirección / CISO', visuales: 'tarjetas KPI de riesgo, tendencia mensual y una conclusión en texto',
+        opciones: [
+          { t: '¿Cómo va la seguridad?', c: [0, 0, 0], exp: 'Es tan vaga que cualquier gráfica «la responde» y ninguna ayuda a decidir: no dice qué medir ni de qué periodo.' },
+          { t: '¿Cuántas alertas generó el SIEM este año?', c: [1, 0, 1], exp: 'Se puede medir, pero no es accionable: más alertas no significa más riesgo (es una métrica de volumen o de vanidad).' },
+          { t: '¿El riesgo por ransomware subió o bajó en octubre frente a septiembre y qué decisión requiere de la dirección?', c: [1, 1, 1], ok: true, exp: 'Nombra la amenaza y el periodo, compara contra una referencia y termina en una decisión de la dirección.' }
+        ] },
+      { id: 'detalle', titulo: 'Detalle técnico (ATT&CK)', audiencia: 'Analista del SOC y equipo de TI', visuales: 'barras por técnica ATT&CK, tabla de IPs y hosts, segmentadores de fecha y severidad',
+        opciones: [
+          { t: '¿Qué hacen los atacantes?', c: [0, 0, 0], exp: 'Es una buena curiosidad, pero no delimita técnicas, periodo ni severidad: no se puede contestar con un dato concreto.' },
+          { t: '¿Podemos ver todos los eventos en una tabla?', c: [0, 0, 1], exp: 'Es una petición de formato, no una pregunta analítica: «ver todo» no prioriza nada ni lleva a una acción.' },
+          { t: '¿Qué técnicas ATT&CK concentran las alertas críticas de los últimos 7 días y desde qué IPs se originan?', c: [1, 1, 1], ok: true, exp: 'Delimita severidad y periodo, y su respuesta dice qué técnica contener y qué IPs bloquear o investigar.' }
+        ] },
+      { id: 'kpis', titulo: 'KPIs de seguimiento', audiencia: 'Auditoría y cumplimiento', visuales: 'tarjetas con meta, tendencia del MTTR y porcentaje dentro del SLA',
+        opciones: [
+          { t: '¿El MTTR de incidentes críticos bajó de 6 a 4 horas este trimestre, como fijó la meta?', c: [1, 1, 1], ok: true, exp: 'Tiene métrica (MTTR), alcance (críticos), periodo (trimestre) y meta (4 h): se responde con sí o no y una cifra.' },
+          { t: '¿Estamos mejorando?', c: [0, 0, 0], exp: '¿Mejorando en qué y frente a qué? Sin métrica ni meta no hay forma de comprobarlo.' },
+          { t: '¿Cuántas reglas de detección tenemos activas?', c: [1, 0, 1], exp: 'Es medible, pero tener más reglas no demuestra que detectes o respondas mejor: es una métrica de vanidad.' }
+        ] }
+    ];
+    const ordenes3 = {};
+
+    function revisarTexto(t) {
+      const s = t.trim();
+      return [
+        ['Es una pregunta (¿…?)', /^¿[\s\S]*\?$/.test(s)],
+        ['Específica (qué o quién)', /t\d{4}|técnica|ip|host|alerta|incidente|ransomware|phishing|sla|servidor|cuenta|usuario|vulnerab|malware|regi[oó]n/i.test(s)],
+        ['Con periodo', /hoy|turno|hora|día|semana|mes|trimestre|año|últim|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre/i.test(s)],
+        ['Medible', /\d|cuánt|porcentaje|%|tasa|tiempo|promedio|mttd|mttr|subi[oó]|baj[oó]|aument|disminu|concentra/i.test(s)],
+        ['Accionable', /debo|debemos|decisi|acci[oó]n|prioriz|parch|aisl|bloque|requiere|meta|sla|atender|escalar|contener|invertir/i.test(s)]
+      ];
+    }
+
+    function construir3() {
+      const cont = $('#preguntas');
+      cont.replaceChildren();
+      VISTAS3.forEach((v, i) => {
+        ordenes3[v.id] = barajar([0, 1, 2], 11 + i * 5);
+        const propia = el('textarea', { id: 'propia-' + v.id, rows: 2, placeholder: '¿…? Escribe aquí tu versión (opcional)' });
+        const lista = el('ul', { class: 'criterios', id: 'lint-' + v.id, 'aria-live': 'polite' });
+        propia.addEventListener('input', () => {
+          lista.replaceChildren(...(propia.value.trim() ? revisarTexto(propia.value).map(([n, ok]) =>
+            el('li', { class: ok ? 'si' : 'no' }, (ok ? '✓ ' : '✗ ') + n)) : []));
+        });
+        cont.append(el('fieldset', { id: 'fs-' + v.id },
+          el('legend', {}, `${v.titulo} · audiencia: ${v.audiencia}`),
+          ordenes3[v.id].map(k => el('label', { class: 'opcion' },
+            el('input', { type: 'radio', name: 'r-' + v.id, value: k }),
+            el('span', {}, v.opciones[k].t))),
+          el('div', { id: 'exp-' + v.id }),
+          el('div', { class: 'campo' }, el('label', { for: 'propia-' + v.id }, 'Tu propia versión (opcional)'), propia),
+          lista,
+          el('p', { class: 'pequeno' }, 'La revisión automática es orientativa: busca palabras clave, no entiende tu intención.')));
+      });
+    }
+
+    function elegida(id) {
+      const r = document.querySelector(`input[name="r-${id}"]:checked`);
+      return r ? Number(r.value) : null;
+    }
+
+    $('#revisar3').addEventListener('click', () => {
+      let bien = 0, vacias = 0;
+      VISTAS3.forEach(v => {
+        const k = elegida(v.id), caja = $('#exp-' + v.id);
+        if (k === null) { vacias++; caja.replaceChildren(el('p', { class: 'explica' }, 'Aún no eliges una opción.')); return; }
+        const o = v.opciones[k];
+        if (o.ok) bien++;
+        caja.replaceChildren(
+          el('ul', { class: 'criterios' }, CRIT.map((n, j) => el('li', { class: o.c[j] ? 'si' : 'no' }, (o.c[j] ? '✓ ' : '✗ ') + n))),
+          el('p', { class: 'explica' }, el('strong', {}, o.ok ? '✓ Bien elegida. ' : '✗ Todavía no. '), o.exp));
+      });
+      if (bien === VISTAS3.length) {
+        prog.marcar('reto3');
+        retro('#retro3', 'ok', '<strong>✓ ¡Las tres preguntas cumplen!</strong> Las tres comparten la misma estructura: <em>qué</em> se mide, <em>de qué periodo</em> y <em>qué decisión</em> habilita. Úsala como plantilla para redactar las preguntas de tu PIA y luego genera tu documento.');
+      } else {
+        retro('#retro3', vacias ? 'aviso' : 'mal', `<strong>${bien} de ${VISTAS3.length} vistas con la mejor pregunta.</strong> Revisa las etiquetas ✓/✗ de cada opción: la correcta cumple las tres condiciones a la vez.`);
+      }
+    });
+
+    $('#reiniciar3').addEventListener('click', () => { construir3(); retro('#retro3', '', ''); });
+
+    /* ---------- Documento de audiencia (Markdown) ---------- */
+    function generarDoc() {
+      const equipo = $('#equipo').value.trim() || '(nombre del equipo)';
+      const hoy = new Date().toISOString().slice(0, 10);
+      const preguntaVista = v => {
+        const propia = $('#propia-' + v.id).value.trim();
+        if (propia) return propia;
+        const k = elegida(v.id);
+        return k === null ? '(pendiente)' : v.opciones[k].t;
+      };
+      const lineas = [
+        '# Documento de audiencia', '',
+        `**Dashboard:** ${equipo}  `, `**Fecha:** ${hoy}`, '',
+        '## 1. Audiencias y vista asignada', '',
+        '| Audiencia | Qué decide | Vista | Pregunta objetivo |', '|---|---|---|---|'
+      ];
+      AUDIENCIAS.forEach(a => {
+        const { sq, sv } = selAud[a.id];
+        lineas.push(`| ${a.nombre} | ${a.decide} | ${sv.value ? VISTAS[sv.value] : '(pendiente)'} | ${sq.value ? PREGUNTAS2[sq.value] : '(pendiente)'} |`);
+      });
+      lineas.push('', '## 2. Pregunta objetivo por vista', '');
+      VISTAS3.forEach(v => {
+        lineas.push(`### ${v.titulo}`, `- **Audiencia principal:** ${v.audiencia}`, `- **Pregunta objetivo:** ${preguntaVista(v)}`,
+          `- **Visuales que la responden:** ${v.visuales}`, '- **Decisión que habilita:** (complétala con tu equipo)', '');
+      });
+      lineas.push('## 3. Bitácora de calidad de datos', '',
+        '| Dimensión | Hallazgo en nuestro dataset | Corrección en Power Query |', '|---|---|---|');
+      Object.values(DIMS).forEach(d => lineas.push(`| ${d} | (describe el hallazgo) | (paso aplicado) |`));
+      lineas.push('', `> Práctica en el simulador: ${encontrados1} de ${PROBLEMAS.length} problemas encontrados en el extracto de prueba.`);
+      $('#doc').value = lineas.join('\n');
+      $('#estadoCopia').textContent = 'Documento generado. Revísalo y cópialo a tu repositorio.';
+    }
+
+    $('#generar').addEventListener('click', generarDoc);
+    $('#copiar').addEventListener('click', async () => {
+      const t = $('#doc');
+      if (!t.value) generarDoc();
+      try {
+        await navigator.clipboard.writeText(t.value);
+        $('#estadoCopia').textContent = '✓ Copiado al portapapeles.';
+      } catch (e) {
+        t.focus();
+        t.select();
+        $('#estadoCopia').textContent = 'Tu navegador no permitió copiar automáticamente: el texto quedó seleccionado, usa Ctrl+C (o Cmd+C).';
+      }
+    });
+
+    construir2();
+    construir3();
+  </script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 9 · Inteligencia de tiempo y caza iterativa | Simuladores ICCA</title>
+  <meta name="description" content="Compara series de tiempo con DAX (promedio móvil, acumulado del mes, periodo anterior), encuentra un pico anómalo y acota una hipótesis de caza con consultas iterativas.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > *, .consultas > *, .kpis > *, .lectura dl > * { min-width: 0; }
+    p, li, dd, label, legend, summary { overflow-wrap: anywhere; }
+    .series { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0; }
+    .series label, .opcion { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
+    .series input, .opcion input { margin-top: 5px; }
+    .leyenda { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .85rem; color: var(--muted); margin-top: 4px; }
+    .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .lectura { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); margin: 8px 0; }
+    .lectura dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 14px; margin: 6px 0 0; }
+    .lectura dt { color: var(--muted); font-size: .82rem; }
+    .lectura dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .si { color: var(--ok); font-weight: 700; }
+    .no { color: var(--bad); font-weight: 700; }
+    .cambia { color: var(--warn); font-weight: 700; }
+    .nota { color: var(--muted); font-size: .92rem; }
+    fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 12px 0; min-width: 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    .hipotesis { border-left: 5px solid var(--accent-2); }
+    .consultas { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin: 10px 0; }
+    .consultas button { text-align: left; }
+    button[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+    .kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin: 10px 0; }
+    .kpis .kpi { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--surface); }
+    .kpis .kpi .valor { font-size: 1.5rem; }
+    .bitacora li { margin: 4px 0; }
+    .tabla-alta { max-height: 300px; overflow: auto; }
+    .ciclo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0; }
+    .ciclo span.fase { border: 1px solid var(--accent-2); background: var(--accent-soft); border-radius: 999px; padding: 4px 12px; font-weight: 600; }
+    .afirmacion { border: 1px solid var(--border); border-left: 5px solid var(--border); border-radius: var(--radius); padding: 10px 14px; background: var(--surface); }
+    .afirmacion.bien { border-left-color: var(--ok); }
+    .afirmacion.revisar { border-left-color: var(--bad); }
+    .afirmacion p { margin: 0 0 6px; }
+    .afirmacion select { width: 100%; }
+    .estado { font-size: .92rem; margin-top: 6px; }
+    .estado:empty { display: none; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 9 · Inteligencia de tiempo y caza iterativa</h1>
+      <p class="subtitulo">Una pregunta de caza muy frecuente es «¿esto es distinto a lo normal?». Responderla exige comparar contra el tiempo (con funciones de inteligencia de tiempo en DAX) y acotar los datos paso a paso, a partir de una hipótesis.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás construir medidas de tendencia con funciones de inteligencia de tiempo sobre una tabla Calendario, identificar un comportamiento anómalo y traducir una hipótesis en una secuencia de consultas que se acotan hasta aislar la evidencia.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Reto 1: activa las series, recorre los días con el control deslizante (o las flechas del teclado) y marca el pico anómalo.</li>
+          <li>Reto 2: elige consultas una por una; cada una filtra los datos y te dice si te acerca o te aleja de la hipótesis.</li>
+          <li>Reto 3: clasifica cada nota de la bitácora en el ciclo hipótesis → consulta → resultado → refinamiento.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Tendencias con inteligencia de tiempo</h2>
+      <p>La tabla <code>Eventos</code> guarda una fila por cada conexión que el proxy marcó como inusual, del 1 de julio al 28 de septiembre de 2026 (90 días). El modelo tiene una tabla <code>Calendario</code> del año completo, relacionada con <code>Eventos[Fecha]</code> y marcada como tabla de fechas.</p>
+      <div class="series" role="group" aria-label="Series de la gráfica">
+        <label><input type="checkbox" id="s-dia" checked> [Eventos] por día</label>
+        <label><input type="checkbox" id="s-ma"> Promedio móvil de 7 días</label>
+        <label><input type="checkbox" id="s-ant"> Mismo día de la semana anterior</label>
+        <label><input type="checkbox" id="s-mtd"> Acumulado del mes (gráfica aparte)</label>
+      </div>
+      <div id="r1-grafica"></div>
+      <div id="r1-grafica-mtd"></div>
+      <div class="campo">
+        <label for="r1-cursor">Recorre los días: <span id="r1-cursor-txt"></span></label>
+        <input type="range" id="r1-cursor" min="0" max="89" step="1" value="0">
+      </div>
+      <div class="lectura" aria-live="polite" id="r1-lectura"></div>
+      <div class="acciones"><button type="button" class="primario" id="r1-marcar">Marcar este día como pico anómalo</button></div>
+      <div class="retro" id="r1-retroPico"></div>
+      <h3>Fórmulas de las series activas</h3>
+      <pre class="codigo" id="r1-formulas"></pre>
+      <h3>Vista mensual (al menos tres periodos)</h3>
+      <div class="tabla-scroll"><table class="datos" id="r1-mensual"></table></div>
+      <p class="nota">Septiembre solo tiene datos hasta el día 28: compáralo con cuidado contra un mes completo.</p>
+      <fieldset id="r1-req">
+        <legend>¿Qué necesita el modelo para que estas medidas funcionen? Marca todo lo que aplique.</legend>
+        <label class="opcion"><input type="checkbox" value="filas"> Una fila por día en Calendario, sin huecos ni fechas repetidas.</label>
+        <label class="opcion"><input type="checkbox" value="anios"> Que Calendario cubra años completos (del 1 de enero al 31 de diciembre).</label>
+        <label class="opcion"><input type="checkbox" value="texto"> Guardar la fecha como texto «2026-08-19» para que se vea igual en todos lados.</label>
+        <label class="opcion"><input type="checkbox" value="rel"> Una relación de Calendario[Fecha] (uno) a Eventos[Fecha] (varios).</label>
+        <label class="opcion"><input type="checkbox" value="solo"> Que Calendario solo tenga los días en los que hubo eventos.</label>
+        <label class="opcion"><input type="checkbox" value="marcar"> Marcarla con Herramientas de tabla › Marcar como tabla de fechas.</label>
+      </fieldset>
+      <div class="acciones">
+        <button type="button" class="primario" id="r1-compReq">Comprobar requisitos</button>
+        <button type="button" id="r1-reiniciar">Reiniciar reto 1</button>
+      </div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Caza iterativa a partir de una hipótesis</h2>
+      <div class="caja hipotesis">
+        <p style="margin:0"><strong>Hipótesis:</strong> el pico del 19 de agosto se debe a que un equipo interno está exfiltrando datos por HTTPS hacia un dominio poco común durante la madrugada (MITRE ATT&amp;CK: T1048.002 Exfiltration Over Asymmetric Encrypted Non-C2 Protocol; si ocurre siempre a la misma hora, también T1029 Scheduled Transfer).</p>
+      </div>
+      <p>Tu entorno de investigación tiene la tabla <code>Conexiones</code> (proxy, del 17 al 23 de agosto de 2026). Empieza amplio y acota: elige la siguiente consulta. Cada una se suma a las anteriores.</p>
+      <div class="consultas" id="r2-consultas"></div>
+      <div class="acciones">
+        <button type="button" id="r2-deshacer">Deshacer último paso</button>
+        <button type="button" id="r2-reiniciar">Reiniciar caza</button>
+      </div>
+      <div class="retro" id="r2-retroPaso"></div>
+      <div class="kpis" id="r2-kpis"></div>
+      <div class="tabla-scroll tabla-alta"><table class="datos" id="r2-tabla"></table></div>
+      <details><summary>Ver la consulta equivalente en KQL (solo como referencia)</summary><pre class="codigo" id="r2-kql"></pre></details>
+      <h3>Bitácora de la caza</h3>
+      <ol class="bitacora" id="r2-bitacora"></ol>
+      <div class="campo" style="max-width:420px">
+        <label for="r2-host">¿Cuál es el host comprometido?</label>
+        <select id="r2-host"></select>
+      </div>
+      <div class="acciones"><button type="button" class="primario" id="r2-confirmar">Confirmar host comprometido</button></div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Documenta el ciclo de la caza</h2>
+      <div class="ciclo" aria-label="Ciclo de la caza: hipótesis, consulta, resultado, refinamiento y de vuelta a consulta">
+        <span class="fase">Hipótesis</span> → <span class="fase">Consulta</span> → <span class="fase">Resultado</span> → <span class="fase">Refinamiento</span> ↺ <span class="nota">(vuelve a consultar o reformula la hipótesis)</span>
+      </div>
+      <p>Estas notas salieron de la bitácora de un compañero que hizo la misma caza. Clasifica cada una según la fase del ciclo que documenta.</p>
+      <div class="rejilla" id="r3-lista"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-comprobar">Comprobar</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+      <details><summary>Así quedaría documentada tu caza del reto 2 (Markdown)</summary><pre class="codigo" id="r3-md"></pre></details>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li>Desactiva la opción <strong>Fecha y hora automáticas</strong> (Archivo › Opciones y configuración › Opciones › Carga de datos) para no arrastrar tablas ocultas <code>LocalDateTable</code>.</li>
+        <li><strong>Modelado › Nueva tabla</strong>: <code>Calendario = SELECTCOLUMNS ( CALENDAR ( DATE ( 2026, 1, 1 ), DATE ( 2026, 12, 31 ) ), "Fecha", [Date] )</code>. Agrega con <strong>Nueva columna</strong> <code>Mes = FORMAT ( Calendario[Fecha], "mmm yyyy" )</code> y <code>Mes número = YEAR ( Calendario[Fecha] ) * 100 + MONTH ( Calendario[Fecha] )</code>, y ordena Mes por Mes número con <strong>Ordenar por columna</strong>.</li>
+        <li>Con Calendario seleccionada usa <strong>Herramientas de tabla › Marcar como tabla de fechas</strong> y elige la columna Fecha. En la vista de modelo relaciona <code>Calendario[Fecha]</code> (1) con <code>Eventos[Fecha]</code> (*).</li>
+        <li>Crea las medidas que viste en el reto 1 (promedio móvil, <code>TOTALMTD</code>, <code>DATEADD</code>) y un <strong>Gráfico de líneas</strong> con <code>Calendario[Fecha]</code> en el eje X; limita el rango con un filtro del objeto visual para no dibujar días sin datos.</li>
+        <li>Para repetir la caza: columnas <code>Hora = HOUR ( Conexiones[FechaHora] )</code> y <code>Hosts por dominio = CALCULATE ( DISTINCTCOUNT ( Conexiones[HostOrigen] ), ALLEXCEPT ( Conexiones, Conexiones[DominioDestino] ) )</code>; luego acota con el <strong>panel Filtros</strong> (Hora ≤ 5, BytesSalida &gt; 20 000 000, Hosts por dominio = 1).</li>
+        <li>Actividad ponderada 2.3: captura el gráfico de tendencia con el eje de fechas etiquetado y al menos tres periodos, y la insignia de <em>Use DAX time intelligence functions in semantic models</em>.</li>
+      </ol>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Revisa que tu modelo tenga una tabla Calendario marcada como tabla de fechas (y ninguna <code>LocalDateTable</code>) y agrega una medida de tendencia en un gráfico de líneas. El dataset de tu equipo es tu entorno de investigación: formula una hipótesis, acótala con consultas y guarda la bitácora (hipótesis, consultas, resultados, refinamientos) en <code>reportes/</code>. Esa hipótesis documentada es un requisito del <strong>checkpoint-2 (Semana 10)</strong>; súbela con el PBIP en tu rama y ábrela en el Pull Request.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(9);
+    const { $, el, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+    const hechos = new Set();
+    function marcar(id) { hechos.add(id); prog.marcar(id); }
+    function desmarcar(id) { if (hechos.delete(id)) { prog.reiniciar(); hechos.forEach(h => prog.marcar(h)); } }
+    function aleatorio(s) {
+      return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function dax(t) {
+      return esc(t).replace(/("[^"\n]*")|(\/\/[^\n]*)|\b(VAR|RETURN|DAY|MONTH)\b|\b([A-Z][A-Z0-9]*|[a-z]+(?=\())(?=\s*\()/g,
+        (m, s, c, k, f) => s ? `<span class="str">${s}</span>` : c ? `<span class="cmt">${c}</span>` : k ? `<span class="kw">${k}</span>` : `<span class="fn">${f}</span>`);
+    }
+    const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+    /* ---------- Reto 1: serie diaria (90 días, generada con semilla) ---------- */
+    const N = 90;
+    const FECHAS = Array.from({ length: N }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 6, 1 + i));
+      const dia = d.getUTCDate(), mes = d.getUTCMonth(), dow = d.getUTCDay();
+      return { dia, mes, dow, corto: `${dia} ${MESES[mes].slice(0, 3)}`, largo: `${DIAS[dow]} ${dia} de ${MESES[mes]} de 2026`, martesParche: dow === 2 && dia >= 8 && dia <= 14 };
+    });
+    const IDX_PICO = FECHAS.findIndex(f => f.mes === 7 && f.dia === 19);
+    const rnd = aleatorio(919);
+    const D = FECHAS.map((f, i) => {
+      let v = 36 + 0.06 * i;
+      if (f.dow === 0 || f.dow === 6) v *= 0.55;
+      if (f.dow === 1) v *= 1.12;
+      if (f.martesParche) v *= 1.45;
+      if (f.mes === 8 && f.dia === 16) v *= 0.6;
+      if (i === IDX_PICO) v *= 2.9; else if (i === IDX_PICO + 1) v *= 1.25; else if (i === IDX_PICO + 2) v *= 1.15;
+      return Math.max(5, Math.round(v * (1 + (rnd() - 0.5) * 0.24)));
+    });
+    // Medidas, con la misma lógica que su DAX
+    const MA = D.map((_, i) => { const w = D.slice(Math.max(0, i - 6), i + 1); return w.reduce((a, b) => a + b, 0) / w.length; });   // AVERAGEX ignora los días en blanco previos al 1 jul
+    const ANT = D.map((_, i) => i >= 7 ? D[i - 7] : null);                                                                          // DATEADD -7 DAY
+    const MTD = D.map((_, i) => { let s = 0; for (let j = i; j >= 0 && FECHAS[j].mes === FECHAS[i].mes; j--) s += D[j]; return s; });   // TOTALMTD
+    const previos = i => { const w = D.slice(Math.max(0, i - 7), i); return w.length ? w.reduce((a, b) => a + b, 0) / w.length : null; };
+
+    const SERIES = {
+      dia: { nombre: '[Eventos]', color: 'var(--accent-2)', ancho: 2, guion: '', dax: 'Eventos = COUNTROWS ( Eventos )' },
+      ma: { nombre: '[Promedio móvil 7 d]', color: 'var(--warn)', ancho: 3.5, guion: '', dax: 'Promedio móvil 7 d =\nAVERAGEX (\n    DATESINPERIOD ( Calendario[Fecha], MAX ( Calendario[Fecha] ), -7, DAY ),\n    [Eventos]\n)' },
+      ant: { nombre: '[Eventos semana anterior]', color: 'var(--muted)', ancho: 2, guion: '6 4', dax: 'Eventos semana anterior =\nCALCULATE ( [Eventos], DATEADD ( Calendario[Fecha], -7, DAY ) )' },
+      mtd: { nombre: '[Eventos MTD]', color: 'var(--ok)', ancho: 2.5, guion: '', dax: 'Eventos MTD = TOTALMTD ( [Eventos], Calendario[Fecha] )' }
+    };
+    function techo(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+    function grafica(cont, series, opc) {
+      const W = 760, H = opc.alto, iz = 48, de = 12, ar = 14, ab = 30;
+      const max = techo(Math.max(1, ...series.flatMap(s => s.valores.filter(v => v !== null))));
+      const X = i => iz + (W - iz - de) * i / (N - 1), Y = v => ar + (H - ar - ab) * (1 - v / max);
+      let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opc.titulo)}" style="width:100%;height:auto;font:12px var(--font)">`;
+      for (let k = 0; k <= 4; k++) { const y = Y(max * k / 4); s += `<line x1="${iz}" x2="${W - de}" y1="${y}" y2="${y}" stroke="var(--border)"/><text x="${iz - 6}" y="${y + 4}" text-anchor="end" fill="var(--muted)">${num(max * k / 4)}</text>`; }
+      FECHAS.forEach((f, i) => { if (f.dia === 1 || f.dia === 15) s += `<line x1="${X(i)}" x2="${X(i)}" y1="${H - ab}" y2="${H - ab + 4}" stroke="var(--muted)"/><text x="${X(i)}" y="${H - ab + 17}" text-anchor="middle" fill="var(--muted)">${f.corto}</text>`; });
+      series.forEach(se => {
+        let d = '', abierto = false;
+        se.valores.forEach((v, i) => { if (v === null) { abierto = false; return; } d += `${abierto ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)} `; abierto = true; });
+        s += `<path d="${d}" fill="none" stroke="${se.color}" stroke-width="${se.ancho}" ${se.guion ? `stroke-dasharray="${se.guion}"` : ''} stroke-linejoin="round"/>`;
+      });
+      if (opc.pico !== undefined) s += `<text x="${X(opc.pico)}" y="${ar + 10}" text-anchor="middle" fill="var(--bad)" font-weight="700">▼ pico</text>`;
+      const x = X(opc.cursor);
+      s += `<line x1="${x}" x2="${x}" y1="${ar}" y2="${H - ab}" stroke="var(--text)" stroke-dasharray="3 3"/>`;
+      series.forEach(se => { const v = se.valores[opc.cursor]; if (v !== null) s += `<circle cx="${x}" cy="${Y(v)}" r="4.5" fill="${se.color}" stroke="var(--surface)" stroke-width="1.5"/>`; });
+      s += '</svg>';
+      const ley = series.map(se => `<span><svg width="28" height="10" aria-hidden="true"><line x1="0" y1="5" x2="28" y2="5" stroke="${se.color}" stroke-width="${se.ancho}" ${se.guion ? `stroke-dasharray="${se.guion}"` : ''}/></svg>${esc(se.nombre)}</span>`).join('');
+      cont.innerHTML = `<p style="margin:8px 0 4px;font-weight:600">${esc(opc.titulo)}</p>${s}<div class="leyenda">${ley}</div>`;
+    }
+    let picoOk = false, reqOk = false;
+    function activa(k) { return $(`#s-${k}`).checked; }
+    function pintar1() {
+      const i = parseInt($('#r1-cursor').value, 10) || 0, f = FECHAS[i];
+      const VAL = { dia: D, ma: MA, ant: ANT, mtd: MTD };
+      const prin = ['dia', 'ma', 'ant'].filter(activa).map(k => Object.assign({ valores: VAL[k] }, SERIES[k]));
+      if (prin.length) grafica($('#r1-grafica'), prin, { alto: 260, cursor: i, titulo: 'Eventos diarios, julio a septiembre de 2026', pico: picoOk ? IDX_PICO : undefined });
+      else $('#r1-grafica').innerHTML = '<p class="nota">Activa al menos una serie para ver la gráfica principal.</p>';
+      if (activa('mtd')) grafica($('#r1-grafica-mtd'), [Object.assign({ valores: MTD }, SERIES.mtd)], { alto: 190, cursor: i, titulo: 'Acumulado del mes (se reinicia el día 1 de cada mes)' });
+      else $('#r1-grafica-mtd').innerHTML = '';
+      $('#r1-cursor-txt').textContent = f.largo;
+      $('#r1-cursor').setAttribute('aria-valuetext', f.largo);
+      const varSem = ANT[i] ? (D[i] - ANT[i]) / ANT[i] : null;
+      $('#r1-lectura').innerHTML = `<strong>${esc(f.largo)}</strong><dl>
+        <div><dt>[Eventos]</dt><dd>${num(D[i])}</dd></div>
+        <div><dt>[Promedio móvil 7 d]</dt><dd>${num(MA[i], 1)}</dd></div>
+        <div><dt>[Eventos semana anterior]</dt><dd>${ANT[i] === null ? '(en blanco)' : num(ANT[i])}</dd></div>
+        <div><dt>Cambio vs. semana anterior</dt><dd>${varSem === null ? '(en blanco)' : (varSem >= 0 ? '+' : '') + num(varSem * 100, 0) + ' %'}</dd></div>
+        <div><dt>[Eventos MTD]</dt><dd>${num(MTD[i])}</dd></div></dl>`;
+      $('#r1-formulas').innerHTML = dax(Object.keys(SERIES).filter(activa).map(k => SERIES[k].dax).join('\n\n') || '// Activa una serie para ver su fórmula.');
+    }
+    function pintarMensual() {
+      const meses = [6, 7, 8].map(m => ({ m, ev: D.filter((_, i) => FECHAS[i].mes === m).reduce((a, b) => a + b, 0) }));
+      const filas = meses.map((x, k) => { const ant = k ? meses[k - 1].ev : null; return [`${MESES[x.m]} 2026`, num(x.ev), ant === null ? '(en blanco)' : num(ant), ant === null ? '(en blanco)' : ((x.ev - ant) / ant >= 0 ? '+' : '') + num(100 * (x.ev - ant) / ant, 1) + ' %']; });
+      $('#r1-mensual').replaceChildren(el('thead', {}, el('tr', {}, ...['Calendario[Mes]', '[Eventos]', '[Eventos mes anterior]', '[Variación %]'].map(h => el('th', { scope: 'col' }, h)))),
+        el('tbody', {}, ...filas.map(r => el('tr', {}, ...r.map((x, j) => el('td', { class: j ? 'num' : '' }, x))))));
+      const pre = el('pre', { class: 'codigo' });
+      pre.innerHTML = dax('Eventos mes anterior =\nCALCULATE ( [Eventos], DATEADD ( Calendario[Fecha], -1, MONTH ) )\n\nVariación % =\nDIVIDE ( [Eventos] - [Eventos mes anterior], [Eventos mes anterior] )');
+      $('#r1-mensual').closest('.tabla-scroll').after(pre);
+    }
+    ['dia', 'ma', 'ant', 'mtd'].forEach(k => $(`#s-${k}`).addEventListener('change', pintar1));
+    $('#r1-cursor').addEventListener('input', pintar1);
+    function cierre1() {
+      if (picoOk && reqOk) { retro('#retro1', 'ok', '<strong>¡Reto 1 completo!</strong> Encontraste el pico comparando contra lo esperado y sabes qué necesita el modelo para calcularlo. Un pico así es justo el disparador de una hipótesis de caza: síguelo en el reto 2.'); marcar('reto1'); }
+      else { if (hechos.has('reto1')) desmarcar('reto1'); }
+    }
+    $('#r1-marcar').addEventListener('click', () => {
+      const i = parseInt($('#r1-cursor').value, 10) || 0, f = FECHAS[i], p = previos(i);
+      const ratio = p ? D[i] / p : null;
+      if (i === IDX_PICO) {
+        picoOk = true;
+        retro('#r1-retroPico', 'ok', `✓ <strong>${esc(f.largo)}</strong>: ${D[i]} eventos contra un promedio de ${num(p, 1)} en los 7 días previos (${num(ratio, 1)} veces lo normal) y ${ANT[i]} el mismo día de la semana anterior. El promedio móvil sube, pero suaviza el pico: por eso conviene mirar varias series a la vez.`);
+      } else {
+        picoOk = false;
+        let msg;
+        if (f.martesParche) msg = `Es alto (${D[i]}), pero se repite el segundo martes de cada mes (14 jul, 11 ago, 8 sep): son las actualizaciones mensuales de Windows. Un patrón que se repite es estacionalidad, no anomalía.`;
+        else if (i === IDX_PICO + 1 || i === IDX_PICO + 2) msg = `Ese día sigue elevado (${D[i]}), pero el salto empieza antes. Retrocede uno o dos días.`;
+        else if (f.dow === 1) msg = `Los lunes suben un poco (${D[i]}) por el rezago del fin de semana; compáralo con el lunes anterior (${ANT[i] === null ? 'sin dato' : ANT[i]}).`;
+        else if (f.dow === 0 || f.dow === 6) msg = `Es fin de semana: la actividad baja (${D[i]}). Un pico anómalo destaca por encima de lo esperado, no por debajo.`;
+        else msg = `Ese día está dentro de lo esperado: ${D[i]} eventos contra un promedio de ${p ? num(p, 1) : '—'} en los 7 días previos. Activa el promedio móvil y busca el día que más se separa de él.`;
+        retro('#r1-retroPico', 'mal', msg);
+      }
+      pintar1(); cierre1();
+    });
+    const REQ_OK = ['filas', 'anios', 'rel', 'marcar'];
+    const REQ_EXP = { texto: 'una fecha como texto no sirve: las funciones de inteligencia de tiempo necesitan una columna de tipo Fecha.', solo: 'si faltan días, DATEADD y DATESINPERIOD dan resultados incorrectos: Calendario debe ser continuo aunque no haya eventos ese día.' };
+    $('#r1-compReq').addEventListener('click', () => {
+      const marcadas = [...document.querySelectorAll('#r1-req input:checked')].map(c => c.value);
+      const sobran = marcadas.filter(v => !REQ_OK.includes(v)), faltan = REQ_OK.filter(v => !marcadas.includes(v));
+      reqOk = !sobran.length && !faltan.length;
+      if (reqOk) retro('#retro1', picoOk ? 'ok' : 'aviso', '✓ Requisitos correctos: Calendario continuo, de años completos, relacionado con tus hechos y marcado como tabla de fechas. ' + (picoOk ? '' : 'Ahora marca el pico anómalo en la gráfica.'));
+      else retro('#retro1', 'mal', (sobran.length ? sobran.map(v => '✗ No: ' + REQ_EXP[v]).join('<br>') + '<br>' : '') + (faltan.length ? `Te ${faltan.length > 1 ? 'faltan' : 'falta'} ${faltan.length} requisito${faltan.length > 1 ? 's' : ''}: piensa en cómo debe ser la tabla, cómo se conecta y qué le dices a Power BI sobre ella.` : ''));
+      cierre1();
+    });
+    $('#r1-reiniciar').addEventListener('click', () => {
+      picoOk = false; reqOk = false;
+      document.querySelectorAll('#r1-req input').forEach(c => { c.checked = false; });
+      $('#s-dia').checked = true; ['ma', 'ant', 'mtd'].forEach(k => { $(`#s-${k}`).checked = false; });
+      $('#r1-cursor').value = '0';
+      retro('#r1-retroPico', '', ''); retro('#retro1', '', ''); pintar1(); desmarcar('reto1');
+    });
+    pintarMensual(); pintar1();
+
+    /* ---------- Reto 2: Conexiones del 17 al 23 de agosto (generadas con semilla) ---------- */
+    const KB = 1e3, MB = 1e6, COMPROMETIDO = 'WS-CONTA-07';
+    const HOSTS_IP = { 'WS-CONTA-07': '10.20.4.37', 'SRV-RESPALDO-01': '10.10.0.20', 'WS-TI-02': '10.20.1.12', 'WS-TI-05': '10.20.1.15', 'WS-MKT-05': '10.20.3.15', 'WS-RH-11': '10.20.2.21', 'WS-VEN-07': '10.20.3.27', 'WS-FIN-03': '10.20.2.13', 'WS-DIR-01': '10.20.0.5', 'WS-LEG-04': '10.20.2.44' };
+    const COMUNES = ['office.example', 'correo.example', 'crm.example', 'cdn.example', 'noticias.example', 'video.example'];
+    const r2 = aleatorio(929);
+    const ent = (a, b) => a + Math.floor(r2() * (b - a + 1)), rango = (a, b) => a + r2() * (b - a);
+    const CX = [];
+    const cx = (dia, hora, host, dominio, salida, entrada, puerto) => CX.push({ dia, hora, min: ent(0, 59), host, dominio, salida: Math.round(salida), entrada: Math.round(entrada), puerto: puerto || 443 });
+    for (let dia = 17; dia <= 23; dia++) {
+      Object.keys(HOSTS_IP).filter(h => h !== 'SRV-RESPALDO-01').forEach(h => {
+        const n = dia >= 22 ? (r2() < 0.3 ? 1 : 0) : 1 + (r2() < 0.7 ? 1 : 0);
+        for (let k = 0; k < n; k++) { const d = COMUNES[ent(0, COMUNES.length - 1)]; cx(dia, ent(8, 18), h, d, rango(20, 900) * KB, rango(0.2, 15) * MB, d === 'noticias.example' && r2() < 0.5 ? 80 : 443); }
+      });
+      cx(dia, 2, 'SRV-RESPALDO-01', 'backup.example', rango(900, 1400) * MB, rango(1, 5) * MB);
+    }
+    [[18, 12], [19, 15], [20, 11]].forEach(([d, h]) => cx(d, h, 'WS-MKT-05', 'video.example', rango(150, 320) * MB, rango(1, 3) * MB));
+    [[18, 0], [20, 1], [21, 0]].forEach(([d, h]) => cx(d, h, 'WS-TI-02', 'repo.example', rango(2, 8) * MB, rango(100, 400) * KB));
+    [[17, 10, 'WS-TI-05'], [19, 16, 'WS-TI-05'], [21, 11, 'WS-TI-02']].forEach(([d, h, host]) => cx(d, h, host, 'repo.example', rango(0.5, 3) * MB, rango(1, 6) * MB));
+    [18, 21].forEach(d => ['WS-FIN-03', 'WS-DIR-01', 'WS-LEG-04'].forEach(h => cx(d, 3, h, 'updates.example', rango(50, 300) * KB, rango(20, 80) * MB)));
+    [19, 20, 21, 22].forEach(d => { const n = ent(2, 3); for (let k = 0; k < n; k++) cx(d, ent(1, 3), COMPROMETIDO, 'sync-cdn-files.test', rango(35, 90) * MB, rango(5, 40) * KB); });
+    cx(18, 10, 'WS-RH-11', 'encuestas-clima.example', rango(30, 200) * KB, rango(100, 500) * KB);
+    cx(20, 13, 'WS-RH-11', 'encuestas-clima.example', rango(30, 200) * KB, rango(100, 500) * KB);
+    cx(19, 17, 'WS-VEN-07', 'feria-proveedores.example', 1.2 * MB, rango(1, 4) * MB);
+    CX.sort((a, b) => a.dia - b.dia || a.hora - b.hora || a.min - b.min).forEach((c, i) => { c.id = i + 1; });
+    const HOSTS_DOM = new Map();
+    CX.forEach(c => { if (!HOSTS_DOM.has(c.dominio)) HOSTS_DOM.set(c.dominio, new Set()); HOSTS_DOM.get(c.dominio).add(c.host); });
+
+    const CONSULTAS = {
+      noche: { t: 'Horario nocturno (00:00 a 05:59)', f: c => c.hora <= 5, kql: '| where hourofday(FechaHora) between (0 .. 5)',
+        mas: 'De madrugada quedan pocos equipos activos; entre ellos hay un servidor de respaldo (esperado) y otros que tendrás que explicar.',
+        aleja: '' },
+      laboral: { t: 'Solo horario laboral (08:00 a 18:59)', f: c => c.hora >= 8 && c.hora <= 18, kql: '| where hourofday(FechaHora) between (8 .. 18)',
+        aleja: 'Tu hipótesis habla de actividad de madrugada: al quedarte con el horario laboral descartaste justo lo que buscas.' },
+      salida: { t: 'Bytes salientes > 20 MB', f: c => c.salida > 20 * MB, kql: '| where BytesSalida > 20000000',
+        mas: 'Los envíos grandes delatan transferencias masivas: respaldos, videos… y quizá la exfiltración.' },
+      entrada: { t: 'Bytes entrantes > 20 MB', f: c => c.entrada > 20 * MB, kql: '| where BytesEntrada > 20000000',
+        aleja: 'La exfiltración se mide en bytes salientes; los bytes entrantes altos son descargas (actualizaciones, por ejemplo).' },
+      raro: { t: 'Dominio raro (lo visita un solo host en la semana)', f: c => HOSTS_DOM.get(c.dominio).size === 1,
+        kql: '| join kind=inner (\n    Conexiones\n    | summarize Hosts = dcount(HostOrigen) by DominioDestino\n    | where Hosts == 1\n  ) on DominioDestino',
+        mas: 'Un dominio que solo visita un equipo merece atención. Ojo: el servidor de respaldo también usa un dominio exclusivo.' },
+      p443: { t: 'Puerto de destino 443 (HTTPS)', f: c => c.puerto === 443, kql: '| where PuertoDestino == 443', mas: '' },
+      respaldo: { t: 'Excluir el respaldo documentado (SRV-RESPALDO-01 → backup.example)', f: c => !(c.host === 'SRV-RESPALDO-01' && c.dominio === 'backup.example'),
+        kql: '| where not(HostOrigen == "SRV-RESPALDO-01" and DominioDestino == "backup.example")',
+        mas: 'Descartaste un falso positivo conocido y documentado: el respaldo nocturno programado. Conocer tu entorno también es parte de la caza.' }
+    };
+    let pasos = [];          // [{k, antes, despues, veredicto}]
+    const aplicar = ks => CX.filter(c => ks.every(k => CONSULTAS[k].f(c)));
+    const aislado = filas => filas.length > 0 && filas.every(c => c.host === COMPROMETIDO);
+    function veredicto(k, antes, despues) {
+      const tAntes = antes.filter(c => c.host === COMPROMETIDO && c.dominio === 'sync-cdn-files.test').length;
+      const tDesp = despues.filter(c => c.host === COMPROMETIDO && c.dominio === 'sync-cdn-files.test').length;
+      if (!despues.length) return { v: 'Aleja', tipo: 'mal', txt: 'La consulta no devuelve nada: tus condiciones se contradicen. Deshaz el último paso.' };
+      if (tAntes && !tDesp) return { v: 'Aleja', tipo: 'mal', txt: `Te aleja: ${CONSULTAS[k].aleja} Deshaz este paso.` };
+      if (k === 'respaldo') return despues.length < antes.length
+        ? { v: 'Acerca', tipo: 'ok', txt: `Te acerca: de ${antes.length} a ${despues.length} conexiones. ${CONSULTAS[k].mas}${despues.length > antes.length * 0.9 ? ' Por sí solo reduce poco: combínalo con consultas que separen lo sospechoso de lo normal.' : ''}` }
+        : { v: 'No discrimina', tipo: 'aviso', txt: 'No cambió nada: en tu resultado ya no había conexiones del respaldo.' };
+      if (despues.length > antes.length * 0.9) return { v: 'No discrimina', tipo: 'aviso', txt: `No discrimina: pasaste de ${antes.length} a ${despues.length} conexiones. Casi todo el tráfico cumple esta condición, así que no separa lo normal de lo sospechoso.` };
+      return { v: 'Acerca', tipo: 'ok', txt: `Te acerca: de ${antes.length} a ${despues.length} conexiones y de ${new Set(antes.map(c => c.host)).size} a ${new Set(despues.map(c => c.host)).size} hosts. ${CONSULTAS[k].mas}` };
+    }
+    const fmtMB = b => num(b / MB, b < 10 * MB ? 1 : 0) + ' MB';
+    function pintar2() {
+      const ks = pasos.map(p => p.k), filas = aplicar(ks);
+      Object.keys(CONSULTAS).forEach(k => {
+        const b = $(`#r2-c-${k}`), usada = ks.includes(k);
+        b.setAttribute('aria-disabled', String(usada));
+        b.textContent = (usada ? '✓ Aplicada: ' : '＋ ') + CONSULTAS[k].t;
+      });
+      $('#r2-deshacer').setAttribute('aria-disabled', String(!pasos.length));
+      $('#r2-kpis').replaceChildren(...[[num(filas.length), 'Conexiones'], [num(new Set(filas.map(c => c.host)).size), 'Hosts distintos'], [num(new Set(filas.map(c => c.dominio)).size), 'Dominios distintos'], [fmtMB(filas.reduce((a, c) => a + c.salida, 0)), 'Bytes salientes']]
+        .map(([v, e]) => el('div', { class: 'kpi' }, el('span', { class: 'valor' }, v), el('span', { class: 'etiqueta' }, e))));
+      const g = new Map();
+      filas.forEach(c => { const k = c.host + '|' + c.dominio; if (!g.has(k)) g.set(k, []); g.get(k).push(c); });
+      const grupos = [...g.values()].map(fs => ({ host: fs[0].host, dom: fs[0].dominio, n: fs.length, mb: fs.reduce((a, c) => a + c.salida, 0), h1: Math.min(...fs.map(c => c.hora)), h2: Math.max(...fs.map(c => c.hora)), dias: [...new Set(fs.map(c => c.dia))].join(', ') })).sort((a, b) => b.mb - a.mb);
+      $('#r2-tabla').replaceChildren(el('thead', {}, el('tr', {}, ...['HostOrigen', 'IP', 'DominioDestino', 'Conexiones', 'MB salientes', 'Horas', 'Días (ago)'].map(h => el('th', { scope: 'col' }, h)))),
+        el('tbody', {}, ...grupos.map(x => el('tr', { class: x.host === COMPROMETIDO && aislado(filas) ? 'resaltado' : '' }, el('td', {}, x.host), el('td', {}, HOSTS_IP[x.host]), el('td', {}, x.dom), el('td', { class: 'num' }, String(x.n)), el('td', { class: 'num' }, fmtMB(x.mb)),
+          el('td', {}, x.h1 === x.h2 ? `${String(x.h1).padStart(2, '0')} h` : `${String(x.h1).padStart(2, '0')}–${String(x.h2).padStart(2, '0')} h`), el('td', {}, x.dias)))));
+      $('#r2-kql').innerHTML = dax(['Conexiones', ...ks.map(k => CONSULTAS[k].kql), '| summarize Conexiones = count(), BytesSalida = sum(BytesSalida) by HostOrigen, DominioDestino', '| extend MB = BytesSalida / 1000000.0', '| order by MB desc'].join('\n'));
+      $('#r2-bitacora').replaceChildren(...(pasos.length ? pasos.map(p => el('li', {}, el('strong', {}, CONSULTAS[p.k].t), ` → ${p.antes} a ${p.despues} conexiones · `, el('span', { class: p.veredicto === 'Acerca' ? 'si' : p.veredicto === 'Aleja' ? 'no' : 'cambia' }, p.veredicto)))
+        : [el('li', {}, `Punto de partida: ${CX.length} conexiones de ${Object.keys(HOSTS_IP).length} hosts. Elige la primera consulta.`)]));
+      pintarMd();
+    }
+    Object.entries(CONSULTAS).forEach(([k, c]) => $('#r2-consultas').append(el('button', { type: 'button', id: `r2-c-${k}`, onclick: () => paso(k) }, '＋ ' + c.t)));
+    function paso(k) {
+      if (pasos.some(p => p.k === k)) { retro('#r2-retroPaso', 'aviso', 'Esa consulta ya está aplicada. Elige otra o deshaz pasos.'); return; }
+      const antes = aplicar(pasos.map(p => p.k)), despues = antes.filter(CONSULTAS[k].f);
+      const v = veredicto(k, antes, despues);
+      pasos.push({ k, antes: antes.length, despues: despues.length, veredicto: v.v });
+      retro('#r2-retroPaso', v.tipo, aislado(despues) ? `<strong>¡Aislaste el comportamiento!</strong> Todas las conexiones que quedan son de ${COMPROMETIDO} hacia sync-cdn-files.test, de madrugada y con decenas de MB cada una. Confirma el host abajo.` : v.txt);
+      pintar2();
+    }
+    $('#r2-deshacer').addEventListener('click', () => {
+      if (!pasos.length) { retro('#r2-retroPaso', 'aviso', 'No hay pasos que deshacer: estás en el punto de partida.'); return; }
+      pasos.pop(); retro('#r2-retroPaso', 'aviso', pasos.length ? 'Deshiciste el último paso.' : 'Volviste al punto de partida.'); pintar2();
+    });
+    const EXPL_HOST = {
+      'SRV-RESPALDO-01': 'es el falso positivo clásico: su respaldo nocturno a backup.example está programado y documentado.',
+      'WS-MKT-05': 'sube archivos grandes, pero en horario laboral y a un dominio que usan muchos equipos (video.example): marketing publicando videos.',
+      'WS-TI-02': 'trabaja de madrugada, pero envía pocos MB a repo.example, un dominio que también usan otros desarrolladores.'
+    };
+    $('#r2-host').replaceChildren(el('option', { value: '' }, 'Elige un host…'), ...Object.keys(HOSTS_IP).sort().map(h => el('option', { value: h }, `${h} (${HOSTS_IP[h]})`)));
+    $('#r2-confirmar').addEventListener('click', () => {
+      const h = $('#r2-host').value, filas = aplicar(pasos.map(p => p.k));
+      if (!h) { retro('#retro2', 'aviso', 'Elige un host.'); return; }
+      if (h !== COMPROMETIDO) { retro('#retro2', 'mal', `${esc(h)} no: ${EXPL_HOST[h] || 'no aparece en las consultas que apoyan la hipótesis (madrugada, muchos bytes salientes, dominio raro).'}`); desmarcar('reto2'); return; }
+      if (!aislado(filas)) { retro('#retro2', 'aviso', `Tu sospecha es correcta, pero todavía no la demuestras: tu consulta devuelve ${filas.length} conexiones de ${new Set(filas.map(c => c.host)).size} hosts. Acótala hasta que solo quede la evidencia; eso es lo que documentarás.`); desmarcar('reto2'); return; }
+      const mb = filas.reduce((a, c) => a + c.salida, 0);
+      retro('#retro2', 'ok', `<strong>¡Hipótesis confirmada!</strong> ${COMPROMETIDO} (${HOSTS_IP[COMPROMETIDO]}) envió ${fmtMB(mb)} en ${filas.length} conexiones de madrugada a sync-cdn-files.test, del 19 al 22 de agosto. Lo lograste en ${pasos.length} pasos; ${pasos.filter(p => p.veredicto !== 'Acerca').length ? 'los pasos que no ayudaron también se documentan: evitan que otro analista repita el mismo camino.' : 'cada paso acotó la búsqueda.'} Siguiente: escalar a respuesta a incidentes y convertir esta consulta en una detección.`);
+      marcar('reto2');
+    });
+    $('#r2-reiniciar').addEventListener('click', () => { pasos = []; $('#r2-host').value = ''; retro('#r2-retroPaso', '', ''); retro('#retro2', '', ''); pintar2(); desmarcar('reto2'); });
+
+    /* ---------- Reto 3 ---------- */
+    const noche = aplicar(['noche']), final = aplicar(['noche', 'raro', 'respaldo']);
+    const FASES = [['hip', 'Hipótesis'], ['con', 'Consulta'], ['res', 'Resultado'], ['ref', 'Refinamiento']];
+    const NOTAS = [
+      { t: 'Si un equipo interno exfiltra datos, veremos conexiones HTTPS de madrugada con muchos bytes salientes hacia un dominio que casi nadie visita.', r: 'hip', exp: 'Es una suposición comprobable («si… veremos…») que guía qué datos consultar.' },
+      { t: 'Filtrar Conexiones entre las 00:00 y las 05:59.', r: 'con', exp: 'Es la instrucción concreta que se ejecuta sobre los datos.' },
+      { t: `La consulta devuelve ${noche.length} conexiones de ${new Set(noche.map(c => c.host)).size} hosts; ${noche.filter(c => c.host === 'SRV-RESPALDO-01').length} son del servidor de respaldo hacia backup.example.`, r: 'res', exp: 'Reporta lo que devolvió la consulta, con números, sin decidir todavía qué hacer.' },
+      { t: 'Como el respaldo nocturno está documentado, lo excluimos y exigimos además que el dominio lo visite un solo host.', r: 'ref', exp: 'Ajusta la búsqueda con base en el resultado anterior («como…, ajustamos…»).' },
+      { t: `Quedan ${final.length} conexiones, todas de WS-CONTA-07 hacia sync-cdn-files.test (${fmtMB(final.reduce((a, c) => a + c.salida, 0))} en total).`, r: 'res', exp: 'Es el resultado de la consulta refinada: la evidencia que confirma la hipótesis.' },
+      { t: 'Como el filtro por puerto 443 casi no redujo el volumen, lo descartamos como criterio.', r: 'ref', exp: 'Decide cambiar el enfoque a partir de lo observado: documentar lo que no sirvió también es parte del refinamiento.' },
+      { t: 'Agrupar por HostOrigen y DominioDestino y sumar BytesSalida.', r: 'con', exp: 'Es una operación concreta sobre los datos (una agregación).' },
+      { t: 'Nueva hipótesis: si el atacante programó la transferencia (T1029), las conexiones ocurrirán cada noche en la misma franja horaria.', r: 'hip', exp: 'El ciclo vuelve a empezar: el hallazgo genera una nueva suposición comprobable.' }
+    ];
+    NOTAS.forEach((n, i) => {
+      const s = el('select', { id: `r3-sel-${i}` }, el('option', { value: '' }, 'Elige la fase…'), ...FASES.map(([v, t]) => el('option', { value: v }, t)));
+      $('#r3-lista').append(el('article', { class: 'afirmacion', id: `r3-it-${i}` }, el('p', {}, el('strong', {}, `Nota ${i + 1}. `), n.t),
+        el('label', { for: `r3-sel-${i}`, class: 'oculto-visual' }, `Fase de la nota ${i + 1}`), s, el('div', { class: 'estado', id: `r3-est-${i}` })));
+    });
+    $('#r3-comprobar').addEventListener('click', () => {
+      let bien = 0;
+      NOTAS.forEach((n, i) => {
+        const v = $(`#r3-sel-${i}`).value, ok = v === n.r, card = $(`#r3-it-${i}`);
+        bien += ok; card.className = 'afirmacion ' + (ok ? 'bien' : 'revisar');
+        $(`#r3-est-${i}`).innerHTML = ok ? `<span class="si">✓ ${FASES.find(f => f[0] === n.r)[1]}.</span> ${esc(n.exp)}` : `<span class="no">✗ ${v ? 'Revisa' : 'Sin responder'}.</span> Pista: ¿supone, ejecuta, reporta o ajusta?`;
+      });
+      if (bien === NOTAS.length) { retro('#retro3', 'ok', '<strong>¡8 de 8!</strong> Una bitácora que distingue hipótesis, consultas, resultados y refinamientos permite que otro analista repita tu caza: eso es lo que separa un hallazgo aislado de un programa de caza repetible (nivel HMM2).'); marcar('reto3'); }
+      else { retro('#retro3', 'mal', `Llevas <strong>${bien} de ${NOTAS.length}</strong>. Hipótesis: «si…, veremos…». Consulta: una instrucción sobre los datos. Resultado: lo que salió, con números. Refinamiento: «como…, ajustamos…».`); desmarcar('reto3'); }
+    });
+    $('#r3-reiniciar').addEventListener('click', () => { NOTAS.forEach((n, i) => { $(`#r3-sel-${i}`).value = ''; $(`#r3-it-${i}`).className = 'afirmacion'; $(`#r3-est-${i}`).innerHTML = ''; }); retro('#retro3', '', ''); desmarcar('reto3'); });
+    function pintarMd() {
+      const lin = ['## Bitácora de caza: exfiltración nocturna por HTTPS', '', '**Hipótesis:** un equipo interno exfiltra datos por HTTPS hacia un dominio poco común de madrugada (T1048.002; T1029 si es programada).', '', '| # | Consulta | Conexiones | Veredicto |', '|---|---|---|---|'];
+      pasos.forEach((p, i) => lin.push(`| ${i + 1} | ${CONSULTAS[p.k].t} | ${p.antes} → ${p.despues} | ${p.veredicto} |`));
+      if (!pasos.length) lin.push('| – | (todavía no aplicas consultas en el reto 2) | – | – |');
+      const f = aplicar(pasos.map(p => p.k));
+      lin.push('', `**Resultado:** ${aislado(f) ? `evidencia aislada en ${COMPROMETIDO} → sync-cdn-files.test.` : `${f.length} conexiones de ${new Set(f.map(c => c.host)).size} hosts; falta acotar.`}`);
+      $('#r3-md').textContent = lin.join('\n');
+    }
+    pintar2();
+  </script>
+</body>
+</html>

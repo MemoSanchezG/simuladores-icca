@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 4 · Arquitecto del modelo semántico | Simuladores ICCA</title>
+  <meta name="description" content="Identifica tablas de hechos y dimensiones, crea relaciones con la cardinalidad y la dirección de filtro correctas en un modelo en estrella y comprueba cómo se propagan los filtros entre IOCs, activos y eventos.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > * { min-width: 0; }
+    .nota { font-size: .88rem; color: var(--muted); }
+    .tabla-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+    .tabla-card.bien { border-color: var(--ok); background: var(--ok-soft); }
+    .tabla-card.malo { border-color: var(--bad); background: var(--bad-soft); }
+    .tabla-card h3 { margin: 0; font-size: 1.05rem; }
+    .tabla-card ul { margin: 0; padding-left: 18px; font-size: .86rem; }
+    .tabla-card select { width: 100%; }
+    .tabla-card .campo { margin: 0; }
+    .explica { font-size: .9rem; margin: 0; }
+    .explica:empty { display: none; }
+    .tipo { display: inline-block; font: 700 .66rem var(--mono); padding: 0 4px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); margin-right: 4px; }
+    .rel-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); min-width: 0; }
+    .rel-card.bien { border-color: var(--ok); background: var(--ok-soft); }
+    .rel-card h3 { margin: 0 0 6px; font-size: 1rem; }
+    .rel-card .campo { margin: 4px 0; }
+    .rel-card select { width: 100%; }
+    .rel-card .explica { margin-top: 8px; }
+    .modelo-svg { width: 100%; height: auto; max-width: 620px; display: block; margin: 0 auto; font-family: var(--font); }
+    .lista-rel { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; font-size: .9rem; }
+    .lista-rel li { border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; background: var(--surface); }
+    .controles { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .controles .campo { margin: 0; min-width: 0; }
+    .controles select { width: 100%; }
+    .kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); margin: 10px 0; }
+    .kpis .kpi { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--surface); }
+    .kpis .valor { font-size: 1.6rem; }
+    .hbarras { display: grid; gap: 6px; }
+    .hbarra { display: grid; grid-template-columns: minmax(7rem, 9.5rem) 1fr 2.4rem; gap: 8px; align-items: center; font-size: .9rem; }
+    .hbarra .et { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hbarra .pista { height: 18px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+    .hbarra .relleno { display: block; height: 100%; background: var(--accent-2); border-radius: 6px; }
+    .hbarra.blanco .relleno { background: var(--muted); }
+    .hbarra .v { text-align: right; font-variant-numeric: tabular-nums; }
+    .explicacion { border-left: 4px solid var(--accent-2); background: var(--surface-2); border-radius: 0 8px 8px 0; padding: 8px 12px; margin: 10px 0; }
+    .explicacion.alerta { border-left-color: var(--warn); background: var(--warn-soft); }
+    fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    .opcion { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; font-weight: 400; }
+    .opcion input { margin-top: 5px; }
+    .muestra { font-size: .8rem; }
+    .muestra td, .muestra th { padding: 3px 6px; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 4 · Arquitecto del modelo semántico</h1>
+      <p class="subtitulo">Un buen tablero de inteligencia empieza en la Vista de modelo: si las tablas no están bien relacionadas, los números se ven razonables… y están mal. Aquí diseñarás un modelo en estrella con eventos, IOCs, activos, usuarios y calendario.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás <strong>distinguir</strong> la tabla de hechos de las dimensiones, <strong>crear</strong> relaciones con la columna, la cardinalidad y la dirección de filtro correctas, y <strong>explicar</strong> por qué una relación mal definida produce resultados engañosos.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>En el Reto 1 revisa cada tabla (fíjate en cuántos valores distintos tiene cada columna) y define su rol y su columna clave.</li>
+          <li>En el Reto 2 configura cada relación como en el cuadro «Nueva relación» de Power BI; el diagrama se actualiza.</li>
+          <li>En el Reto 3 cambia el modelo y las segmentaciones, observa los números y responde.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · ¿Hechos o dimensión?</h2>
+      <p>La tabla de <strong>hechos</strong> registra sucesos (muchas filas, crece todos los días). Las <strong>dimensiones</strong> describen quién, qué, dónde y cuándo (una fila por entidad, con una columna de valores únicos).</p>
+      <div class="rejilla" id="r1-lista"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="r1-revisar">Revisar roles</button>
+        <button type="button" id="r1-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · Crea las relaciones del modelo en estrella</h2>
+      <p>Cada tarjeta equivale al cuadro <strong>Nueva relación</strong>: la primera tabla siempre es Eventos, así que la cardinalidad se lee desde Eventos hacia la dimensión.</p>
+      <div class="dos-columnas">
+        <div class="rejilla" id="r2-lista" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))"></div>
+        <div>
+          <h3 style="margin-top:0">Vista de modelo</h3>
+          <div id="r2-diagrama"></div>
+          <h3>Administrar relaciones</h3>
+          <ul class="lista-rel" id="r2-relaciones"></ul>
+        </div>
+      </div>
+      <div class="acciones"><button type="button" id="r2-reiniciar">Reiniciar</button></div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · ¿Hacia dónde viajan los filtros?</h2>
+      <p>La medida es <code>Eventos totales = COUNTROWS(Eventos)</code>. Cambia el modelo y las segmentaciones y observa qué pasa con los números.</p>
+      <div class="controles">
+        <div class="campo"><label for="r3-modelo">Modelo</label>
+          <select id="r3-modelo">
+            <option value="correcto">Correcto: Eventos[ip_origen] *:1 IOCs[valor_ioc], filtro único</option>
+            <option value="sin">Sin relación entre Eventos e IOCs</option>
+            <option value="fecha">Columna equivocada: Eventos[fecha] *:1 IOCs[primera_vez]</option>
+            <option value="ambas">Correcto, pero con filtro en ambas direcciones</option>
+          </select></div>
+        <div class="campo"><label for="r3-sev">Segmentación: IOCs[severidad]</label>
+          <select id="r3-sev"><option value="Todas">Todas</option><option value="Crítica">Crítica</option><option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option></select></div>
+        <div class="campo"><label for="r3-crit">Segmentación: Activos[criticidad]</label>
+          <select id="r3-crit"><option value="Todas">Todas</option><option value="Alta">Alta</option><option value="Media">Media</option><option value="Baja">Baja</option></select></div>
+      </div>
+      <div class="kpis" id="r3-kpis"></div>
+      <p style="font-weight:600;margin:0 0 6px">Eventos totales por IOCs[actor]</p>
+      <div id="r3-barras"></div>
+      <div class="explicacion" id="r3-explica" aria-live="polite"></div>
+      <fieldset>
+        <legend>1. Con el modelo correcto, ¿cuántos eventos vienen de IPs con severidad Crítica contra activos de criticidad Alta?</legend>
+        <label for="r3-p1" class="oculto-visual">Número de eventos</label>
+        <input type="number" id="r3-p1" min="0" step="1" inputmode="numeric" style="width:9rem">
+      </fieldset>
+      <fieldset>
+        <legend>2. Sin relación entre Eventos e IOCs, ¿qué síntoma delata el problema?</legend>
+        <div id="r3-p2"></div>
+      </fieldset>
+      <fieldset>
+        <legend>3. Con filtro en ambas direcciones, elige criticidad Alta y mira la tarjeta «IOCs en la lista». ¿Por qué es engañoso?</legend>
+        <div id="r3-p3"></div>
+      </fieldset>
+      <div class="acciones">
+        <button type="button" class="primario" id="r3-comprobar">Comprobar respuestas</button>
+        <button type="button" id="r3-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li>Abre la <strong>Vista de modelo</strong> (ícono de la barra izquierda). Arrastra <code>Eventos[hostname]</code> sobre <code>Activos[hostname]</code>: Power BI crea la relación y propone la cardinalidad.</li>
+        <li>Para configurarla a mano: <strong>Administrar relaciones › Nueva relación</strong> (en la pestaña Inicio de la Vista de modelo, o en Modelado). Elige tablas y columnas, <strong>Cardinalidad: Varios a uno (*:1)</strong>, <strong>Dirección del filtro cruzado: Única</strong> y deja marcada <strong>Activar esta relación</strong>.</li>
+        <li>Comprueba el diagrama: <strong>1</strong> del lado de la dimensión, <strong>*</strong> del lado de Eventos y la flecha apuntando hacia Eventos (la dimensión filtra a los hechos).</li>
+        <li>Para el calendario: <strong>Modelado › Nueva tabla</strong> con <code>Calendario = SELECTCOLUMNS(CALENDAR(DATE(2026, 8, 1), DATE(2026, 8, 31)), "Fecha", [Date])</code> y luego <strong>Herramientas de tabla › Marcar como tabla de fechas</strong>. Eventos necesita una columna de tipo Fecha (sin hora): créala en Power Query con <strong>Agregar columna › Fecha › Solo fecha</strong>.</li>
+        <li>Crea la medida con <strong>Inicio › Nueva medida</strong>: <code>Eventos totales = COUNTROWS(Eventos)</code>, y pruébala en un visual con <code>IOCs[actor]</code> y segmentaciones de severidad y criticidad.</li>
+      </ol>
+      <p class="nota">En el dataset del curso la relación es <code>eventos[source_ip]</code> ↔ <code>iocs[ioc_value]</code> (uno a varios desde iocs) y <code>eventos[hostname]</code> ↔ <code>activos[hostname]</code>. Relacionar por fecha (<code>timestamp</code> con <code>first_seen</code>) es el error que este simulador te enseña a evitar.</p>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Para el checkpoint-1 de la Semana 5 necesitas un <strong>primer boceto de las tablas que vas a relacionar</strong>. Dibuja tu modelo en estrella en el README: cuál es tu tabla de hechos, qué dimensiones tendrás, con qué columna se relaciona cada una y con qué cardinalidad. Si tu dataset trae todo en una sola tabla plana, identifica qué columnas podrías separar como dimensiones (activos, usuarios, técnicas ATT&amp;CK, fechas).</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(4);
+    const { el, $, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const dos = n => String(n).padStart(2, '0');
+
+    /* =========================================================
+       Datos sintéticos del modelo
+       ========================================================= */
+    const ACTIVOS = [
+      ['FCFM-DIR-01', 'Dirección', 'Estación de trabajo', 'Alta', 'Laura Méndez'], ['FCFM-DIR-02', 'Dirección', 'Laptop', 'Alta', 'Laura Méndez'],
+      ['FCFM-ESC-01', 'Servicios Escolares', 'Servidor', 'Alta', 'Jorge Salinas'], ['FCFM-ESC-02', 'Servicios Escolares', 'Estación de trabajo', 'Media', 'Ana Treviño'],
+      ['FCFM-BIB-01', 'Biblioteca', 'Estación de trabajo', 'Baja', 'Rosa Garza'], ['FCFM-BIB-02', 'Biblioteca', 'Laptop', 'Baja', 'Rosa Garza'],
+      ['FCFM-LAB-01', 'Laboratorio de Cómputo', 'Estación de trabajo', 'Baja', 'Diego Cantú'], ['FCFM-LAB-02', 'Laboratorio de Cómputo', 'Estación de trabajo', 'Baja', 'Diego Cantú'],
+      ['FCFM-LAB-03', 'Laboratorio de Cómputo', 'Estación de trabajo', 'Baja', 'Diego Cantú'], ['FCFM-LAB-04', 'Laboratorio de Cómputo', 'Estación de trabajo', 'Baja', 'Diego Cantú'],
+      ['FCFM-LAB-05', 'Laboratorio de Cómputo', 'Servidor', 'Media', 'Diego Cantú'], ['FCFM-POS-01', 'Posgrado', 'Laptop', 'Media', 'Elena Rocha'],
+      ['FCFM-POS-02', 'Posgrado', 'Estación de trabajo', 'Media', 'Elena Rocha'], ['FCFM-VIN-01', 'Vinculación', 'Laptop', 'Baja', 'Marco Villarreal'],
+      ['FCFM-TI-01', 'TI', 'Servidor', 'Alta', 'Sofía Ramírez'], ['FCFM-TI-02', 'TI', 'Servidor', 'Alta', 'Sofía Ramírez'],
+      ['FCFM-ADM-01', 'Administración', 'Estación de trabajo', 'Media', 'Héctor Domínguez'], ['FCFM-ADM-02', 'Administración', 'Servidor', 'Alta', 'Héctor Domínguez']
+    ].map(([hostname, departamento, tipo, criticidad, responsable]) => ({ hostname, departamento, tipo, criticidad, responsable }));
+    const IOCS = [
+      ['198.51.100.77', 'Grupo Nómada', 'Crítica', '2026-07-28'], ['198.51.100.23', 'Grupo Nómada', 'Alta', '2026-08-03'],
+      ['203.0.113.45', 'Grupo Nómada', 'Alta', '2026-08-06'], ['203.0.113.66', 'Colectivo Fénix', 'Crítica', '2026-08-10'],
+      ['203.0.113.101', 'Colectivo Fénix', 'Media', '2026-08-12'], ['198.51.100.140', 'Colectivo Fénix', 'Alta', '2026-08-14'],
+      ['203.0.113.200', 'Operación Sombra', 'Media', '2026-08-17'], ['198.51.100.9', 'Operación Sombra', 'Baja', '2026-08-19'],
+      ['203.0.113.17', 'Operación Sombra', 'Crítica', '2026-08-21'], ['198.51.100.201', 'Colectivo Fénix', 'Baja', '2026-08-24'],
+      ['203.0.113.88', 'Grupo Nómada', 'Media', '2026-08-26'], ['198.51.100.55', 'Operación Sombra', 'Alta', '2026-08-28']
+    ].map(([valor_ioc, actor, severidad, primera_vez]) => ({ valor_ioc, actor, severidad, primera_vez }));
+    const USUARIOS = [
+      ['jgomez', 'Julia Gómez', 'Servicios Escolares', 'Administrativo'], ['mrivera', 'Mario Rivera', 'Servicios Escolares', 'Administrativo'],
+      ['jtrevino', 'Jorge Treviño', 'Servicios Escolares', 'Jefatura'], ['lsantos', 'Lucía Santos', 'Biblioteca', 'Administrativo'],
+      ['pgonzalez', 'Paola González', 'Biblioteca', 'Administrativo'], ['agarcia', 'Andrea García', 'Administración', 'Administrativo'],
+      ['shernandez', 'Sara Hernández', 'Administración', 'Jefatura'], ['rmartinez', 'Ricardo Martínez', 'TI', 'Administrador de sistemas'],
+      ['jcantu', 'Javier Cantú', 'TI', 'Administrador de sistemas'], ['cvillarreal', 'Carmen Villarreal', 'Dirección', 'Directivo'],
+      ['flopez', 'Fernando López', 'Posgrado', 'Docente'], ['mflores', 'Mónica Flores', 'Posgrado', 'Docente'],
+      ['eramirez', 'Emilio Ramírez', 'Vinculación', 'Administrativo'], ['dcastillo', 'Daniel Castillo', 'Laboratorio de Cómputo', 'Técnico']
+    ].map(([usuario, nombre, departamento, rol]) => ({ usuario, nombre, departamento, rol }));
+    const DIAS_SEM = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const CALENDARIO = Array.from({ length: 31 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 7, i + 1));
+      return { Fecha: `2026-08-${dos(i + 1)}`, Mes: 'agosto', Dia: DIAS_SEM[d.getUTCDay()], Semana: Math.ceil((i + 1 + 5) / 7) };
+    });
+    const HOST_DE = { jgomez: 'FCFM-ESC-02', mrivera: 'FCFM-ESC-01', jtrevino: 'FCFM-ESC-02', lsantos: 'FCFM-BIB-01', pgonzalez: 'FCFM-BIB-02', agarcia: 'FCFM-ADM-01', shernandez: 'FCFM-ADM-02', rmartinez: 'FCFM-TI-01', jcantu: 'FCFM-TI-02', cvillarreal: 'FCFM-DIR-01', flopez: 'FCFM-POS-01', mflores: 'FCFM-POS-02', eramirez: 'FCFM-VIN-01', dcastillo: 'FCFM-LAB-05' };
+    const EVENTOS = (() => {
+      const azar = mulberry32(20260824);
+      const f = [];
+      const hora = (h0, h1) => `${dos(h0 + Math.floor(azar() * (h1 - h0 + 1)))}:${dos(Math.floor(azar() * 60))}:${dos(Math.floor(azar() * 60))}`;
+      CALENDARIO.forEach(c => {
+        const n = ['sábado', 'domingo'].includes(c.Dia) ? 1 : 2 + (azar() < 0.4 ? 1 : 0);
+        for (let k = 0; k < n; k++) {
+          const u = USUARIOS[Math.floor(azar() * USUARIOS.length)].usuario;
+          f.push({ fecha: c.Fecha, hora: hora(7, 19), usuario: u, hostname: HOST_DE[u], ip_origen: `10.10.${2 + USUARIOS.findIndex(x => x.usuario === u)}.${20 + Math.floor(azar() * 10)}`, resultado: azar() < 0.1 ? 'Fallo' : 'Éxito' });
+        }
+      });
+      const ataques = [
+        ['198.51.100.77', [['03', 'FCFM-TI-01', 'agarcia'], ['03', 'FCFM-TI-01', 'jgomez'], ['04', 'FCFM-TI-01', 'admin'], ['13', 'FCFM-ESC-01', 'mrivera'], ['13', 'FCFM-ESC-01', 'mrivera']]],
+        ['203.0.113.17', [['22', 'FCFM-ADM-02', 'shernandez'], ['22', 'FCFM-ADM-02', 'admin'], ['25', 'FCFM-LAB-05', 'dcastillo']]],
+        ['203.0.113.66', [['11', 'FCFM-BIB-01', 'lsantos'], ['12', 'FCFM-BIB-01', 'lsantos']]],
+        ['198.51.100.23', [['05', 'FCFM-DIR-01', 'cvillarreal'], ['06', 'FCFM-POS-01', 'flopez'], ['06', 'FCFM-POS-01', 'flopez']]],
+        ['203.0.113.45', [['08', 'FCFM-ESC-02', 'jtrevino'], ['09', 'FCFM-ESC-02', 'jtrevino']]],
+        ['198.51.100.140', [['15', 'FCFM-TI-02', 'jcantu'], ['16', 'FCFM-LAB-02', 'dcastillo']]],
+        ['198.51.100.55', [['29', 'FCFM-VIN-01', 'eramirez']]],
+        ['203.0.113.101', [['13', 'FCFM-LAB-03', 'dcastillo'], ['14', 'FCFM-LAB-03', 'dcastillo']]],
+        ['203.0.113.200', [['18', 'FCFM-POS-02', 'mflores']]],
+        ['203.0.113.88', [['27', 'FCFM-ADM-01', 'agarcia']]],
+        ['198.51.100.9', [['20', 'FCFM-LAB-01', 'dcastillo']]]
+      ];
+      ataques.forEach(([ip, lista]) => lista.forEach(([d, h, u]) => f.push({ fecha: `2026-08-${d}`, hora: hora(0, 5), usuario: u, hostname: h, ip_origen: ip, resultado: azar() < 0.85 ? 'Fallo' : 'Éxito' })));
+      f[40].hora = f[12].hora; f[33].hora = f[5].hora; // eventos de días distintos a la misma hora: hora no es clave
+      f.sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+      f.forEach((e, i) => { e.event_id = 5001 + i; });
+      return f;
+    })();
+
+    const TABLAS = {
+      Eventos: { filas: EVENTOS, cols: [['event_id', 'int'], ['fecha', 'date'], ['hora', 'time'], ['usuario', 'text'], ['hostname', 'text'], ['ip_origen', 'text'], ['resultado', 'text']], rol: 'Hechos', clave: 'event_id' },
+      IOCs: { filas: IOCS, cols: [['valor_ioc', 'text'], ['actor', 'text'], ['severidad', 'text'], ['primera_vez', 'date']], rol: 'Dimensión', clave: 'valor_ioc' },
+      Activos: { filas: ACTIVOS, cols: [['hostname', 'text'], ['departamento', 'text'], ['tipo', 'text'], ['criticidad', 'text'], ['responsable', 'text']], rol: 'Dimensión', clave: 'hostname' },
+      Usuarios: { filas: USUARIOS, cols: [['usuario', 'text'], ['nombre', 'text'], ['departamento', 'text'], ['rol', 'text']], rol: 'Dimensión', clave: 'usuario' },
+      Calendario: { filas: CALENDARIO, cols: [['Fecha', 'date'], ['Mes', 'text'], ['Dia', 'text'], ['Semana', 'int']], rol: 'Dimensión', clave: 'Fecha' }
+    };
+    const TIPO_ICONO = { int: '123', date: 'FECHA', time: 'HORA', text: 'ABC' };
+    const TIPO_TXT = { int: 'Número entero', date: 'Fecha', time: 'Hora', text: 'Texto' };
+    const nombreCol = c => c === 'Dia' ? 'Día' : c;
+    const distintos = (tabla, col) => new Set(TABLAS[tabla].filas.map(r => r[col])).size;
+    const tipoDe = (tabla, col) => TABLAS[tabla].cols.find(c => c[0] === col)[1];
+
+    /* =========================================================
+       Reto 1 · Roles y claves
+       ========================================================= */
+    const ORDEN1 = ['Activos', 'Eventos', 'Calendario', 'IOCs', 'Usuarios'];
+    const r1 = Object.fromEntries(ORDEN1.map(t => [t, { rol: '', clave: '' }]));
+    const EXPLICA1 = {
+      Eventos: 'Registra sucesos: una fila por intento de inicio de sesión, crece todos los días y tiene columnas (hostname, ip_origen, usuario, fecha) que apuntan a las dimensiones. event_id es el único valor que no se repite.',
+      IOCs: 'Describe indicadores: una fila por IOC con su actor y severidad. valor_ioc no se repite, así que puede ser el lado «uno» de una relación.',
+      Activos: 'Describe cada equipo (dónde ocurrió el evento): una fila por hostname, con criticidad y responsable.',
+      Usuarios: 'Describe a cada persona (quién): una fila por cuenta, con su departamento y rol.',
+      Calendario: 'Describe cada día (cuándo): una fila por fecha, sin huecos. Permite filtrar por día de la semana, semana o mes.'
+    };
+    function pintarReto1() {
+      $('#r1-lista').replaceChildren(...ORDEN1.map(t => {
+        const T = TABLAS[t];
+        const selRol = el('select', { id: `r1-rol-${t}`, onchange: e => { r1[t].rol = e.target.value; limpiar1(t); } }, el('option', { value: '' }, '— Elige —'), el('option', { value: 'Hechos' }, 'Tabla de hechos'), el('option', { value: 'Dimensión' }, 'Dimensión'));
+        const selClave = el('select', { id: `r1-clave-${t}`, onchange: e => { r1[t].clave = e.target.value; limpiar1(t); } }, el('option', { value: '' }, '— Elige —'), T.cols.map(([c]) => el('option', { value: c }, nombreCol(c))));
+        selRol.value = r1[t].rol; selClave.value = r1[t].clave;
+        const muestra = T.filas.slice(0, 2);
+        return el('article', { class: 'tabla-card', id: `r1-card-${t}` },
+          el('h3', {}, `${t} `, el('span', { class: 'nota' }, `(${T.filas.length} filas)`)),
+          el('ul', {}, T.cols.map(([c, tp]) => el('li', {}, el('span', { class: 'tipo', title: TIPO_TXT[tp] }, TIPO_ICONO[tp]), `${nombreCol(c)} · ${distintos(t, c)} distintos`))),
+          el('div', { class: 'tabla-scroll' }, el('table', { class: 'datos muestra' }, el('caption', { class: 'oculto-visual' }, `Muestra de ${t}`),
+            el('thead', {}, el('tr', {}, T.cols.map(([c]) => el('th', { scope: 'col' }, nombreCol(c))))),
+            el('tbody', {}, muestra.map(r => el('tr', {}, T.cols.map(([c]) => el('td', {}, String(r[c])))))))),
+          el('div', { class: 'campo' }, el('label', { for: `r1-rol-${t}` }, 'Rol'), selRol),
+          el('div', { class: 'campo' }, el('label', { for: `r1-clave-${t}` }, 'Columna clave (identifica cada fila)'), selClave),
+          el('p', { class: 'explica', id: `r1-exp-${t}` }));
+      }));
+    }
+    function limpiar1(t) { $(`#r1-card-${t}`).classList.remove('bien', 'malo'); $(`#r1-exp-${t}`).textContent = ''; }
+    $('#r1-revisar').addEventListener('click', () => {
+      let bien = 0, vacias = 0;
+      ORDEN1.forEach(t => {
+        const T = TABLAS[t], card = $(`#r1-card-${t}`), ex = $(`#r1-exp-${t}`);
+        card.classList.remove('bien', 'malo');
+        if (!r1[t].rol || !r1[t].clave) { vacias++; ex.textContent = 'Elige el rol y la columna.'; return; }
+        const okRol = r1[t].rol === T.rol, okClave = r1[t].clave === T.clave;
+        if (okRol && okClave) { bien++; card.classList.add('bien'); ex.innerHTML = `<strong>✓ ${T.rol === 'Hechos' ? 'Tabla de hechos' : 'Dimensión'}, clave ${nombreCol(T.clave)}.</strong> ${EXPLICA1[t]}`; return; }
+        card.classList.add('malo');
+        const partes = [];
+        if (!okRol) partes.push(T.rol === 'Hechos' ? 'Es la tabla de <strong>hechos</strong>.' : 'Es una <strong>dimensión</strong>.');
+        if (!okClave) {
+          const c = r1[t].clave, nd = distintos(t, c);
+          const porCasualidad = { primera_vez: 'dos IOCs pueden verse por primera vez el mismo día; además, unir por fecha es justo el error que verás en el Reto 2', nombre: 'dos personas pueden llamarse igual, y Eventos guarda la cuenta (usuario), no el nombre' };
+          partes.push(nd < T.filas.length
+            ? `${nombreCol(c)} tiene ${nd} valores distintos en ${T.filas.length} filas: se repite, así que no identifica cada fila.`
+            : `${nombreCol(c)} no se repite en esta muestra, pero solo por casualidad: ${porCasualidad[c] || 'no identifica cada fila por diseño'}.`);
+          partes.push(`La clave es <strong>${nombreCol(T.clave)}</strong>.`);
+        }
+        ex.innerHTML = `<strong>✗</strong> ${partes.join(' ')} ${EXPLICA1[t]}`;
+      });
+      if (bien === ORDEN1.length) { retro('#retro1', 'ok', '<strong>¡Roles correctos!</strong> Un modelo en estrella tiene una tabla de hechos al centro y dimensiones alrededor. La columna única de cada dimensión será el lado «1» de su relación; la columna equivalente en Eventos, el lado «*».'); prog.marcar('r1'); }
+      else retro('#retro1', vacias ? 'aviso' : 'mal', `Llevas <strong>${bien} de ${ORDEN1.length}</strong>${vacias ? ` y ${vacias} incompletas` : ''}. Pista: una clave tiene tantos valores distintos como filas, y además identifica cada fila por diseño (no por casualidad).`);
+    });
+    $('#r1-reiniciar').addEventListener('click', () => { ORDEN1.forEach(t => { r1[t].rol = ''; r1[t].clave = ''; }); pintarReto1(); retro('#retro1', '', ''); });
+    pintarReto1();
+
+    /* =========================================================
+       Reto 2 · Relaciones
+       ========================================================= */
+    const DIMS = ['Activos', 'IOCs', 'Usuarios', 'Calendario'];
+    const CORRECTA = { Activos: ['hostname', 'hostname'], IOCs: ['ip_origen', 'valor_ioc'], Usuarios: ['usuario', 'usuario'], Calendario: ['fecha', 'Fecha'] };
+    const CARD = { '*:1': 'Varios a uno (*:1)', '1:1': 'Uno a uno (1:1)', '1:*': 'Uno a varios (1:*)', '*:*': 'Varios a varios (*:*)' };
+    const relaciones = {}; // dim -> {colE, colD}
+    function coincidencias(colE, dim, colD) {
+      const vals = new Set(TABLAS[dim].filas.map(r => r[colD]));
+      return EVENTOS.filter(e => vals.has(e[colE])).length;
+    }
+    function pintarReto2() {
+      $('#r2-lista').replaceChildren(...DIMS.map(d => {
+        const hecha = !!relaciones[d];
+        const sel = (id, etiqueta, opciones) => el('div', { class: 'campo' }, el('label', { for: id }, etiqueta),
+          el('select', { id, disabled: hecha }, el('option', { value: '' }, '— Elige —'), opciones.map(([v, t]) => el('option', { value: v }, t))));
+        const card = el('article', { class: 'rel-card' + (hecha ? ' bien' : ''), id: `r2-card-${d}` },
+          el('h3', {}, `Eventos → ${d}`),
+          sel(`r2-ce-${d}`, 'Columna de Eventos', TABLAS.Eventos.cols.map(([c]) => [c, c])),
+          sel(`r2-cd-${d}`, `Columna de ${d}`, TABLAS[d].cols.map(([c]) => [c, nombreCol(c)])),
+          sel(`r2-card-sel-${d}`, 'Cardinalidad', Object.entries(CARD)),
+          sel(`r2-dir-${d}`, 'Dirección del filtro cruzado', [['Única', 'Única'], ['Ambas', 'Ambas']]),
+          el('div', { class: 'acciones', style: 'margin-top:6px' }, el('button', { type: 'button', class: 'primario', disabled: hecha, onclick: () => crearRelacion(d) }, hecha ? '✓ Relación activa' : 'Crear relación')),
+          el('p', { class: 'explica', id: `r2-exp-${d}` }));
+        if (hecha) {
+          $(`#r2-ce-${d}`, card).value = CORRECTA[d][0]; $(`#r2-cd-${d}`, card).value = CORRECTA[d][1];
+          $(`#r2-card-sel-${d}`, card).value = '*:1'; $(`#r2-dir-${d}`, card).value = 'Única';
+          $(`#r2-exp-${d}`, card).innerHTML = relaciones[d].msg;
+        }
+        return card;
+      }));
+      pintarDiagrama();
+      $('#r2-relaciones').replaceChildren(...(Object.keys(relaciones).length ? DIMS.filter(d => relaciones[d]).map(d =>
+        el('li', {}, `✓ Eventos (${CORRECTA[d][0]}) *:1 ${d} (${nombreCol(CORRECTA[d][1])}) · Única · Activa`)) : [el('li', { class: 'nota' }, 'Todavía no hay relaciones.')]));
+    }
+    function crearRelacion(d) {
+      const colE = $(`#r2-ce-${d}`).value, colD = $(`#r2-cd-${d}`).value, card = $(`#r2-card-sel-${d}`).value, dir = $(`#r2-dir-${d}`).value;
+      const ex = $(`#r2-exp-${d}`);
+      const mal = html => { ex.innerHTML = `<strong>✗</strong> ${html}`; retro('#retro2', 'mal', `Relación Eventos → ${d}: revisa la explicación en su tarjeta.`); };
+      if (!colE || !colD || !card || !dir) { ex.textContent = 'Completa las cuatro opciones.'; return; }
+      const tE = tipoDe('Eventos', colE), tD = tipoDe(d, colD);
+      if (tE !== tD) return mal(`Power BI no puede crear la relación: Eventos[${colE}] es <em>${TIPO_TXT[tE]}</em> y ${d}[${nombreCol(colD)}] es <em>${TIPO_TXT[tD]}</em>. Las dos columnas deben tener el mismo tipo de datos (y, sobre todo, el mismo significado).`);
+      const unicaE = distintos('Eventos', colE) === EVENTOS.length, unicaD = distintos(d, colD) === TABLAS[d].filas.length;
+      if ((card === '*:1' || card === '1:1') && !unicaD) return mal(`La cardinalidad no es válida: ${d}[${nombreCol(colD)}] tiene valores repetidos (${distintos(d, colD)} distintos en ${TABLAS[d].filas.length} filas), así que no puede ser el lado «uno».`);
+      if ((card === '1:*' || card === '1:1') && !unicaE) return mal(`La cardinalidad no es válida: «${CARD[card]}» exige que Eventos[${colE}] no se repita, pero tiene ${distintos('Eventos', colE)} valores distintos en ${EVENTOS.length} filas. En Eventos, cada ${colE} aparece muchas veces: es el lado «varios».`);
+      const n = coincidencias(colE, d, colD);
+      const esCorrecta = colE === CORRECTA[d][0] && colD === CORRECTA[d][1];
+      if (!esCorrecta) {
+        if (d === 'IOCs' && colE === 'fecha' && colD === 'primera_vez') return mal(`Coinciden ${n} eventos, pero por pura casualidad: unir por fecha relaciona cada IOC con <em>todo</em> lo que pasó el día en que se vio por primera vez, tenga o no su IP. Es el error más común de esta actividad. La columna en común es la IP: Eventos[ip_origen] ↔ IOCs[valor_ioc].`);
+        if (n === 0) return mal(`Power BI crearía la relación, pero <strong>ningún</strong> evento encuentra pareja: todos irían a (En blanco). Eventos[${colE}] y ${d}[${nombreCol(colD)}] no contienen el mismo dato.`);
+        return mal(`Coinciden ${n} de ${EVENTOS.length} eventos, pero esas columnas no representan lo mismo. Busca en Eventos la columna que guarda el mismo dato que la clave única de ${d}.`);
+      }
+      if (card === '*:*') return mal('Power BI permitiría «Varios a varios», pero aquí la dimensión tiene una clave única: usar *:* oculta problemas de duplicados y hace que los totales dejen de sumar. Elige «Varios a uno (*:1)».');
+      if (dir === 'Ambas') return mal('Las columnas y la cardinalidad son correctas, pero «Ambas» no hace falta: la dimensión debe filtrar a Eventos, no al revés. El filtro bidireccional innecesario hace que una dimensión filtre a otra a través de los hechos y puede volver ambiguo el modelo cuando crece (lo verás en el Reto 3). Usa «Única».');
+      const extra = d === 'IOCs' ? ` Los otros ${EVENTOS.length - n} eventos tienen IPs que no están en la lista: al agrupar por actor aparecerán como (En blanco), y eso es lo esperado.`
+        : d === 'Usuarios' && n < EVENTOS.length ? ` ${EVENTOS.length - n} eventos usan la cuenta «admin», que no existe en Usuarios: irán a (En blanco). En seguridad es una pista, no un error del modelo.` : '';
+      relaciones[d] = { msg: `<strong>✓ Relación activa:</strong> Eventos[${colE}] (*) → ${d}[${nombreCol(colD)}] (1), filtro único: ${d} filtra a Eventos. ${n} de ${EVENTOS.length} eventos encuentran su fila en ${d}.${extra}` };
+      pintarReto2();
+      const sig = DIMS.find(x => !relaciones[x]);
+      if (sig) $(`#r2-ce-${sig}`).focus();
+      if (DIMS.every(x => relaciones[x])) { retro('#retro2', 'ok', '<strong>¡Modelo en estrella completo!</strong> Cuatro relaciones varios a uno, todas con filtro único desde la dimensión hacia Eventos. Así cualquier segmentación de activos, IOCs, usuarios o fechas filtra los hechos sin ambigüedad.'); prog.marcar('r2'); }
+      else retro('#retro2', 'ok', `Relación con ${d} creada. Te faltan ${DIMS.filter(x => !relaciones[x]).length}.`);
+    }
+    function pintarDiagrama() {
+      const caja = { Eventos: [175, 135], Activos: [10, 10], IOCs: [340, 10], Usuarios: [10, 255], Calendario: [340, 255] };
+      const W = 130, H = 95, mostrar = { Eventos: ['event_id', 'fecha', 'usuario', 'hostname', 'ip_origen'], Activos: ['hostname', 'criticidad', 'tipo'], IOCs: ['valor_ioc', 'actor', 'severidad'], Usuarios: ['usuario', 'departamento', 'rol'], Calendario: ['Fecha', 'Dia', 'Semana'] };
+      const centro = t => [caja[t][0] + W / 2, caja[t][1] + (t === 'Eventos' ? 55 : H / 2)];
+      let s = `<svg class="modelo-svg" viewBox="0 0 480 360" role="img" aria-label="Diagrama del modelo: ${Object.keys(relaciones).length} de 4 relaciones creadas"><defs><marker id="r2-flecha" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--ok)"/></marker></defs>`;
+      DIMS.forEach(d => {
+        const [x1, y1] = centro(d), [x2, y2] = centro('Eventos');
+        if (relaciones[d]) {
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+          s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--ok)" stroke-width="2.5"/>`;
+          s += `<line x1="${mx - (x2 - x1) * 0.04}" y1="${my - (y2 - y1) * 0.04}" x2="${mx + (x2 - x1) * 0.04}" y2="${my + (y2 - y1) * 0.04}" stroke="var(--ok)" stroke-width="2.5" marker-end="url(#r2-flecha)"/>`;
+          const p1 = [x1 + (x2 - x1) * 0.3, y1 + (y2 - y1) * 0.3], p2 = [x1 + (x2 - x1) * 0.72, y1 + (y2 - y1) * 0.72];
+          s += `<text x="${p1[0] + 8}" y="${p1[1] - 4}" style="font-size:15px;font-weight:700" fill="var(--text)">1</text><text x="${p2[0] + 8}" y="${p2[1] - 2}" style="font-size:17px;font-weight:700" fill="var(--text)">*</text>`;
+        } else s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="5 5"/>`;
+      });
+      Object.keys(caja).forEach(t => {
+        const [x, y] = caja[t], h = t === 'Eventos' ? 110 : H, hecha = t === 'Eventos' || relaciones[t];
+        s += `<rect x="${x}" y="${y}" width="${W}" height="${h}" rx="8" fill="var(--surface)" stroke="${hecha && t !== 'Eventos' ? 'var(--ok)' : 'var(--border)'}" stroke-width="1.5"/>`;
+        s += `<rect x="${x}" y="${y}" width="${W}" height="24" rx="8" fill="${t === 'Eventos' ? 'var(--accent-2)' : 'var(--accent-soft)'}"/>`;
+        s += `<text x="${x + 10}" y="${y + 17}" style="font-size:13px;font-weight:700" fill="${t === 'Eventos' ? 'var(--surface)' : 'var(--text)'}">${t}${relaciones[t] ? ' ✓' : ''}</text>`;
+        mostrar[t].forEach((c, i) => { s += `<text x="${x + 10}" y="${y + 42 + i * 14}" style="font-size:11.5px" fill="var(--muted)">${nombreCol(c)}</text>`; });
+      });
+      $('#r2-diagrama').innerHTML = s + '</svg>';
+    }
+    $('#r2-reiniciar').addEventListener('click', () => { DIMS.forEach(d => { delete relaciones[d]; }); pintarReto2(); retro('#retro2', '', ''); });
+    pintarReto2();
+
+    /* =========================================================
+       Reto 3 · Propagación de filtros
+       ========================================================= */
+    const activo = h => ACTIVOS.find(a => a.hostname === h);
+    const ACTORES = ['Grupo Nómada', 'Colectivo Fénix', 'Operación Sombra'];
+    function calcular(modelo, sev, crit) {
+      const iocsF = IOCS.filter(i => sev === 'Todas' || i.severidad === sev);
+      const llave = modelo === 'fecha' ? ['fecha', 'primera_vez'] : ['ip_origen', 'valor_ioc'];
+      let ev = EVENTOS.filter(e => crit === 'Todas' || activo(e.hostname).criticidad === crit);
+      if (modelo !== 'sin' && sev !== 'Todas') { const vals = new Set(iocsF.map(i => i[llave[1]])); ev = ev.filter(e => vals.has(e[llave[0]])); }
+      const barras = ACTORES.map(a => {
+        if (modelo === 'sin') return { etiqueta: a, valor: ev.length };
+        const vals = new Set(iocsF.filter(i => i.actor === a).map(i => i[llave[1]]));
+        return { etiqueta: a, valor: ev.filter(e => vals.has(e[llave[0]])).length };
+      });
+      if (modelo !== 'sin' && sev === 'Todas') {
+        const todos = new Set(IOCS.map(i => i[llave[1]]));
+        barras.push({ etiqueta: '(En blanco)', valor: ev.filter(e => !todos.has(e[llave[0]])).length, blanco: true });
+      }
+      let iocsVisibles = iocsF.length;
+      if (modelo === 'ambas' && crit !== 'Todas') { const ips = new Set(ev.map(e => e.ip_origen)); iocsVisibles = iocsF.filter(i => ips.has(i.valor_ioc)).length; }
+      const activosF = ACTIVOS.filter(a => crit === 'Todas' || a.criticidad === crit).length;
+      return { eventos: ev.length, iocs: iocsVisibles, activos: activosF, barras };
+    }
+    const EXPLICA3 = {
+      correcto: 'Cada segmentación filtra su dimensión y el filtro viaja por la relación hacia Eventos. La barra (En blanco) agrupa los eventos cuya IP no está en la lista de IOCs: con «Todas» en severidad es normal y esperada.',
+      sin: '<strong>Engañoso:</strong> sin relación, el filtro de IOCs no llega a Eventos. Cada barra de actor calcula COUNTROWS(Eventos) completo, así que todas muestran el mismo número, y la segmentación de severidad no cambia nada. La de criticidad sí funciona porque Activos sí está relacionada.',
+      fecha: '<strong>Engañoso, y el más peligroso:</strong> los números se ven razonables, pero cuentan los eventos que ocurrieron el mismo día en que se vio cada IOC por primera vez, sin importar la IP. Un tablero así atribuye actividad a actores que nunca tocaron tu red.',
+      ambas: '<strong>Cuidado:</strong> los eventos se cuentan igual que en el modelo correcto, pero ahora Eventos también filtra a IOCs. Elige una criticidad y mira la tarjeta «IOCs en la lista»: la tabla de indicadores se recorta a los que aparecieron en esos activos.'
+    };
+    function pintarReto3() {
+      const modelo = $('#r3-modelo').value, sev = $('#r3-sev').value, crit = $('#r3-crit').value;
+      const r = calcular(modelo, sev, crit);
+      const kpi = (v, t) => el('div', { class: 'kpi' }, el('span', { class: 'valor' }, num(v)), el('span', { class: 'etiqueta' }, t));
+      $('#r3-kpis').replaceChildren(kpi(r.eventos, 'Eventos totales'), kpi(r.iocs, 'IOCs en la lista'), kpi(r.activos, 'Activos'));
+      const max = Math.max(1, ...r.barras.map(b => b.valor));
+      $('#r3-barras').replaceChildren(el('div', { class: 'hbarras' }, r.barras.map(b => el('div', { class: 'hbarra' + (b.blanco ? ' blanco' : '') },
+        el('span', { class: 'et', title: b.etiqueta }, b.etiqueta), el('span', { class: 'pista' }, el('span', { class: 'relleno', style: `width:${(100 * b.valor / max).toFixed(1)}%` })), el('span', { class: 'v' }, num(b.valor))))));
+      const ex = $('#r3-explica');
+      ex.className = 'explicacion' + (modelo === 'correcto' ? '' : ' alerta');
+      ex.innerHTML = EXPLICA3[modelo];
+    }
+    ['#r3-modelo', '#r3-sev', '#r3-crit'].forEach(s => $(s).addEventListener('change', pintarReto3));
+    const P2 = [
+      { v: 'igual', t: 'Todas las barras de actor muestran el mismo número (el total) y la segmentación de severidad no cambia nada.', ok: true },
+      { v: 'blanco', t: 'Aparece una barra (En blanco) muy grande.', x: 'La barra (En blanco) también aparece en el modelo correcto: no es el síntoma de la relación faltante.' },
+      { v: 'cero', t: 'Todos los números bajan a cero.', x: 'Sin relación los números no bajan a cero: se repite el total completo en cada categoría.' }
+    ];
+    const P3 = [
+      { v: 'recorta', t: 'El filtro de Activos atraviesa Eventos y recorta la tabla IOCs: parece que el feed tiene menos indicadores de los que realmente tiene.', ok: true },
+      { v: 'borra', t: 'Power BI borra filas de la tabla IOCs al filtrar.', x: 'Nada se borra: es un filtro temporal. El problema es que la tarjeta ya no responde «¿cuántos IOCs tengo?» sino otra pregunta.' },
+      { v: 'nada', t: 'No es engañoso: siempre conviene usar «Ambas».', x: '«Ambas» tiene casos de uso, pero aplicarla por costumbre cambia el significado de las medidas de las dimensiones y puede crear ambigüedad.' }
+    ];
+    const radios = (cont, nombre, ops) => $(cont).replaceChildren(...ops.map(o => el('label', { class: 'opcion' }, el('input', { type: 'radio', name: nombre, value: o.v }), el('span', {}, o.t))));
+    radios('#r3-p2', 'r3-p2', P2); radios('#r3-p3', 'r3-p3', P3);
+    const RESP_P1 = calcular('correcto', 'Crítica', 'Alta').eventos;
+    $('#r3-comprobar').addEventListener('click', () => {
+      const v1 = $('#r3-p1').value.trim();
+      const m2 = document.querySelector('input[name="r3-p2"]:checked'), m3 = document.querySelector('input[name="r3-p3"]:checked');
+      if (!v1 || !m2 || !m3) { retro('#retro3', 'aviso', 'Responde las tres preguntas antes de comprobar.'); return; }
+      const res = [];
+      const ok1 = Number(v1) === RESP_P1;
+      res.push(ok1 ? `✓ Pregunta 1: ${RESP_P1} eventos. Dos dimensiones filtraron a la vez la misma tabla de hechos.` : `✗ Pregunta 1: pon el modelo correcto, severidad Crítica y criticidad Alta, y lee la tarjeta «Eventos totales».`);
+      const o2 = P2.find(o => o.v === m2.value), o3 = P3.find(o => o.v === m3.value);
+      res.push(o2.ok ? '✓ Pregunta 2: el total repetido en cada categoría es la firma de una relación faltante (o inactiva).' : `✗ Pregunta 2: ${o2.x}`);
+      res.push(o3.ok ? '✓ Pregunta 3: con «Ambas», una dimensión termina filtrando a otra a través de los hechos.' : `✗ Pregunta 3: ${o3.x}`);
+      const todo = ok1 && o2.ok && o3.ok;
+      retro('#retro3', todo ? 'ok' : 'mal', `${todo ? '<strong>¡Todo correcto!</strong> ' : ''}<ul>${res.map(x => `<li>${x}</li>`).join('')}</ul>${todo ? 'Regla de oro: relaciones varios a uno, filtro único desde la dimensión y la columna que de verdad comparte el dato.' : ''}`);
+      if (todo) prog.marcar('r3');
+    });
+    $('#r3-reiniciar').addEventListener('click', () => {
+      $('#r3-modelo').value = 'correcto'; $('#r3-sev').value = 'Todas'; $('#r3-crit').value = 'Todas'; $('#r3-p1').value = '';
+      document.querySelectorAll('#r3-p2 input, #r3-p3 input').forEach(r => { r.checked = false; });
+      pintarReto3(); retro('#retro3', '', '');
+    });
+    pintarReto3();
+  </script>
+</body>
+</html>

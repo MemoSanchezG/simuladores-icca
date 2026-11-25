@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 12 · Jerarquía visual en el dashboard | Simuladores ICCA</title>
+  <meta name="description" content="Rediseña una vista saturada de un dashboard de amenazas aplicando jerarquía visual, elige el gráfico correcto para cada pregunta e interpreta gráficas sin caer en conclusiones falsas.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    .paleta { display: flex; flex-wrap: wrap; gap: 6px; }
+    .paleta button { font-size: .88rem; padding: 6px 10px; }
+    .paleta button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-2); }
+    .controles { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 10px 0; }
+    .controles .campo { margin: 0; min-width: 0; flex: 1 1 200px; }
+    .controles select { width: 100%; }
+    .lienzo, .previa { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 8px; border-radius: var(--radius); background: var(--surface); }
+    .lienzo { border: 2px dashed var(--border); }
+    .celda { min-height: 64px; font-size: .8rem; font-weight: 600; padding: 4px; border-radius: 8px; border: 1px dashed var(--border); background: var(--surface-2); overflow-wrap: anywhere; line-height: 1.2; }
+    .celda.ocupada { border-style: solid; border-color: var(--accent-2); background: var(--accent-soft); }
+    .celda.elegida { box-shadow: inset 0 0 0 3px var(--accent-2); }
+    .celda small { display: block; font-weight: 400; color: var(--muted); }
+    .previa { border: 1px solid var(--border); grid-auto-rows: minmax(96px, auto); }
+    .vis { border: 1px solid var(--border); border-radius: 8px; padding: 6px; background: var(--bg); font-size: .72rem; min-width: 0; overflow: hidden; }
+    .vis h4 { margin: 0 0 4px; font-size: .74rem; line-height: 1.25; }
+    .vis .grande { font-size: 1.5rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .vis table { width: 100%; border-collapse: collapse; font-size: .66rem; }
+    .vis td { border-bottom: 1px solid var(--border); padding: 1px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+    .vis .seg { border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; background: var(--surface); }
+    .vacia { border: 1px dashed var(--border); border-radius: 8px; }
+    .reglas { list-style: none; padding: 0; margin: 8px 0; }
+    .reglas li { padding: 6px 10px; border-left: 5px solid var(--border); margin: 5px 0; background: var(--surface-2); border-radius: 6px; font-size: .92rem; }
+    .reglas li.si { border-left-color: var(--ok); }
+    .reglas li.no { border-left-color: var(--bad); }
+    .puntaje { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+    .preguntas2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .preg { border: 2px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface); }
+    .preg.ok { border-color: var(--ok); }
+    .preg.mal { border-color: var(--bad); }
+    .preg h3 { margin: 0 0 8px; font-size: 1rem; }
+    .preg select { width: 100%; }
+    .mini { margin-top: 8px; min-height: 90px; }
+    .mini svg { width: 100%; height: auto; max-height: 150px; display: block; }
+    .explica { font-size: .9rem; margin: 6px 0 0; }
+    .grafica3 { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface); margin: 12px 0; }
+    .grafica3 h3 { margin-top: 0; }
+    .grafica3 .svg3 svg { width: 100%; height: auto; max-height: 260px; display: block; }
+    .grafica3 .contexto { font-size: .9rem; }
+    .opcion { display: flex; gap: 10px; align-items: flex-start; padding: 5px 2px; font-weight: 400; cursor: pointer; }
+    .opcion input { margin-top: 5px; flex: none; width: 18px; height: 18px; }
+    fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin: 10px 0 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    .pequeno { font-size: .88rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 12 · Jerarquía visual en el dashboard</h1>
+      <p class="subtitulo">Tu audiencia decide en segundos qué mirar. Si la conclusión está escondida entre gráficas decorativas, nadie la verá. Hoy rediseñas una vista saturada, eliges el gráfico adecuado para cada pregunta e interpretas resultados sin exagerar.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás organizar una vista de dashboard con jerarquía visual (lectura en Z/F, tamaño según importancia, color de alerta reservado y títulos con conclusión), elegir el tipo de gráfico según la pregunta e identificar qué conclusiones permite y cuáles no permite una gráfica.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Reto 1: elige un visual de la paleta (o del lienzo), su tamaño y luego la casilla donde va. Todo funciona con Tab y Enter.</li>
+          <li>Observa cómo se redibuja la vista previa y cómo cambia el puntaje de cada regla.</li>
+          <li>Retos 2 y 3: elige respuestas, usa los botones de cada gráfica y lee la explicación.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Rediseña la vista saturada</h2>
+      <p>Esta vista debe responder: <strong>«¿Qué técnicas ATT&amp;CK concentran las alertas críticas de esta semana y cómo evolucionan?»</strong> Hoy está saturada. Reacomódala hasta cumplir las 8 reglas de jerarquía visual. Para mover un visual, selecciónalo y elige otra casilla; si colocas algo sobre una casilla ocupada, el visual anterior regresa a la paleta.</p>
+      <h3>1. Elige un visual</h3>
+      <div class="paleta" id="paleta" role="group" aria-label="Paleta de visuales"></div>
+      <div class="controles">
+        <div class="campo">
+          <label for="tamano">Tamaño al colocar</label>
+          <select id="tamano">
+            <option value="1">1 casilla</option>
+            <option value="2">2 casillas (ancho doble)</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="colores">Colores del tema</label>
+          <select id="colores">
+            <option value="arcoiris">Un color distinto para cada visual</option>
+            <option value="rojo">Rojo en todo para que destaque</option>
+            <option value="reservado">Azul para todo; rojo solo para lo crítico</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="titulo">Título de la gráfica de tendencia</label>
+          <select id="titulo">
+            <option value="generico">Gráfica 1</option>
+            <option value="descriptivo">Alertas críticas por día</option>
+            <option value="conclusion">Las alertas críticas subieron 38 % desde el lunes, impulsadas por T1110</option>
+          </select>
+        </div>
+      </div>
+      <div class="acciones">
+        <button type="button" id="quitar" disabled>Quitar del lienzo</button>
+        <button type="button" id="evaluar1" class="primario">Evaluar diseño</button>
+        <button type="button" id="reiniciar1">Reiniciar (vista saturada)</button>
+      </div>
+      <p id="estadoLienzo" class="pequeno" aria-live="polite">Selecciona un visual para empezar.</p>
+      <h3>2. Elige la casilla (lienzo de 3 filas × 4 columnas)</h3>
+      <div class="lienzo" id="lienzo" role="group" aria-label="Lienzo del dashboard"></div>
+      <div class="dos-columnas">
+        <div>
+          <h3>Vista previa</h3>
+          <div class="previa" id="previa" aria-label="Vista previa del dashboard"></div>
+        </div>
+        <div>
+          <h3>Reglas de jerarquía visual</h3>
+          <div class="puntaje">
+            <div class="kpi"><span class="valor" id="puntaje">0/8</span><span class="etiqueta">reglas cumplidas</span></div>
+            <div class="kpi"><span class="valor" id="nVisuales">0</span><span class="etiqueta">visuales de datos (meta: 6 o menos)</span></div>
+          </div>
+          <ul class="reglas" id="reglas"></ul>
+        </div>
+      </div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · El gráfico correcto para cada pregunta</h2>
+      <p>Cada pregunta pide un tipo de análisis: tendencia, comparación, composición, distribución, relación o valor único. Elige un gráfico y mira cómo se ven <em>esos mismos datos</em> con él: la vista previa te ayuda a descubrir por qué algunas opciones no funcionan.</p>
+      <div class="preguntas2" id="preguntas2"></div>
+      <div class="acciones"><button type="button" id="reiniciar2">Reiniciar</button></div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · ¿Qué puedes afirmar con esta gráfica?</h2>
+      <p>Interpretar también es saber qué <strong>no</strong> puedes concluir. Para cada gráfica, usa el botón para ver más contexto y elige la única afirmación que los datos sí sostienen.</p>
+      <div id="graficas3"></div>
+      <div class="acciones">
+        <button type="button" class="primario" id="revisar3">Comprobar</button>
+        <button type="button" id="reiniciar3">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol>
+        <li><strong>Rejilla:</strong> en Power BI Desktop, pestaña <strong>Vista</strong>, activa <strong>Líneas de cuadrícula</strong> y <strong>Ajustar a la cuadrícula</strong>. Para tamaños exactos: panel <strong>Formato</strong> del objeto visual → <strong>General</strong> → <strong>Propiedades</strong> → <strong>Tamaño</strong> y <strong>Posición</strong>.</li>
+        <li><strong>Orden de lectura:</strong> <strong>Vista → Selección</strong>. En la pestaña <strong>Orden de tabulación</strong> deja primero los KPI y al final la tabla: así también navega quien usa teclado o lector de pantalla.</li>
+        <li><strong>Segmentadores:</strong> el visual se llama <strong>Segmentación de datos</strong>. Agrúpalos (selecciónalos, clic derecho → <strong>Agrupar</strong>) en un borde de la página.</li>
+        <li><strong>Color reservado:</strong> <strong>Vista → Temas → Personalizar el tema actual</strong> para fijar un color base; el rojo aplícalo solo con <strong>formato condicional</strong> (en el panel Formato, botón <em>fx</em> junto al color).</li>
+        <li><strong>Título con conclusión:</strong> crea una medida de texto y úsala en <strong>Formato → General → Título → fx</strong> (Valor del campo):</li>
+      </ol>
+      <pre class="codigo"><span class="fn">Título tendencia</span> =
+<span class="kw">VAR</span> Actual = [Alertas críticas]
+<span class="kw">VAR</span> Anterior = <span class="fn">CALCULATE</span>( [Alertas críticas], <span class="fn">DATEADD</span>( Calendario[Fecha], -7, <span class="kw">DAY</span> ) )
+<span class="kw">VAR</span> Cambio = <span class="fn">DIVIDE</span>( Actual - Anterior, Anterior )
+<span class="kw">RETURN</span>
+    <span class="str">"Las alertas críticas "</span> &amp; <span class="fn">IF</span>( Cambio &gt;= 0, <span class="str">"subieron "</span>, <span class="str">"bajaron "</span> )
+        &amp; <span class="fn">FORMAT</span>( <span class="fn">ABS</span>( Cambio ), <span class="str">"0%"</span> ) &amp; <span class="str">" frente a la semana anterior"</span></pre>
+      <p class="pequeno">Power BI no tiene un visual de histograma nativo: clic derecho en la columna numérica → <strong>Nuevo grupo</strong> → tipo <strong>Discretización</strong>, y usa los intervalos en un gráfico de columnas.</p>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Actividad ponderada 3.1: elige una vista de tu dashboard (te recomendamos el resumen ejecutivo) y rediséñala con estas reglas. En el Pull Request agrega capturas de <strong>antes y después</strong> y una lista de las reglas que aplicaste. Verifica que el título principal exprese la conclusión con una medida dinámica, que no haya más de unos seis visuales por página y que el rojo signifique solo «crítico» en las tres vistas: resumen ejecutivo, detalle técnico ATT&amp;CK y KPIs de seguimiento.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(12);
+    const { $, el, retro } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+
+    /* ================= Reto 1 · Lienzo con jerarquía visual ================= */
+    const FILAS = 3, COLS = 4;
+    const VISUALES = {
+      kpiCrit: { nombre: 'Tarjeta KPI de alertas críticas', corto: 'KPI críticas', tipo: 'kpi', ancho: 1, datos: true },
+      kpiMttr: { nombre: 'Tarjeta KPI de MTTR', corto: 'KPI MTTR', tipo: 'kpi', ancho: 1, datos: true },
+      tendencia: { nombre: 'Gráfica de tendencia de alertas críticas', corto: 'Tendencia', tipo: 'linea', ancho: 2, datos: true },
+      tecnicas: { nombre: 'Barras por técnica ATT&CK', corto: 'Técnicas ATT&CK', tipo: 'barras', ancho: 2, datos: true },
+      tabla: { nombre: 'Tabla de detalle de eventos', corto: 'Tabla detalle', tipo: 'tabla', ancho: 2, datos: true },
+      segFecha: { nombre: 'Segmentador de fecha', corto: 'Seg. fecha', tipo: 'seg', ancho: 1, datos: false },
+      segSev: { nombre: 'Segmentador de severidad', corto: 'Seg. severidad', tipo: 'seg', ancho: 1, datos: false },
+      mapa: { nombre: 'Mapa de IPs por país', corto: 'Mapa IPs', tipo: 'mapa', ancho: 2, datos: true, distractor: true },
+      medidor: { nombre: 'Medidor de reglas activas', corto: 'Medidor reglas', tipo: 'medidor', ancho: 1, datos: true, distractor: true },
+      anillo: { nombre: 'Anillo con 9 técnicas', corto: 'Anillo técnicas', tipo: 'anillo', ancho: 1, datos: true, distractor: true }
+    };
+    const MOTIVO = {
+      mapa: 'la geolocalización de IPs es poco confiable y el mapa no responde qué técnicas concentran las alertas.',
+      medidor: 'el número de reglas activas es una métrica de vanidad y el medidor gasta mucho espacio en un solo dato.',
+      anillo: 'el anillo de 9 técnicas duplica las barras y es mucho más difícil de comparar.'
+    };
+    const SATURADO = {
+      anillo: { f: 1, c: 1, a: 1 }, mapa: { f: 1, c: 2, a: 2 }, segFecha: { f: 1, c: 4, a: 1 },
+      tabla: { f: 2, c: 1, a: 2 }, medidor: { f: 2, c: 3, a: 1 }, kpiMttr: { f: 2, c: 4, a: 1 },
+      segSev: { f: 3, c: 1, a: 1 }, tendencia: { f: 3, c: 2, a: 1 }, tecnicas: { f: 3, c: 3, a: 2 }
+    };
+    const TITULOS = { generico: 'Gráfica 1', descriptivo: 'Alertas críticas por día', conclusion: 'Las alertas críticas subieron 38 % desde el lunes, impulsadas por T1110' };
+    const TENDENCIA = [34, 33, 37, 41, 39, 44, 47];
+    const TECNICAS = [['T1110', 18], ['T1566', 11], ['T1059', 8], ['T1078', 6], ['T1046', 4]];
+    const FILAS_TABLA = [['14/10 08:05', '203.0.113.9', 'T1566'], ['14/10 09:21', '198.51.100.23', 'T1110'], ['14/10 11:34', '198.51.100.61', 'T1486']];
+    const ARCOIRIS = ['#8e44ad', '#e67e22', '#16a085', '#c0392b', '#2980b9', '#d35400', '#27ae60', '#b7950b', '#7f8c8d', '#e84393'];
+    let pos = {};
+    let elegido = null;
+    let reto1Hecho = false;
+
+    const celdasDe = p => Array.from({ length: p.a }, (_, k) => [p.f, p.c + k]);
+    const ocupante = (f, c) => Object.keys(pos).find(id => celdasDe(pos[id]).some(([ff, cc]) => ff === f && cc === c)) || null;
+    const estado = t => { $('#estadoLienzo').textContent = t; };
+
+    const botonesPaleta = {};
+    Object.keys(VISUALES).forEach(id => {
+      const b = el('button', { type: 'button', 'aria-pressed': 'false', onclick: () => elegir(id) });
+      botonesPaleta[id] = b;
+      $('#paleta').append(b);
+    });
+    const celdas = [];
+    for (let f = 1; f <= FILAS; f++) {
+      for (let c = 1; c <= COLS; c++) {
+        const b = el('button', { type: 'button', class: 'celda', onclick: () => clicCelda(f, c) });
+        celdas.push({ f, c, b });
+        $('#lienzo').append(b);
+      }
+    }
+
+    function elegir(id) {
+      elegido = elegido === id ? null : id;
+      if (elegido) {
+        $('#tamano').value = String(pos[id] ? pos[id].a : VISUALES[id].ancho);
+        estado(`Elegiste «${VISUALES[id].corto}». Ajusta el tamaño si quieres y elige una casilla del lienzo.`);
+      } else {
+        estado('Selección cancelada.');
+      }
+      render();
+    }
+
+    function clicCelda(f, c) {
+      if (!elegido) {
+        const occ = ocupante(f, c);
+        if (occ) elegir(occ);
+        else estado('Primero elige un visual de la paleta; luego elige esta casilla.');
+        return;
+      }
+      const a = Number($('#tamano').value);
+      if (c + a - 1 > COLS) {
+        estado(`«${VISUALES[elegido].corto}» con 2 casillas no cabe en la columna ${COLS}: elige una casilla de las columnas 1 a ${COLS - 1}.`);
+        return;
+      }
+      const desplazados = [];
+      for (let k = 0; k < a; k++) {
+        const occ = ocupante(f, c + k);
+        if (occ && occ !== elegido && !desplazados.includes(occ)) desplazados.push(occ);
+      }
+      desplazados.forEach(id => { delete pos[id]; });
+      pos[elegido] = { f, c, a };
+      let msg = `Colocaste «${VISUALES[elegido].corto}» en la fila ${f}, columna ${c}${a === 2 ? ' (2 casillas)' : ''}.`;
+      if (desplazados.length) msg += ' Regresó a la paleta: ' + desplazados.map(id => `«${VISUALES[id].corto}»`).join(', ') + '.';
+      elegido = null;
+      estado(msg);
+      render();
+    }
+
+    $('#quitar').addEventListener('click', () => {
+      if (!elegido || !pos[elegido]) return;
+      delete pos[elegido];
+      estado(`Quitaste «${VISUALES[elegido].corto}» del lienzo.`);
+      elegido = null;
+      render();
+    });
+
+    /* --- vista previa --- */
+    function color(id, critico) {
+      const modo = $('#colores').value;
+      if (modo === 'rojo') return 'var(--bad)';
+      if (modo === 'arcoiris') return ARCOIRIS[Object.keys(VISUALES).indexOf(id)];
+      return critico ? 'var(--bad)' : 'var(--accent-2)';
+    }
+    function svgLinea(vals, base, alerta) {
+      const w = 200, h = 64, max = Math.max(...vals), min = Math.min(...vals);
+      const xy = vals.map((v, i) => [5 + i * (w - 12) / (vals.length - 1), h - 8 - (v - min) / (max - min || 1) * (h - 18)]);
+      const ult = xy[xy.length - 1];
+      return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${xy.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="${base}" stroke-width="3"/><circle cx="${ult[0].toFixed(1)}" cy="${ult[1].toFixed(1)}" r="5" fill="${alerta}"/></svg>`;
+    }
+    function svgBarras(datos, base, alerta) {
+      const max = Math.max(...datos.map(d => d[1]));
+      let s = `<svg viewBox="0 0 200 ${datos.length * 16 + 4}" aria-hidden="true">`;
+      datos.forEach(([n, v], i) => {
+        s += `<text x="0" y="${i * 16 + 13}" font-size="11" fill="var(--text)">${n}</text><rect x="46" y="${i * 16 + 3}" width="${(v / max * 146).toFixed(1)}" height="11" rx="2" fill="${i === 0 ? alerta : base}"/>`;
+      });
+      return s + '</svg>';
+    }
+    function svgAnillo() {
+      const vals = [18, 11, 8, 6, 4, 3, 2, 2, 1], tot = 55, r = 26, C = 2 * Math.PI * r;
+      let off = 0, s = '<svg viewBox="0 0 80 64" aria-hidden="true">';
+      vals.forEach((v, i) => {
+        const l = v / tot * C;
+        s += `<circle cx="40" cy="32" r="${r}" fill="none" stroke="${ARCOIRIS[i]}" stroke-width="11" stroke-dasharray="${l.toFixed(2)} ${(C - l).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
+        off += l;
+      });
+      return s + '</svg>';
+    }
+    function contenido(id) {
+      const base = color(id, false), alerta = color(id, true);
+      switch (VISUALES[id].tipo) {
+        case 'kpi':
+          return id === 'kpiCrit'
+            ? `<h4>Alertas críticas (7 días)</h4><div class="grande" style="color:${alerta}">47</div><div>▲ 38 % vs. lunes</div>`
+            : `<h4>MTTR (horas)</h4><div class="grande" style="color:${base}">5.2</div><div>Meta: 4 h</div>`;
+        case 'linea': return `<h4>${TITULOS[$('#titulo').value]}</h4>${svgLinea(TENDENCIA, base, alerta)}`;
+        case 'barras': return `<h4>Alertas críticas por técnica</h4>${svgBarras(TECNICAS, base, alerta)}`;
+        case 'tabla': return '<h4>Detalle de eventos</h4><table><tbody>' + FILAS_TABLA.map(r => '<tr>' + r.map(x => `<td>${x}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+        case 'seg': return `<h4>${id === 'segFecha' ? 'Fecha' : 'Severidad'}</h4><div class="seg">${id === 'segFecha' ? 'Últimos 7 días' : 'Alta, Crítica'} ▾</div>`;
+        case 'mapa': return `<h4>IPs por país</h4><svg viewBox="0 0 200 60" aria-hidden="true"><rect width="200" height="60" rx="6" fill="var(--surface-2)"/>${[[30, 20], [60, 35], [95, 18], [120, 40], [150, 25], [175, 45]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="${base}"/>`).join('')}</svg>`;
+        case 'medidor': return `<h4>Reglas activas</h4><svg viewBox="0 0 200 80" aria-hidden="true"><path d="M40 70 A60 60 0 0 1 160 70" fill="none" stroke="var(--border)" stroke-width="14"/><path d="M40 70 A60 60 0 0 1 150.7 37.9" fill="none" stroke="${base}" stroke-width="14"/><text x="100" y="68" text-anchor="middle" font-size="16" fill="var(--text)">412</text></svg>`;
+        default: return `<h4>Técnicas (anillo)</h4>${svgAnillo()}`;
+      }
+    }
+    function pintarPrevia() {
+      const cont = $('#previa');
+      cont.replaceChildren();
+      for (let f = 1; f <= FILAS; f++) {
+        for (let c = 1; c <= COLS; c++) {
+          if (!ocupante(f, c)) cont.append(el('div', { class: 'vacia', style: `grid-row:${f};grid-column:${c}`, 'aria-hidden': 'true' }));
+        }
+      }
+      Object.entries(pos).forEach(([id, p]) => cont.append(el('div', { class: 'vis', style: `grid-row:${p.f};grid-column:${p.c} / span ${p.a}`, html: contenido(id) })));
+    }
+
+    /* --- reglas --- */
+    function reglas() {
+      const P = id => pos[id];
+      const r = [];
+      const k1 = P('kpiCrit'), k2 = P('kpiMttr');
+      r.push({ ok: !!(k1 && k2 && k1.f === 1 && k2.f === 1 && Math.min(k1.c, k2.c) === 1), t: 'Los KPI van arriba a la izquierda',
+        si: 'Las dos tarjetas KPI están en la fila 1 y una arranca en la columna 1: es lo primero que lee el ojo (patrón en Z o en F).',
+        no: !(k1 && k2) ? 'Coloca las dos tarjetas KPI: el número clave debe verse sin buscarlo.' : 'Pon las dos tarjetas KPI en la fila 1, empezando en la columna 1: la lectura en Z o en F empieza arriba a la izquierda.' });
+      const t = P('tendencia');
+      r.push({ ok: !!(t && t.a === 2 && t.f <= 2), t: 'Lo más importante es más grande',
+        si: 'La tendencia, que responde la pregunta, ocupa 2 casillas en la mitad superior.',
+        no: !t ? 'Falta la tendencia: es el visual que responde «cómo evolucionan».' : 'Dale 2 casillas a la tendencia y súbela a la fila 1 o 2: el tamaño y la posición comunican importancia.' });
+      const nDatos = Object.keys(pos).filter(id => VISUALES[id].datos).length;
+      r.push({ ok: nDatos <= 6, t: 'No más de 6 visuales de datos',
+        si: `Hay ${nDatos} visuales de datos: la vista se entiende de un vistazo.`,
+        no: `Hay ${nDatos} visuales de datos. Con más de 6 la atención se dispersa y la página carga más lento; quita lo que no responda la pregunta.` });
+      const s1 = P('segFecha'), s2 = P('segSev');
+      let okSeg = false;
+      if (s1 && s2) {
+        const c1 = celdasDe(s1), c2 = celdasDe(s2), todas = c1.concat(c2);
+        const contiguos = c1.some(([f1, k1]) => c2.some(([f2, k2]) => Math.abs(f1 - f2) + Math.abs(k1 - k2) === 1));
+        const borde = todas.every(([f]) => f === 1) || todas.every(([, k]) => k === 1) || todas.every(([, k]) => k === COLS);
+        okSeg = contiguos && borde;
+      }
+      r.push({ ok: okSeg, t: 'Segmentadores juntos y en un borde',
+        si: 'Los dos segmentadores están contiguos en un borde: todos los filtros se encuentran en un solo lugar.',
+        no: !(s1 && s2) ? 'Coloca los dos segmentadores: sin filtros de fecha y severidad no se puede acotar el análisis.' : 'Pon los segmentadores en casillas contiguas, en la fila superior o en una columna lateral: filtros dispersos obligan a buscarlos.' });
+      const tb = P('tabla');
+      r.push({ ok: !!(tb && tb.f === FILAS), t: 'El detalle va al final',
+        si: 'La tabla está en la última fila: quien quiere profundizar baja; quien solo quiere la conclusión no la necesita.',
+        no: !tb ? 'Incluye la tabla de detalle en la última fila: es la evidencia para quien quiera verificar.' : `Mueve la tabla a la fila ${FILAS}: el detalle no debe competir con la conclusión.` });
+      const dist = Object.keys(pos).filter(id => VISUALES[id].distractor);
+      r.push({ ok: !!P('tecnicas') && dist.length === 0, t: 'Cada visual responde la pregunta',
+        si: 'Están las técnicas ATT&CK y no hay visuales decorativos ni duplicados.',
+        no: !P('tecnicas') ? 'Falta la gráfica de barras por técnica ATT&CK: es la que responde «qué técnicas concentran».' : 'Quita ' + dist.map(id => `«${VISUALES[id].corto}»: ${MOTIVO[id]}`).join(' Quita ') });
+      const col = $('#colores').value;
+      r.push({ ok: col === 'reservado', t: 'Colores consistentes y rojo reservado',
+        si: 'Un color base para todo y rojo solo para lo crítico: el rojo vuelve a significar «atiende esto».',
+        no: col === 'rojo' ? 'Si todo es rojo, nada destaca: el color de alerta pierde su significado.' : 'Un color por visual sugiere categorías que no existen y distrae; usa un color base y reserva el rojo para lo crítico.' });
+      const tit = $('#titulo').value;
+      r.push({ ok: tit === 'conclusion', t: 'El título expresa la conclusión',
+        si: 'El título dice qué pasó y por qué; la gráfica lo confirma en lugar de obligar a descifrarla.',
+        no: tit === 'generico' ? '«Gráfica 1» no le dice nada al lector.' : '«Alertas críticas por día» describe el eje, no la conclusión: dile al lector qué debe notar.' });
+      return { r, nDatos };
+    }
+
+    function evaluarReglas() {
+      const { r, nDatos } = reglas();
+      const n = r.filter(x => x.ok).length;
+      $('#puntaje').textContent = `${n}/${r.length}`;
+      $('#nVisuales').textContent = nDatos;
+      $('#reglas').replaceChildren(...r.map(x => el('li', { class: x.ok ? 'si' : 'no' },
+        el('strong', {}, `${x.ok ? '✓' : '✗'} ${x.t}. `), x.ok ? x.si : x.no)));
+      if (n === r.length && !reto1Hecho) {
+        reto1Hecho = true;
+        prog.marcar('reto1');
+        retro('#retro1', 'ok', '<strong>✓ ¡Vista rediseñada!</strong> Cumples las 8 reglas. Compara con la vista saturada: ahora el ojo encuentra primero los KPI, luego la tendencia que explica el cambio y al final la evidencia. Eso es jerarquía visual: el diseño decide el orden de lectura, no el azar.');
+      }
+      return { n, r };
+    }
+
+    function render() {
+      Object.entries(botonesPaleta).forEach(([id, b]) => {
+        b.setAttribute('aria-pressed', String(elegido === id));
+        b.textContent = VISUALES[id].corto + (pos[id] ? ' · en lienzo' : '');
+      });
+      celdas.forEach(({ f, c, b }) => {
+        const id = ocupante(f, c);
+        b.classList.toggle('ocupada', !!id);
+        b.classList.toggle('elegida', !!id && id === elegido);
+        if (id) {
+          const p = pos[id], parte = p.a === 2 ? ` (${c - p.c + 1}/2)` : '';
+          b.replaceChildren(VISUALES[id].corto + parte);
+          b.setAttribute('aria-label', `${VISUALES[id].corto}${parte}: ${VISUALES[id].nombre}, fila ${f}, columna ${c}`);
+        } else {
+          b.replaceChildren(el('small', {}, `F${f} · C${c}`), 'vacía');
+          b.setAttribute('aria-label', `F${f} · C${c} vacía: fila ${f}, columna ${c}`);
+        }
+      });
+      $('#quitar').disabled = !(elegido && pos[elegido]);
+      pintarPrevia();
+      evaluarReglas();
+    }
+
+    function cargarSaturado() {
+      pos = JSON.parse(JSON.stringify(SATURADO));
+      elegido = null;
+      reto1Hecho = false;
+      $('#colores').value = 'arcoiris';
+      $('#titulo').value = 'generico';
+      $('#tamano').value = '1';
+      estado('Vista saturada cargada. Selecciona un visual para empezar.');
+      retro('#retro1', '', '');
+      render();
+    }
+
+    $('#colores').addEventListener('change', render);
+    $('#titulo').addEventListener('change', render);
+    $('#reiniciar1').addEventListener('click', cargarSaturado);
+    $('#evaluar1').addEventListener('click', () => {
+      const { n, r } = evaluarReglas();
+      if (n === r.length) {
+        retro('#retro1', 'ok', '<strong>✓ Las 8 reglas se cumplen.</strong> Tu vista guía la lectura: KPI → tendencia → técnicas → detalle.');
+        return;
+      }
+      const faltan = r.filter(x => !x.ok).map(x => `<li>${x.t}</li>`).join('');
+      retro('#retro1', 'aviso', `<strong>${n} de ${r.length} reglas.</strong> Aún falta:<ul>${faltan}</ul>Lee la explicación de cada regla marcada con ✗ en la lista.`);
+    });
+
+    cargarSaturado();
+
+    /* ================= Reto 2 · Tipo de gráfico ================= */
+    const TIPOS = {
+      linea: { n: 'Gráfico de líneas', fuerte: 'La línea muestra cambios a lo largo de un eje continuo, casi siempre el tiempo.' },
+      barras: { n: 'Gráfico de barras', fuerte: 'Las barras comparan magnitudes entre categorías; ordenadas de mayor a menor se leen al instante.' },
+      apilada: { n: 'Barra apilada al 100 %', fuerte: 'La barra al 100 % muestra cómo se reparte un total entre pocas partes.' },
+      anillo: { n: 'Gráfico de anillo', fuerte: 'El anillo muestra partes de un total, pero solo funciona con pocas categorías.' },
+      histograma: { n: 'Histograma (columnas por intervalos)', fuerte: 'El histograma agrupa valores numéricos en intervalos para ver dónde se concentran.' },
+      dispersion: { n: 'Gráfico de dispersión', fuerte: 'La dispersión cruza dos medidas numéricas para ver si se mueven juntas.' },
+      tarjeta: { n: 'Tarjeta (valor único)', fuerte: 'La tarjeta destaca un solo número, idealmente junto a su meta.' },
+      tabla: { n: 'Tabla', fuerte: 'La tabla sirve para consultar valores exactos, no para ver patrones de un vistazo.' }
+    };
+    const PISTAS = {
+      tendencia: 'busca un gráfico que conecte los puntos a lo largo del tiempo.',
+      comparación: 'necesitas comparar el tamaño de varias categorías.',
+      composición: 'necesitas ver cómo se reparte un total entre pocas partes.',
+      distribución: 'necesitas agrupar muchos valores numéricos en intervalos.',
+      relación: 'necesitas cruzar dos medidas numéricas.',
+      'valor único': 'basta con un número grande junto a su meta.'
+    };
+    const PREGS2 = [
+      { cat: 'tendencia', q: '¿Cómo evolucionaron las alertas críticas día a día en las últimas dos semanas?', ok: ['linea'],
+        d: { valores: [12, 14, 13, 15, 18, 17, 21, 20, 24, 23, 27, 29, 28, 33] },
+        exp: 'Es una pregunta de tendencia: la línea conecta los días y hace visible la subida sostenida.' },
+      { cat: 'comparación', q: '¿Qué técnica ATT&CK tuvo más detecciones esta semana?', ok: ['barras'],
+        d: { etiquetas: ['T1110', 'T1566', 'T1059', 'T1078', 'T1046', 'T1021'], valores: [42, 31, 18, 12, 9, 5] },
+        exp: 'Comparar categorías es el trabajo de las barras: el largo de cada barra se compara de un vistazo.' },
+      { cat: 'composición', q: '¿Qué proporción de los incidentes del mes corresponde a cada severidad (4 niveles)?', ok: ['apilada', 'anillo'],
+        d: { etiquetas: ['Baja', 'Media', 'Alta', 'Crítica'], valores: [38, 34, 20, 8] },
+        exp: 'Es composición (partes de un todo) con solo 4 categorías: la barra al 100 % o el anillo funcionan. Con más de 5 categorías, mejor usa barras.' },
+      { cat: 'distribución', q: '¿Cómo se distribuyen los tiempos de respuesta (en horas) de los 40 incidentes del trimestre?', ok: ['histograma'],
+        d: { crudos: [1.2, 0.8, 2.5, 3.1, 1.9, 4.2, 2.2, 1.1, 0.5, 2.8, 3.5, 1.7, 2.1, 6.5, 1.4, 2.9, 3.8, 1.6, 2.4, 9.8, 1.3, 2.6, 0.9, 3.3, 2.0, 1.8, 4.6, 2.3, 1.5, 2.7, 5.1, 1.0, 3.0, 2.2, 1.9, 7.4, 2.5, 1.2, 3.6, 2.1] },
+        exp: 'Para ver cómo se reparten valores numéricos usa un histograma: la mayoría se resuelve en menos de 4 h y hay casos extremos que merecen revisión.' },
+      { cat: 'relación', q: '¿Los hosts con más vulnerabilidades sin parche también reciben más alertas?', ok: ['dispersion'],
+        d: { pares: [[2, 5], [4, 9], [5, 8], [7, 14], [8, 13], [10, 19], [12, 22], [3, 4], [9, 17], [11, 18], [6, 10], [1, 3]] },
+        exp: 'La pregunta cruza dos medidas numéricas por host: la dispersión revela que suben juntas. Recuerda que relación no es causalidad.' },
+      { cat: 'valor único', q: '¿Cuál es el MTTD actual frente a la meta de 2 horas?', ok: ['tarjeta'],
+        d: { valor: 2.6, meta: 2 },
+        exp: 'Un solo número contra su meta: la tarjeta (o el visual KPI de Power BI) lo hace imposible de ignorar.' }
+    ];
+    const ACENTO = 'var(--accent-2)';
+
+    function serie(d) {
+      if (d.valores) return { e: d.etiquetas || d.valores.map((_, i) => String(i + 1)), v: d.valores };
+      if (d.crudos) return { e: d.crudos.map((_, i) => String(i + 1)), v: d.crudos };
+      if (d.pares) return { e: d.pares.map((_, i) => 'H' + (i + 1)), v: d.pares.map(p => p[1]) };
+      return { e: ['Actual', 'Meta'], v: [d.valor, d.meta] };
+    }
+    function mini(tipo, d) {
+      const W = 220, H = 110, s = serie(d), max = Math.max(...s.v), tot = s.v.reduce((a, b) => a + b, 0);
+      let o = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vista previa: ${TIPOS[tipo].n}">`;
+      if (tipo === 'linea') {
+        const pts = s.v.map((v, i) => `${(10 + i * (W - 20) / Math.max(1, s.v.length - 1)).toFixed(1)},${(H - 10 - v / max * (H - 24)).toFixed(1)}`);
+        o += `<polyline points="${pts.join(' ')}" fill="none" stroke="${ACENTO}" stroke-width="3"/>`;
+      } else if (tipo === 'barras') {
+        const bw = (W - 10) / s.v.length;
+        s.v.forEach((v, i) => {
+          const h = v / max * (H - 30);
+          o += `<rect x="${(6 + i * bw).toFixed(1)}" y="${(H - 18 - h).toFixed(1)}" width="${(bw * 0.75).toFixed(1)}" height="${h.toFixed(1)}" fill="${ACENTO}"/>`;
+          if (s.v.length <= 8) o += `<text x="${(6 + i * bw + bw * 0.37).toFixed(1)}" y="${H - 5}" font-size="9" text-anchor="middle" fill="var(--muted)">${s.e[i]}</text>`;
+        });
+      } else if (tipo === 'apilada') {
+        let x = 10;
+        s.v.forEach((v, i) => {
+          const w = v / tot * (W - 20);
+          o += `<rect x="${x.toFixed(1)}" y="38" width="${w.toFixed(1)}" height="30" fill="${ARCOIRIS[i % ARCOIRIS.length]}"/>`;
+          if (s.v.length <= 6 && w > 26) o += `<text x="${(x + w / 2).toFixed(1)}" y="84" font-size="9" text-anchor="middle" fill="var(--text)">${s.e[i]} ${Math.round(v / tot * 100)}%</text>`;
+          x += w;
+        });
+      } else if (tipo === 'anillo') {
+        const r = 38, C = 2 * Math.PI * r;
+        let off = 0;
+        s.v.forEach((v, i) => {
+          const l = v / tot * C;
+          o += `<circle cx="70" cy="55" r="${r}" fill="none" stroke="${ARCOIRIS[i % ARCOIRIS.length]}" stroke-width="16" stroke-dasharray="${l.toFixed(2)} ${(C - l).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
+          off += l;
+        });
+        if (s.v.length <= 6) s.e.forEach((e, i) => { o += `<text x="128" y="${22 + i * 14}" font-size="10" fill="${ARCOIRIS[i]}">■ <tspan fill="var(--text)">${e}</tspan></text>`; });
+        else o += `<text x="122" y="58" font-size="10" fill="var(--muted)">${s.v.length} rebanadas…</text>`;
+      } else if (tipo === 'histograma') {
+        const lo = Math.min(...s.v), paso = (max - lo) / 5 || 1, bins = [0, 0, 0, 0, 0];
+        s.v.forEach(v => { bins[Math.min(4, Math.floor((v - lo) / paso))]++; });
+        const mb = Math.max(...bins), bw = (W - 20) / 5;
+        bins.forEach((b, i) => {
+          const h = b / mb * (H - 34);
+          o += `<rect x="${(10 + i * bw).toFixed(1)}" y="${(H - 20 - h).toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${h.toFixed(1)}" fill="${ACENTO}"/><text x="${(10 + i * bw + bw / 2).toFixed(1)}" y="${H - 7}" font-size="9" text-anchor="middle" fill="var(--muted)">${(lo + i * paso).toFixed(1)}–${(lo + (i + 1) * paso).toFixed(1)}</text>`;
+        });
+      } else if (tipo === 'dispersion') {
+        const pares = d.pares || s.v.map((v, i) => [i + 1, v]);
+        const mx = Math.max(...pares.map(p => p[0])), my = Math.max(...pares.map(p => p[1]));
+        o += `<line x1="14" y1="${H - 12}" x2="${W - 6}" y2="${H - 12}" stroke="var(--border)"/><line x1="14" y1="6" x2="14" y2="${H - 12}" stroke="var(--border)"/>`;
+        pares.forEach(([x, y]) => { o += `<circle cx="${(18 + x / mx * (W - 30)).toFixed(1)}" cy="${(H - 16 - y / my * (H - 28)).toFixed(1)}" r="4" fill="${ACENTO}"/>`; });
+      } else if (tipo === 'tarjeta') {
+        const txt = d.valor !== undefined ? `${d.valor} h` : ICCA.num(tot, 1).replace(/\.0$/, '');
+        o += `<text x="${W / 2}" y="58" font-size="34" font-weight="700" text-anchor="middle" fill="var(--text)">${txt}</text><text x="${W / 2}" y="84" font-size="11" text-anchor="middle" fill="var(--muted)">${d.valor !== undefined ? 'Meta: ' + d.meta + ' h' : 'Total (se pierde el detalle)'}</text>`;
+      } else {
+        s.e.slice(0, 5).forEach((e, i) => { o += `<text x="12" y="${18 + i * 17}" font-size="11" fill="var(--text)">${e}</text><text x="${W - 12}" y="${18 + i * 17}" font-size="11" text-anchor="end" fill="var(--text)">${s.v[i]}</text><line x1="8" x2="${W - 8}" y1="${23 + i * 17}" y2="${23 + i * 17}" stroke="var(--border)"/>`; });
+        if (s.v.length > 5) o += `<text x="12" y="105" font-size="10" fill="var(--muted)">… ${s.v.length - 5} filas más</text>`;
+      }
+      return o + '</svg>';
+    }
+
+    const correctas2 = new Set();
+    function construir2() {
+      correctas2.clear();
+      const cont = $('#preguntas2');
+      cont.replaceChildren();
+      PREGS2.forEach((p, i) => {
+        const sel = el('select', { id: 'tipo' + i },
+          el('option', { value: '' }, 'Elige un gráfico…'),
+          Object.entries(TIPOS).map(([k, t]) => el('option', { value: k }, t.n)));
+        const tarjeta = el('div', { class: 'preg', id: 'preg' + i },
+          el('h3', {}, `${i + 1}. ${p.q}`),
+          el('label', { for: 'tipo' + i, class: 'oculto-visual' }, `Tipo de gráfico para la pregunta ${i + 1}`), sel,
+          el('div', { class: 'mini', id: 'mini' + i }, el('p', { class: 'pequeno' }, 'Aquí verás estos datos con el gráfico que elijas.')),
+          el('p', { class: 'explica', id: 'exp2-' + i }));
+        sel.addEventListener('change', () => responder2(i, sel.value));
+        cont.append(tarjeta);
+      });
+    }
+    function responder2(i, tipo) {
+      const p = PREGS2[i], tarjeta = $('#preg' + i), exp = $('#exp2-' + i);
+      tarjeta.classList.remove('ok', 'mal');
+      if (!tipo) { $('#mini' + i).replaceChildren(); exp.textContent = ''; correctas2.delete(i); return; }
+      $('#mini' + i).innerHTML = mini(tipo, p.d);
+      const ok = p.ok.includes(tipo);
+      tarjeta.classList.add(ok ? 'ok' : 'mal');
+      if (ok) { correctas2.add(i); exp.textContent = `✓ Tipo de análisis: ${p.cat}. ${p.exp}`; }
+      else { correctas2.delete(i); exp.textContent = `✗ ${TIPOS[tipo].fuerte} Pero esta pregunta es de ${p.cat}: ${PISTAS[p.cat]}`; }
+      if (correctas2.size === PREGS2.length) {
+        prog.marcar('reto2');
+        retro('#retro2', 'ok', '<strong>✓ ¡6 de 6!</strong> La regla de oro: primero identifica el tipo de pregunta (tendencia, comparación, composición, distribución, relación o valor único) y después elige el gráfico. Nunca al revés.');
+      } else {
+        retro('#retro2', ok ? 'aviso' : 'mal', `Pregunta ${i + 1}: ${ok ? '✓ correcta' : '✗ revisa la explicación de la tarjeta'}. Llevas ${correctas2.size} de ${PREGS2.length}.`);
+      }
+    }
+    $('#reiniciar2').addEventListener('click', () => { construir2(); retro('#retro2', '', ''); });
+
+    /* ================= Reto 3 · Interpretar gráficas ================= */
+    function barrasEje(cont, datos, ymin, ymax, titulo) {
+      const W = 360, H = 200, izq = 46, abajo = 30;
+      let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${titulo}">`;
+      for (let k = 0; k <= 4; k++) {
+        const v = ymin + (ymax - ymin) * k / 4, y = H - abajo - (H - abajo - 10) * k / 4;
+        s += `<line x1="${izq}" x2="${W - 6}" y1="${y}" y2="${y}" stroke="var(--border)"/><text x="${izq - 6}" y="${y + 4}" font-size="11" text-anchor="end" fill="var(--muted)">${ICCA.num(v)}</text>`;
+      }
+      const bw = (W - izq - 10) / datos.length;
+      datos.forEach(([e, v], i) => {
+        const h = (v - ymin) / (ymax - ymin) * (H - abajo - 10), x = izq + i * bw + bw * 0.2;
+        s += `<rect x="${x}" y="${H - abajo - h}" width="${bw * 0.6}" height="${h}" fill="${ACENTO}"/><text x="${x + bw * 0.3}" y="${H - abajo - h - 5}" font-size="12" text-anchor="middle" fill="var(--text)">${ICCA.num(v)}</text><text x="${x + bw * 0.3}" y="${H - 10}" font-size="11" text-anchor="middle" fill="var(--muted)">${e}</text>`;
+      });
+      cont.innerHTML = `<p style="margin:0 0 4px;font-weight:600">${titulo}</p>${s}</svg>`;
+    }
+    const GRAF3 = [
+      { titulo: 'Gráfica A · Capacitación y reportes de phishing (índice, mayo = 100)', boton: 'Agregar la serie de ataques recibidos',
+        contexto: 'Los ataques que llegan a la pasarela de correo se mantuvieron estables. En junio se activó el botón «Reportar phishing» y la capacitación enseña a usarlo.',
+        dibujar(cont, extra) {
+          const series = [{ nombre: 'Usuarios capacitados', valores: [100, 213, 325, 450, 550, 650] }, { nombre: 'Reportes de phishing', valores: [100, 158, 225, 292, 342, 417], color: 'var(--warn)' }];
+          if (extra) series.push({ nombre: 'Ataques recibidos', valores: [100, 104, 97, 101, 99, 103], color: 'var(--muted)', punteada: true });
+          ICCA.lineas(cont, ['May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct'], series, { titulo: 'Índice mensual (mayo = 100)' });
+        },
+        opciones: [
+          { t: 'La capacitación provoca más ataques de phishing.', exp: 'Confunde correlación con causalidad. Además, los reportes no son ataques: miden lo que los usuarios detectan, y los ataques recibidos se mantuvieron estables.' },
+          { t: 'Usuarios capacitados y reportes crecieron juntos; con el contexto, lo más probable es que más personas sepan reportar, no que haya más ataques.', ok: true, exp: 'Describe lo que muestran los datos y usa el contexto (ataques estables, botón de reporte) para una explicación prudente, sin afirmar causalidad.' },
+          { t: 'La capacitación no sirve y conviene cancelarla.', exp: 'Saca una decisión que los datos no sostienen: más reportes con los mismos ataques es, de hecho, una buena señal (más ojos detectando).' }
+        ] },
+      { titulo: 'Gráfica B · Alertas por semana', boton: 'Mostrar el eje desde cero',
+        contexto: 'Con el eje desde cero, las dos barras casi miden lo mismo: 980 frente a 1,010 alertas.',
+        dibujar(cont, extra) { barrasEje(cont, [['Semana 41', 980], ['Semana 42', 1010]], extra ? 0 : 970, 1020, extra ? 'Alertas por semana (eje desde 0)' : 'Alertas por semana (eje desde 970)'); },
+        opciones: [
+          { t: 'Las alertas se cuadruplicaron de una semana a otra.', exp: 'El eje empieza en 970: la barra de la semana 42 se ve cuatro veces más alta, pero el aumento real es de 30 alertas.' },
+          { t: 'Las alertas subieron alrededor de 3 % (de 980 a 1,010).', ok: true, exp: '(1,010 − 980) / 980 ≈ 3.1 %. Siempre lee los valores y revisa dónde empieza el eje de una gráfica de barras.' },
+          { t: 'Hay una crisis y hay que escalar a la dirección hoy.', exp: 'Un 3 % por sí solo no justifica escalar; primero compáralo con la variación habitual de otras semanas.' }
+        ] },
+      { titulo: 'Gráfica C · Tasa de falsos positivos por regla de detección', boton: 'Mostrar cuántas alertas evaluó cada regla (n)',
+        contexto: 'El número de alertas evaluadas cambia muchísimo entre reglas: de 2 a 400.',
+        dibujar(cont, extra) {
+          const n = { A: 2, B: 400, C: 3, D: 180 };
+          ICCA.barras(cont, [['A', 50], ['B', 30], ['C', 0], ['D', 25]].map(([r, v]) => ({ etiqueta: extra ? `${r} · n=${n[r]}` : 'Regla ' + r, valor: v })), { titulo: 'Falsos positivos (%)', unidad: ' %' });
+        },
+        opciones: [
+          { t: 'La regla C es la mejor: tiene 0 % de falsos positivos.', exp: 'Con solo 3 alertas, un 0 % puede ser casualidad: la siguiente alerta falsa lo convertiría en 25 %.' },
+          { t: 'La regla A es la peor y hay que desactivarla.', exp: 'Una alerta falsa de dos no basta para juzgar la regla: la muestra es demasiado pequeña.' },
+          { t: 'Las reglas B y D tienen suficientes alertas para comparar sus tasas; para A y C hay que esperar más datos.', ok: true, exp: 'Un porcentaje sin su tamaño de muestra engaña. Muestra siempre el número de casos (n) junto a la tasa.' }
+        ] }
+    ];
+
+    function construir3() {
+      const cont = $('#graficas3');
+      cont.replaceChildren();
+      GRAF3.forEach((g, i) => {
+        const lienzo = el('div', { class: 'svg3', id: 'svg3-' + i });
+        const ctx = el('p', { class: 'contexto', id: 'ctx3-' + i, hidden: true }, el('strong', {}, 'Contexto: '), g.contexto);
+        const boton = el('button', { type: 'button', 'aria-pressed': 'false' }, g.boton);
+        boton.addEventListener('click', () => {
+          const activo = boton.getAttribute('aria-pressed') !== 'true';
+          boton.setAttribute('aria-pressed', String(activo));
+          ctx.hidden = !activo;
+          g.dibujar(lienzo, activo);
+        });
+        const orden = ICCA.barajar([0, 1, 2], 3 + i * 7);
+        cont.append(el('div', { class: 'grafica3' },
+          el('h3', {}, g.titulo), lienzo,
+          el('div', { class: 'acciones' }, boton), ctx,
+          el('fieldset', {}, el('legend', {}, '¿Qué puedes afirmar?'),
+            orden.map(k => el('label', { class: 'opcion' }, el('input', { type: 'radio', name: 'g3-' + i, value: k }), el('span', {}, g.opciones[k].t)))),
+          el('p', { class: 'explica', id: 'exp3-' + i })));
+        g.dibujar(lienzo, false);
+      });
+    }
+    $('#revisar3').addEventListener('click', () => {
+      let bien = 0, vacias = 0;
+      GRAF3.forEach((g, i) => {
+        const r = document.querySelector(`input[name="g3-${i}"]:checked`), exp = $('#exp3-' + i);
+        if (!r) { vacias++; exp.textContent = 'Aún no eliges una afirmación.'; return; }
+        const o = g.opciones[Number(r.value)];
+        if (o.ok) bien++;
+        exp.textContent = (o.ok ? '✓ ' : '✗ ') + o.exp;
+      });
+      if (bien === GRAF3.length) {
+        prog.marcar('reto3');
+        retro('#retro3', 'ok', '<strong>✓ ¡Interpretación impecable!</strong> Tres trampas clásicas: correlación no es causalidad, un eje truncado exagera diferencias y un porcentaje sin su muestra engaña. En tu PIA, cada conclusión debe decir qué sostienen los datos y qué no.');
+      } else {
+        retro('#retro3', vacias ? 'aviso' : 'mal', `<strong>${bien} de ${GRAF3.length} correctas.</strong> Usa el botón de cada gráfica para ver más contexto y lee por qué cada afirmación sí o no se sostiene.`);
+      }
+    });
+    $('#reiniciar3').addEventListener('click', () => { construir3(); retro('#retro3', '', ''); });
+
+    construir2();
+    construir3();
+  </script>
+</body>
+</html>

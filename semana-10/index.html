@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semana 10 · Checkpoint 2: un hunt completo | Simuladores ICCA</title>
+  <meta name="description" content="Recorre las etapas de un hunt con un caso guiado, evalúa y mejora hipótesis de caza y genera la ficha del hunt en Markdown para el checkpoint-2 del PIA.">
+  <link rel="stylesheet" href="../assets/estilos.css">
+  <style>
+    code { overflow-wrap: anywhere; }
+    .dos-columnas > *, .rejilla > *, .constructor > *, .ficha > *, .medidor > * { min-width: 0; }
+    p, li, dd, label, legend, summary { overflow-wrap: anywhere; }
+    .si { color: var(--ok); font-weight: 700; }
+    .no { color: var(--bad); font-weight: 700; }
+    .nota { color: var(--muted); font-size: .92rem; }
+    .pasos li.hecha::before { content: "✓"; background: var(--ok); }
+    .pasos li.actual { border-color: var(--accent-2); }
+    .pasos li small { display: block; color: var(--muted); }
+    .panel { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin: 12px 0; background: var(--surface); }
+    .panel h3 { margin-top: 0; }
+    .opcion { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; font-weight: 400; }
+    .opcion input { margin-top: 5px; }
+    .chip[aria-pressed="true"]::before { content: "●"; }
+    .crit { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+    .crit label { display: flex; gap: 6px; align-items: center; font-weight: 400; }
+    .hip { border: 1px solid var(--border); border-left: 5px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 10px 0; background: var(--surface); }
+    .hip.bien { border-left-color: var(--ok); }
+    .hip.revisar { border-left-color: var(--bad); }
+    .hip p { margin: 0 0 4px; }
+    .estado { font-size: .92rem; margin-top: 6px; }
+    .estado:empty { display: none; }
+    .constructor { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .constructor select, .ficha input[type="text"], .ficha select, .ficha textarea, .ficha input[type="date"] { width: 100%; }
+    .frase { font-size: 1.05rem; border-left: 5px solid var(--accent-2); padding: 10px 14px; background: var(--surface); border-radius: 0 10px 10px 0; margin: 10px 0; }
+    .medidor { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .medidor li { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: var(--surface); font-size: .92rem; }
+    .ficha { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .ficha .ancho { grid-column: 1 / -1; }
+    .ficha textarea { min-height: 80px; resize: vertical; }
+    input[type="date"] { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; min-height: 40px; }
+    fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 0; min-width: 0; }
+    legend { font-weight: 700; padding: 0 6px; }
+    #f-md { max-height: 420px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <header class="cabecera">
+      <p class="migas"></p>
+      <h1>Semana 10 · Checkpoint 2: un hunt completo</h1>
+      <p class="subtitulo">Las semanas 6 a 9 te dieron las piezas: vocabulario ATT&amp;CK, datos normalizados y enriquecidos, CALCULATE con umbrales, inteligencia de tiempo y consultas iterativas. Aquí las juntas en un hunt completo y preparas la evidencia EV02 del checkpoint-2.</p>
+    </header>
+
+    <section class="dos-columnas">
+      <div class="caja objetivo">
+        <h2>Objetivo</h2>
+        <p>Al terminar podrás ejecutar en orden las etapas de un hunt, evaluar y mejorar la calidad de una hipótesis de caza y documentar el hunt en una ficha lista para el repositorio de tu PIA.</p>
+      </div>
+      <div class="caja">
+        <h2>Cómo usarlo</h2>
+        <ol>
+          <li>Reto 1: en cada paso elige qué etapa sigue y toma la decisión de esa etapa con los datos del caso.</li>
+          <li>Reto 2: evalúa cinco hipótesis con cuatro criterios y luego construye una buena.</li>
+          <li>Reto 3: llena la ficha del hunt; el Markdown se genera solo para que lo copies a <code>reportes/</code>.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div id="prog"></div>
+
+    <section class="tarjeta" aria-labelledby="reto1">
+      <h2 id="reto1">Reto 1 · Un hunt de principio a fin</h2>
+      <div class="caja"><p style="margin:0"><strong>Caso (ficticio):</strong> un reporte de CTI advierte que un actor está haciendo <em>password spraying</em> contra VPN corporativas: prueba una misma contraseña común contra muchas cuentas, una vez por cuenta, para no provocar bloqueos. Tu equipo tiene los registros de autenticación de la VPN de la noche del 30 de septiembre al 1 de octubre de 2026.</p></div>
+      <h3>Etapas completadas</h3>
+      <ol class="pasos" id="r1-etapas"></ol>
+      <div class="panel" id="r1-elegir">
+        <p style="margin-top:0;font-weight:600" id="r1-pregunta">¿Con qué etapa empieza el hunt?</p>
+        <div role="group" aria-labelledby="r1-pregunta" id="r1-opciones"></div>
+        <div class="retro" id="r1-retroEtapa"></div>
+      </div>
+      <div id="r1-panel"></div>
+      <div class="acciones"><button type="button" id="r1-reiniciar">Reiniciar reto 1</button></div>
+      <div class="retro" id="retro1"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto2">
+      <h2 id="reto2">Reto 2 · ¿Qué tan buena es tu hipótesis?</h2>
+      <p>Una buena hipótesis de caza es <strong>específica</strong> (qué comportamiento, dónde y cuándo), <strong>verificable</strong> (una condición que una consulta puede confirmar o descartar), <strong>basada en TTP</strong> (nombra una técnica ATT&amp;CK coherente) y usa una <strong>fuente disponible</strong>. Supón que tu dataset tiene logs de autenticación de la VPN y del proxy web, pero <strong>no</strong> telemetría de procesos del endpoint ni registros del servidor de correo.</p>
+      <h3>Parte A · Evalúa cinco hipótesis</h3>
+      <div id="r2-hips"></div>
+      <div class="acciones"><button type="button" class="primario" id="r2-compA">Comprobar parte A</button></div>
+      <div class="retro" id="r2-retroA"></div>
+      <h3>Parte B · Mejora la hipótesis vaga «Hay actividad maliciosa en la red»</h3>
+      <div class="constructor" id="r2-constructor"></div>
+      <p class="frase" id="r2-frase" aria-live="polite"></p>
+      <ul class="medidor" id="r2-medidor"></ul>
+      <div class="acciones">
+        <button type="button" class="primario" id="r2-compB">Comprobar reto 2</button>
+        <button type="button" id="r2-usar">Usar esta hipótesis en la ficha</button>
+        <button type="button" id="r2-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro2"></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="reto3">
+      <h2 id="reto3">Reto 3 · Ficha del hunt y checklist del checkpoint-2</h2>
+      <p>Llena la ficha. El Markdown de abajo se actualiza mientras escribes: guárdalo como <code>reportes/hunt-01.md</code>, enlázalo desde el README y pégalo en la descripción del Pull Request.</p>
+      <form class="ficha" id="ficha" novalidate>
+        <div class="campo"><label for="f-titulo">Título del hunt</label><input type="text" id="f-titulo" value="Hunt 01: password spraying contra la VPN"></div>
+        <div class="campo"><label for="f-equipo">Integrantes del equipo</label><input type="text" id="f-equipo" placeholder="Integrante 1 e integrante 2"></div>
+        <div class="campo"><label for="f-fecha">Fecha</label><input type="date" id="f-fecha" value="2026-10-05"></div>
+        <div class="campo"><label for="f-res">Resultado</label><select id="f-res"><option value="">Elige…</option><option>Confirmada</option><option>Descartada</option><option>No concluyente</option></select></div>
+        <div class="campo ancho"><label for="f-hip">Hipótesis</label><textarea id="f-hip" placeholder="Si un adversario…, entonces en … veremos … en …"></textarea></div>
+        <div class="campo"><label for="f-tec">Técnica ATT&amp;CK (ID)</label><input type="text" id="f-tec" placeholder="T1110.003"></div>
+        <div class="campo"><label for="f-tecn">Nombre de la técnica</label><input type="text" id="f-tecn" placeholder="Password Spraying"></div>
+        <div class="campo"><label for="f-tac">Táctica</label><select id="f-tac"></select></div>
+        <fieldset class="ancho" id="f-fuentes"><legend>Fuentes de datos</legend></fieldset>
+        <div class="campo ancho"><label for="f-cons">Consultas y medidas DAX usadas</label><textarea id="f-cons"></textarea></div>
+        <div class="campo ancho"><label for="f-hal">Hallazgos (con números)</label><textarea id="f-hal" placeholder="Qué encontraste, con evidencia; también falsos positivos descartados."></textarea></div>
+        <div class="campo"><label for="f-sig">Siguiente paso</label><select id="f-sig"><option value="">Elige…</option><option>Escalar a respuesta a incidentes</option><option>Automatizar como detección</option><option>Refinar la hipótesis</option><option>Cerrar sin acción</option></select></div>
+        <div class="campo"><label for="f-sigd">Detalle del siguiente paso</label><input type="text" id="f-sigd" placeholder="Por ejemplo: alerta si una IP falla en 10 o más cuentas en 1 h"></div>
+        <fieldset class="ancho" id="f-check"><legend>Checklist del checkpoint-2 (EV02)</legend></fieldset>
+      </form>
+      <h3>Vista previa en Markdown</h3>
+      <pre class="codigo" id="f-md" tabindex="0" aria-label="Ficha del hunt en Markdown"></pre>
+      <div class="acciones">
+        <button type="button" class="primario" id="f-comprobar">Comprobar ficha</button>
+        <button type="button" id="f-copiar">Copiar Markdown</button>
+        <button type="button" id="f-descargar">Descargar hunt-01.md</button>
+        <button type="button" id="f-reiniciar">Reiniciar</button>
+      </div>
+      <div class="retro" id="retro3"></div>
+    </section>
+
+    <section class="caja powerbi">
+      <h2>Así se hace en Power BI</h2>
+      <ol class="pasos">
+        <li>Vista preliminar con mapeo ATT&amp;CK: inserta una <strong>Matriz</strong> con la táctica en filas, el ID de técnica en columnas y <code>[Eventos]</code> en valores; aplica <strong>Formato condicional › Color de fondo</strong> (escala de colores) para obtener un mapa de calor de tu cobertura.</li>
+        <li>Agrega segmentadores de <code>Calendario[Fecha]</code> y severidad, y tarjetas con <code>[Eventos]</code>, <code>[Eventos críticos]</code> y tu medida de alerta (semanas 6 a 9).</li>
+        <li>Lleva tu hunt al tablero: <code>Cuentas con fallo = CALCULATE ( DISTINCTCOUNT ( Autenticacion[Usuario] ), Autenticacion[Resultado] = "Fallo" )</code> en una tabla con la IP de origen y la hora; en el panel <strong>Filtros</strong> del objeto visual elige «Mostrar elementos cuando el valor es mayor o igual que 10».</li>
+        <li>Guarda con <strong>Archivo › Guardar como</strong> y el tipo <strong>Archivos de proyecto de Power BI (*.pbip)</strong> dentro de la carpeta <code>dashboard/</code> del repositorio.</li>
+        <li>En GitHub: <code>git switch -c checkpoint-2</code>, <code>git add dashboard reportes</code>, <code>git commit -m "Checkpoint 2: dataset definitivo, vista preliminar e hipótesis"</code> y <code>git push -u origin checkpoint-2</code>; abre el Pull Request hacia <code>main</code> con la ficha y la checklist en la descripción.</li>
+      </ol>
+    </section>
+
+    <section class="caja pia">
+      <h2>Para tu PIA</h2>
+      <p>Esta semana <strong>es</strong> tu checkpoint-2 (evidencia EV02, en equipo). El Pull Request de <code>checkpoint-2</code> hacia <code>main</code> debe incluir: (a) el dataset definitivo, limpio y modelado, con el proyecto PBIP en <code>dashboard/</code>; (b) una vista preliminar del dashboard que aproveche el mapeo a ATT&amp;CK; y (c) al menos una hipótesis de hunting documentada en <code>reportes/</code>. Rúbrica: dataset definitivo y modelado (30), hipótesis siguiendo el proceso iterativo (30), vista preliminar con ATT&amp;CK (20) y Pull Request documentado, revisado y fusionado (20). Atiende los comentarios del docente, fusiona y sube el enlace del PR a Teams. A partir de aquí el dataset ya no debe cambiar de forma sustancial.</p>
+    </section>
+
+    <nav class="semanas" aria-label="Navegación entre semanas"></nav>
+  </main>
+
+  <script src="../assets/comun.js"></script>
+  <script>
+    'use strict';
+    ICCA.iniciarPagina(10);
+    const { $, el, retro, num } = ICCA;
+    const prog = ICCA.progreso('#prog', 3);
+    const hechos = new Set();
+    function marcar(id) { hechos.add(id); prog.marcar(id); }
+    function desmarcar(id) { if (hechos.delete(id)) { prog.reiniciar(); hechos.forEach(h => prog.marcar(h)); } }
+    function aleatorio(s) {
+      return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function dax(t) {
+      return esc(t).replace(/("[^"\n]*")|\b([A-Z][A-Z0-9]*)(?=\s*\()/g, (m, s, f) => s ? `<span class="str">${s}</span>` : `<span class="fn">${f}</span>`);
+    }
+    const radio = n => { const r = document.querySelector(`input[name="${n}"]:checked`); return r ? r.value : ''; };
+
+    /* ---------- Datos del caso: autenticación VPN (ficticia, generada con semilla) ---------- */
+    const rnd = aleatorio(1010);
+    const ent = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+    const hhmm = m => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const USUARIOS = ['agarcia', 'bmendoza', 'cruiz', 'dflores', 'eortiz', 'fcastro', 'gmorales', 'hvega', 'irios', 'jperez', 'ksoto', 'lgarza', 'mtorres', 'nramos'];
+    const EXTRA = ['admin', 'backup', 'scanner', 'test', 'invitado', 'rrhh', 'ventas', 'compras', 'auditoria', 'vpn', 'operador', 'conta'];
+    const SPRAY = '203.0.113.77', BRUTA = '192.0.2.50', VICTIMA = 'lgarza';
+    const AUTH = [];
+    const reg = (min, usuario, ip, resultado) => AUTH.push({ min, usuario, ip, resultado });
+    USUARIOS.forEach((u, i) => {
+      const ip = `198.51.100.${30 + i}`, n = ent(1, 2);
+      for (let k = 0; k < n; k++) {
+        const m = k === 0 ? ent(22 * 60, 24 * 60 + 30) : ent(29 * 60 + 30, 30 * 60 + 30);
+        if (rnd() < 0.3) reg(m - 1, u, ip, 'Fallo');
+        reg(m, u, ip, 'Éxito');
+      }
+    });
+    ICCA.barajar([...USUARIOS, ...EXTRA], 26).forEach((u, i) => reg(24 * 60 + 62 + i * 2 - (i > 17 ? 1 : 0), u, SPRAY, u === VICTIMA ? 'Éxito' : 'Fallo'));
+    for (let k = 0; k < 34; k++) reg(27 * 60 + Math.floor(k * 0.6), 'soporte01', BRUTA, 'Fallo');
+    AUTH.sort((a, b) => a.min - b.min);
+    const minVictima = AUTH.find(a => a.ip === SPRAY && a.resultado === 'Éxito').min;
+
+    function porIp(filas) {
+      const m = new Map();
+      filas.forEach(a => { if (!m.has(a.ip)) m.set(a.ip, { ip: a.ip, fallos: 0, cuentas: new Set() }); if (a.resultado === 'Fallo') { m.get(a.ip).fallos++; m.get(a.ip).cuentas.add(a.usuario); } });
+      return [...m.values()].filter(x => x.fallos);
+    }
+    const tabla = (cab, filas) => el('div', { class: 'tabla-scroll', style: 'margin:8px 0' }, el('table', { class: 'datos' },
+      el('thead', {}, el('tr', {}, ...cab.map(h => el('th', { scope: 'col' }, h)))),
+      el('tbody', {}, ...filas.map(r => el('tr', {}, ...r.map((x, j) => el('td', { class: typeof x === 'number' ? 'num' : '' }, typeof x === 'number' ? num(x) : x)))))));
+    const CONSULTAS = {
+      fallos: { t: 'Contar fallos por IP de origen', res: () => tabla(['IP de origen', 'Fallos'], porIp(AUTH).sort((a, b) => b.fallos - a.fallos).slice(0, 5).map(x => [x.ip, x.fallos])),
+        msg: `Útil, pero ambiguo: la IP con más fallos (${BRUTA}) ataca una sola cuenta. Tu hipótesis habla de muchas cuentas, una vez cada una.` },
+      cuentas: { t: 'Contar cuentas distintas con fallo por IP de origen', ok: true, res: () => tabla(['IP de origen', 'Cuentas distintas con fallo', 'Fallos'], porIp(AUTH).sort((a, b) => b.cuentas.size - a.cuentas.size).slice(0, 5).map(x => [x.ip, x.cuentas.size, x.fallos])),
+        msg: `Ese es el observable de tu hipótesis: ${SPRAY} falló en ${porIp(AUTH).find(x => x.ip === SPRAY).cuentas.size} cuentas distintas, casi una vez por cuenta. Patrón clásico de password spraying.` },
+      exitos: { t: 'Listar todos los inicios de sesión exitosos', res: () => el('p', { class: 'nota' }, `${AUTH.filter(a => a.resultado === 'Éxito').length} filas de actividad normal…`),
+        msg: 'No responde tu hipótesis: devuelve sobre todo actividad legítima y no aísla al atacante.' },
+      proxy: { t: 'Buscar descargas grandes en el proxy', res: () => el('p', { class: 'nota' }, 'Sin resultados relevantes.'),
+        msg: 'Esa fuente no está en tu recolección y no se relaciona con password spraying.' }
+    };
+    const CONSULTAS2 = {
+      exito: { t: `Buscar inicios de sesión exitosos desde ${SPRAY}`, ok: true, res: () => tabla(['Hora', 'Usuario', 'IP', 'Resultado'], AUTH.filter(a => a.ip === SPRAY && a.resultado === 'Éxito').map(a => [hhmm(a.min), a.usuario, a.ip, a.resultado])),
+        msg: `Hallazgo crítico: entre los intentos del spraying, la cuenta ${VICTIMA} sí entró a las ${hhmm(minVictima)}.` },
+      bloqueos: { t: 'Contar cuentas bloqueadas durante la noche', res: () => el('p', { class: 'nota' }, '1 cuenta bloqueada (soporte01).'),
+        msg: 'No cambia la conclusión: un spraying bien hecho evita los bloqueos probando una sola vez por cuenta.' },
+      soporte: { t: 'Revisar los fallos de soporte01', res: () => el('p', { class: 'nota' }, `34 fallos desde ${BRUTA} entre 03:00 y 03:20, ningún éxito.`),
+        msg: 'Es otro patrón (T1110.001, adivinar contraseñas de una sola cuenta). Anótalo como hallazgo secundario, pero no responde tu hipótesis.' }
+    };
+
+    /* ---------- Reto 1: etapas del hunt ---------- */
+    const ETAPAS = [
+      { k: 'hip', t: 'Hipótesis', pre: 'Todo hunt empieza con una hipótesis informada por CTI: sin ella no sabes qué buscar ni qué datos reunir.' },
+      { k: 'rec', t: 'Recolección de datos', pre: 'Para saber qué datos reunir primero necesitas la hipótesis.' },
+      { k: 'inv', t: 'Investigación (consultas)', pre: 'Antes de consultar necesitas reunir los datos que tu hipótesis requiere.' },
+      { k: 'hal', t: 'Hallazgos', pre: 'No hay hallazgos sin haber consultado los datos.' },
+      { k: 'resp', t: 'Respuesta y documentación', pre: 'La respuesta depende del hallazgo: primero confirma o descarta la hipótesis.' },
+      { k: 'mej', t: 'Mejora de detecciones', pre: 'Se automatiza lo que ya se confirmó y documentó: es la última etapa.' }
+    ];
+    let actual = 0, resumen = [], invPaso = 1;
+    function pintarEtapas() {
+      $('#r1-etapas').replaceChildren(...(resumen.length ? resumen.map((r, i) => el('li', { class: 'hecha' }, el('strong', {}, ETAPAS[i].t), el('small', {}, r))) : [el('li', {}, 'Todavía ninguna.')]));
+      const quedan = ETAPAS.slice(actual);
+      $('#r1-elegir').hidden = !quedan.length || $('#r1-panel').childElementCount > 0;
+      $('#r1-pregunta').textContent = actual === 0 ? '¿Con qué etapa empieza el hunt?' : '¿Qué etapa sigue?';
+      $('#r1-opciones').replaceChildren(...ICCA.barajar(quedan, 7 + actual).map(e => el('button', { type: 'button', class: 'chip', onclick: () => elegirEtapa(e.k) }, e.t)));
+    }
+    function elegirEtapa(k) {
+      const esperada = ETAPAS[actual];
+      if (k !== esperada.k) { retro('#r1-retroEtapa', 'mal', `Todavía no: ${ETAPAS.find(e => e.k === k).pre}`); return; }
+      retro('#r1-retroEtapa', '', '');
+      abrirPanel(k);
+    }
+    function terminarEtapa(txt) {
+      resumen.push(txt); actual++;
+      $('#r1-panel').replaceChildren();
+      pintarEtapas();
+      if (actual === ETAPAS.length) {
+        retro('#retro1', 'ok', '<strong>¡Hunt completo!</strong> Hipótesis → recolección → investigación → hallazgos → respuesta y documentación → mejora de detecciones. Documentar hace tu programa de caza <em>repetible</em> (HMM2); automatizar lo hace <em>escalable</em> (HMM4).');
+        marcar('reto1');
+      } else { retro('#retro1', 'aviso', `Etapa «${ETAPAS[actual - 1].t}» completada.`); const b = $('#r1-opciones button'); if (b) b.focus(); }
+    }
+    function panelOpciones(titulo, nombre, opciones, multiple, alConfirmar) {
+      const fb = el('div', { class: 'retro' });
+      const caja = el('div', { class: 'panel' }, el('h3', {}, titulo),
+        el('fieldset', { style: 'border:0;padding:0;margin:0' }, el('legend', { class: 'oculto-visual' }, titulo),
+          ...opciones.map(o => el('label', { class: 'opcion' }, el('input', { type: multiple ? 'checkbox' : 'radio', name: nombre, value: o.v }), ' ' + o.t))),
+        el('button', { type: 'button', class: 'primario', onclick: () => alConfirmar(fb, multiple ? Array.from(caja.querySelectorAll('input:checked')).map(i => i.value) : radio(nombre)) }, 'Confirmar decisión'), fb);
+      return caja;
+    }
+    function abrirPanel(k) {
+      const p = $('#r1-panel');
+      let caja;
+      if (k === 'hip') {
+        const ops = [{ v: 'a', t: 'Hay atacantes intentando entrar a la VPN.' },
+          { v: 'b', t: 'Si un actor hace password spraying (T1110.003) contra la VPN, veremos una IP externa con fallos en 10 o más cuentas distintas en menos de una hora y, quizá, un éxito desde esa misma IP.' },
+          { v: 'c', t: 'Si un actor ejecuta PowerShell codificado (T1059.001), lo veremos en los registros de la VPN.' }];
+        caja = panelOpciones('Hipótesis: ¿cuál formularías?', 'r1-hip', ops, false, (fb, v) => {
+          if (v === 'b') return terminarEtapa('T1110.003: una IP externa con fallos en 10 o más cuentas distintas en menos de 1 h.');
+          retro(fb, 'mal', v === 'a' ? 'Demasiado vaga: no dice qué comportamiento buscar ni cómo comprobarlo.' : v === 'c' ? 'La técnica no corresponde al caso y la VPN no registra procesos de PowerShell.' : 'Elige una opción.');
+        });
+      } else if (k === 'rec') {
+        const ops = [{ v: 'vpn', t: 'Registros de autenticación de la VPN (usuario, IP, resultado, hora)' }, { v: 'geo', t: 'Tabla de referencia GeoIP/ASN para enriquecer las IP' },
+          { v: 'proxy', t: 'Registros del proxy web' }, { v: 'edr', t: 'Telemetría de procesos del endpoint' }, { v: 'correo', t: 'Correos del área de Recursos Humanos' }];
+        caja = panelOpciones('Recolección: ¿qué datos reúnes? (marca todos los necesarios)', 'r1-rec', ops, true, (fb, v) => {
+          const ok = v.includes('vpn') && v.includes('geo') && v.length === 2;
+          if (ok) return terminarEtapa('Registros de autenticación de la VPN, enriquecidos con GeoIP/ASN.');
+          retro(fb, 'mal', !v.includes('vpn') ? 'Sin los registros de autenticación de la VPN no puedes ver el spraying.' : v.some(x => ['proxy', 'edr', 'correo'].includes(x)) ? 'Recolecta lo que la hipótesis necesita: proxy, endpoint y correo no registran intentos de inicio de sesión a la VPN (y los correos de RR. HH. no son datos de seguridad).' : 'Te falta el enriquecimiento: saber de qué país y ASN viene cada IP ayuda a distinguir al atacante (Semana 7).');
+        });
+      } else if (k === 'inv') {
+        invPaso = 1;
+        const zona = el('div');
+        const opciones = (paso) => {
+          const C = paso === 1 ? CONSULTAS : CONSULTAS2;
+          const fb = el('div', { class: 'retro' }), res = el('div');
+          return el('div', { class: 'panel' }, el('h3', {}, paso === 1 ? 'Investigación: ¿cuál es tu primera consulta?' : 'Investigación: ¿cuál es la consulta de seguimiento?'),
+            el('div', { role: 'group', 'aria-label': 'Consultas disponibles' }, ...Object.entries(C).map(([key, c]) => el('button', { type: 'button', class: 'chip', onclick: () => {
+              res.replaceChildren(c.res()); retro(fb, c.ok ? 'ok' : 'mal', (c.ok ? '✓ ' : '✗ ') + esc(c.msg));
+              if (c.ok && paso === 1 && invPaso === 1) { invPaso = 2; zona.append(opciones(2)); }
+              if (c.ok && paso === 2 && !zona.querySelector('.continuar')) {
+                const sig = el('button', { type: 'button', class: 'primario continuar', onclick: () => terminarEtapa(`Cuentas distintas con fallo por IP → ${SPRAY}; éxitos desde esa IP → ${VICTIMA} a las ${hhmm(minVictima)}.`) }, 'Continuar a la siguiente etapa');
+                zona.append(el('div', { class: 'acciones' }, sig)); sig.focus();
+              }
+            } }, c.t))), fb, res);
+        };
+        zona.append(opciones(1));
+        caja = zona;
+      } else if (k === 'hal') {
+        const ops = [{ v: 'a', t: `Hipótesis confirmada: ${SPRAY} hizo password spraying contra 26 cuentas y entró como ${VICTIMA} a las ${hhmm(minVictima)}.` },
+          { v: 'b', t: 'Hipótesis descartada: ninguna IP logró entrar.' }, { v: 'c', t: `Hipótesis confirmada: ${BRUTA} comprometió la cuenta soporte01.` }];
+        caja = panelOpciones('Hallazgos: ¿qué concluyes?', 'r1-hal', ops, false, (fb, v) => {
+          if (v === 'a') return terminarEtapa(`Confirmada: spraying desde ${SPRAY} con acceso exitoso de ${VICTIMA}; hallazgo secundario: fuerza bruta contra soporte01 sin éxito.`);
+          retro(fb, 'mal', v === 'b' ? 'Revisa la consulta de seguimiento: sí hubo un inicio exitoso.' : v === 'c' ? `${BRUTA} no tuvo éxitos y atacó una sola cuenta: es fuerza bruta (T1110.001), no spraying. Regístralo como hallazgo secundario.` : 'Elige una opción.');
+        });
+      } else if (k === 'resp') {
+        const ops = [{ v: 'ir', t: 'Escalar al equipo de respuesta a incidentes con la evidencia (consultas y resultados).' }, { v: 'pwd', t: `Restablecer la contraseña de ${VICTIMA} y cerrar sus sesiones activas.` },
+          { v: 'blq', t: `Bloquear temporalmente ${SPRAY} en la VPN.` }, { v: 'doc', t: 'Documentar el hunt en reportes/ (hipótesis, consultas, resultado y falsos positivos).' },
+          { v: 'borrar', t: 'Borrar los registros de la VPN para liberar espacio.' }, { v: 'redes', t: 'Publicar la IP del atacante y el nombre del usuario en redes sociales.' }];
+        caja = panelOpciones('Respuesta y documentación: ¿qué haces? (marca todo lo que aplique)', 'r1-resp', ops, true, (fb, v) => {
+          const buenas = ['ir', 'pwd', 'blq', 'doc'];
+          if (buenas.every(x => v.includes(x)) && v.length === 4) return terminarEtapa('Escalado a respuesta, contraseña restablecida, IP bloqueada y hunt documentado en reportes/.');
+          const msgs = [];
+          if (v.includes('borrar')) msgs.push('Borrar los registros destruye la evidencia que necesita el equipo de respuesta.');
+          if (v.includes('redes')) msgs.push('Publicarlo expone a una persona y alerta al atacante; los indicadores se comparten por canales de confianza.');
+          if (buenas.some(x => !v.includes(x))) msgs.push('Te faltan acciones: contener (cuenta e IP), escalar y documentar van juntas.');
+          retro(fb, 'mal', msgs.join(' '));
+        });
+      } else if (k === 'mej') {
+        const ops = [{ v: 'a', t: 'Automatizar la consulta como detección: alerta cuando una IP falle en 10 o más cuentas distintas en una hora.' },
+          { v: 'b', t: 'Alertar por cada inicio de sesión fallido.' }, { v: 'c', t: 'Bloquear todas las IP extranjeras.' }];
+        caja = panelOpciones('Mejora de detecciones: ¿qué automatizas?', 'r1-mej', ops, false, (fb, v) => {
+          if (v === 'a') return terminarEtapa('Detección automatizada: medida Cuentas con fallo por IP y hora, con alerta en 10 o más.');
+          retro(fb, 'mal', v === 'b' ? 'Generaría cientos de alertas al día por simples errores de dedo: fatiga de alertas.' : v === 'c' ? 'No es una detección: afectaría a usuarios legítimos que viajan y el atacante solo cambiaría de IP.' : 'Elige una opción.');
+        });
+        const pre = el('pre', { class: 'codigo' }); pre.innerHTML = dax('Cuentas con fallo =\nCALCULATE (\n    DISTINCTCOUNT ( Autenticacion[Usuario] ),\n    Autenticacion[Resultado] = "Fallo"\n)');
+        caja.insertBefore(pre, caja.querySelector('button'));
+      }
+      p.replaceChildren(caja);
+      $('#r1-elegir').hidden = true;
+      const foco = caja.querySelector('input, button'); if (foco) foco.focus();
+    }
+    $('#r1-reiniciar').addEventListener('click', () => { actual = 0; resumen = []; $('#r1-panel').replaceChildren(); retro('#r1-retroEtapa', '', ''); retro('#retro1', '', ''); pintarEtapas(); desmarcar('reto1'); });
+    pintarEtapas();
+
+    /* ---------- Reto 2 ---------- */
+    const CRIT = [['esp', 'Específica'], ['ver', 'Verificable'], ['ttp', 'Basada en TTP'], ['fue', 'Fuente disponible']];
+    const HIPS = [
+      { t: 'Hay actividad maliciosa en la red.', c: [], e: { esp: 'no dice qué comportamiento, dónde ni cuándo.', ver: 'no hay ninguna condición que una consulta pueda confirmar o descartar.', ttp: 'no nombra ninguna técnica.', fue: 'no indica qué datos revisar.' } },
+      { t: 'Si un actor hace password spraying (T1110.003) contra la VPN, en los logs de autenticación veremos una IP con fallos en 10 o más cuentas distintas en una hora, en los últimos 30 días.', c: ['esp', 'ver', 'ttp', 'fue'],
+        e: { esp: 'comportamiento, alcance (VPN) y ventana (30 días) concretos.', ver: '«10 o más cuentas distintas con fallo por IP en una hora» se mide con una consulta.', ttp: 'T1110.003 es Password Spraying.', fue: 'los logs de autenticación de la VPN están en tu dataset.' } },
+      { t: 'Si un atacante ejecuta PowerShell codificado (T1059.001), en la telemetría de procesos del endpoint veremos líneas de comandos con -EncodedCommand en los últimos 30 días.', c: ['esp', 'ver', 'ttp'],
+        e: { esp: 'comportamiento y ventana concretos.', ver: 'buscar -EncodedCommand es una condición medible.', ttp: 'T1059.001 es PowerShell.', fue: 'tu dataset no tiene telemetría del endpoint: no podrías probarla con tus datos.' } },
+      { t: 'Si alguien exfiltra datos, lo notaremos en el proxy.', c: ['fue'],
+        e: { esp: '«alguien» y «exfiltrar», sin umbral ni ventana, no acotan nada.', ver: '«lo notaremos» no es una condición medible.', ttp: 'no nombra técnica (podría ser T1048 o T1567, por ejemplo).', fue: 'el proxy sí está en tu dataset.' } },
+      { t: 'Los usuarios de Finanzas son el blanco favorito del phishing (T1566).', c: ['ttp'],
+        e: { esp: 'no dice qué observar ni en qué periodo.', ver: '«blanco favorito» no se traduce en una condición medible.', ttp: 'T1566 es Phishing.', fue: 'no tienes registros del servidor de correo.' } }
+    ];
+    HIPS.forEach((h, i) => $('#r2-hips').append(el('div', { class: 'hip', id: `r2-h-${i}` }, el('p', {}, el('strong', {}, `H${i + 1}. `), h.t),
+      el('div', { class: 'crit', role: 'group', 'aria-label': `Criterios que cumple H${i + 1}` }, ...CRIT.map(([k, t]) => el('label', {}, el('input', { type: 'checkbox', id: `r2-h-${i}-${k}` }), t))),
+      el('div', { class: 'estado', id: `r2-he-${i}` }))));
+    let parteA = false;
+    $('#r2-compA').addEventListener('click', () => {
+      let bien = 0;
+      HIPS.forEach((h, i) => {
+        const errores = CRIT.filter(([k]) => $(`#r2-h-${i}-${k}`).checked !== h.c.includes(k));
+        const ok = !errores.length; bien += ok;
+        $(`#r2-h-${i}`).className = 'hip ' + (ok ? 'bien' : 'revisar');
+        $(`#r2-he-${i}`).innerHTML = ok ? `<span class="si">✓ Correcto (${h.c.length} de 4).</span>` : '<span class="no">✗ Revisa:</span> ' + errores.map(([k, t]) => `<strong>${t}</strong>: ${h.c.includes(k) ? 'sí cumple' : 'no cumple'}, ${esc(h.e[k])}`).join(' ');
+      });
+      parteA = bien === HIPS.length;
+      retro('#r2-retroA', parteA ? 'ok' : 'mal', parteA ? '✓ Parte A completa. Fíjate en H3: una hipótesis impecable no sirve si no tienes los datos para probarla.' : `Llevas ${bien} de ${HIPS.length} hipótesis evaluadas correctamente.`);
+    });
+    const PIEZAS = {
+      comp: { t: 'Comportamiento', o: [['', 'Elige…'], ['vago', 'realiza actividad sospechosa'], ['spray', 'prueba una misma contraseña contra muchas cuentas de la VPN'], ['beacon', 'mantiene conexiones periódicas con un dominio raro'], ['ps', 'ejecuta PowerShell con comandos codificados']] },
+      tec: { t: 'Técnica ATT&CK', o: [['', 'Elige…'], ['ninguna', '(sin técnica)'], ['T1110.003', 'T1110.003 · Password Spraying'], ['T1071.001', 'T1071.001 · Web Protocols'], ['T1059.001', 'T1059.001 · PowerShell'], ['T1486', 'T1486 · Data Encrypted for Impact']] },
+      fue: { t: 'Fuente de datos', o: [['', 'Elige…'], ['auth', 'los logs de autenticación de la VPN'], ['proxy', 'los logs del proxy web'], ['edr', 'la telemetría de procesos del endpoint']] },
+      obs: { t: 'Observable medible', o: [['', 'Elige…'], ['vago', 'algo raro'], ['spray', 'una IP con fallos en 10 o más cuentas distintas en una hora'], ['beacon', 'conexiones al mismo dominio a intervalos regulares (variación menor a 10 %) durante 6 horas o más'], ['ps', 'líneas de comandos con -EncodedCommand']] },
+      ven: { t: 'Periodo', o: [['', 'Elige…'], ['30', 'en los últimos 30 días'], ['siempre', 'en cualquier momento']] }
+    };
+    const TEC_DE = { spray: 'T1110.003', beacon: 'T1071.001', ps: 'T1059.001' }, FUE_DE = { spray: 'auth', beacon: 'proxy', ps: 'edr' };
+    const TEC_NOMBRE = { 'T1110.003': 'Password Spraying', 'T1071.001': 'Application Layer Protocol: Web Protocols', 'T1059.001': 'Command and Scripting Interpreter: PowerShell' };
+    const TAC_DE = { 'T1110.003': 'Acceso a credenciales', 'T1071.001': 'Comando y control', 'T1059.001': 'Ejecución' };
+    Object.entries(PIEZAS).forEach(([k, p]) => $('#r2-constructor').append(el('div', { class: 'campo' }, el('label', { for: `r2-${k}` }, p.t),
+      el('select', { id: `r2-${k}`, onchange: evaluarB }, ...p.o.map(([v, t]) => el('option', { value: v }, t))))));
+    const pieza = k => $(`#r2-${k}`).value;
+    const texto = k => { const o = PIEZAS[k].o.find(x => x[0] === pieza(k)); return o && o[0] ? o[1] : '…'; };
+    function criteriosB() {
+      const c = pieza('comp'), t = pieza('tec'), f = pieza('fue'), o = pieza('obs'), v = pieza('ven');
+      const r = {};
+      r.esp = c && c !== 'vago' && o && o !== 'vago' && v === '30' ? [true, 'comportamiento, observable y periodo concretos.'] : [false, !c || c === 'vago' ? 'elige un comportamiento concreto.' : !o || o === 'vago' ? '«algo raro» no dice qué observar.' : 'acota el periodo: «en cualquier momento» no es una ventana de búsqueda.'];
+      r.ttp = c && TEC_DE[c] && t === TEC_DE[c] ? [true, `${t} describe ese comportamiento.`] : [false, !c || c === 'vago' ? 'primero elige un comportamiento concreto.' : `la técnica no corresponde: ese comportamiento se mapea a ${TEC_DE[c]}.`];
+      const fuenteOk = c && FUE_DE[c] === f && f !== 'edr';
+      const concreto = c && c !== 'vago';
+      r.fue = fuenteOk ? [true, 'esa fuente está en tu dataset y registra ese comportamiento.'] : [false, f === 'edr' ? 'tu dataset no tiene telemetría del endpoint.' : !f ? 'elige una fuente.' : !concreto ? 'primero elige un comportamiento concreto.' : c === 'ps' ? 'el PowerShell solo se ve en el endpoint, que no tienes: elige otro comportamiento.' : 'esa fuente no registra ese comportamiento.'];
+      r.ver = concreto && fuenteOk && o === c ? [true, 'una consulta sobre tus datos puede confirmarla o descartarla.'] : [false, !concreto ? 'primero elige un comportamiento concreto.' : o !== c ? 'el observable debe ser una condición medible de ese mismo comportamiento.' : 'sin una fuente disponible que lo registre, no la puedes verificar.'];
+      return r;
+    }
+    function fraseB() { const t = pieza('tec'); return `Si un adversario ${texto('comp')}${t && t !== 'ninguna' ? ` (${t})` : ''}, entonces en ${texto('fue')} veremos ${texto('obs')} ${texto('ven')}.`; }
+    function evaluarB() {
+      $('#r2-frase').textContent = fraseB();
+      const r = criteriosB();
+      $('#r2-medidor').replaceChildren(...CRIT.map(([k, t]) => el('li', {}, el('span', { class: r[k][0] ? 'si' : 'no' }, `${r[k][0] ? '✓' : '✗'} ${t}: `), r[k][1])));
+    }
+    $('#r2-compB').addEventListener('click', () => {
+      const r = criteriosB(), okB = CRIT.every(([k]) => r[k][0]);
+      if (parteA && okB) { retro('#retro2', 'ok', '<strong>¡Reto 2 completo!</strong> Pasaste de «hay actividad maliciosa» a una hipótesis que cualquier analista puede ejecutar y que tus datos pueden responder. Úsala en la ficha del reto 3.'); marcar('reto2'); }
+      else { retro('#retro2', 'mal', (parteA ? '✓ Parte A. ' : '✗ Completa primero la parte A. ') + (okB ? '✓ Parte B.' : `✗ Parte B: tu hipótesis cumple ${CRIT.filter(([k]) => r[k][0]).length} de 4 criterios; revisa los marcados con ✗.`)); desmarcar('reto2'); }
+    });
+    $('#r2-usar').addEventListener('click', () => {
+      $('#f-hip').value = fraseB();
+      const t = pieza('tec');
+      if (TEC_NOMBRE[t]) { $('#f-tec').value = t; $('#f-tecn').value = TEC_NOMBRE[t]; $('#f-tac').value = TAC_DE[t]; }
+      pintarMd();
+      retro('#retro2', 'aviso', 'Copiada a la ficha del reto 3 (hipótesis, técnica y táctica).');
+    });
+    $('#r2-reiniciar').addEventListener('click', () => {
+      parteA = false;
+      HIPS.forEach((h, i) => { CRIT.forEach(([k]) => { $(`#r2-h-${i}-${k}`).checked = false; }); $(`#r2-h-${i}`).className = 'hip'; $(`#r2-he-${i}`).innerHTML = ''; });
+      Object.keys(PIEZAS).forEach(k => { $(`#r2-${k}`).value = ''; });
+      retro('#r2-retroA', '', ''); retro('#retro2', '', ''); evaluarB(); desmarcar('reto2');
+    });
+    evaluarB();
+
+    /* ---------- Reto 3: ficha del hunt ---------- */
+    const TACTICAS = ['Reconocimiento', 'Acceso inicial', 'Ejecución', 'Persistencia', 'Escalación de privilegios', 'Evasión de defensas', 'Acceso a credenciales', 'Descubrimiento', 'Movimiento lateral', 'Recolección', 'Comando y control', 'Exfiltración', 'Impacto'];
+    $('#f-tac').replaceChildren(el('option', { value: '' }, 'Elige…'), ...TACTICAS.map(t => el('option', { value: t }, t)));
+    const FUENTES = ['Logs de autenticación (VPN/AD)', 'Logs de proxy web', 'DNS', 'Firewall', 'Telemetría de endpoint (EDR/Sysmon)', 'Correo'];
+    FUENTES.forEach((f, i) => $('#f-fuentes').append(el('label', { class: 'opcion' }, el('input', { type: 'checkbox', id: `f-fu-${i}`, value: f }), ' ' + f)));
+    const CHECK = ['Dataset definitivo, limpio y modelado (relaciones y cardinalidad revisadas)', 'Proyecto guardado como PBIP dentro de dashboard/', 'Tabla Calendario marcada como tabla de fechas y sin fecha/hora automáticas', 'Medidas de las semanas 6 a 9 (conteo por técnica, severidad, CALCULATE con umbral, tendencia)', 'Vista preliminar del dashboard con mapeo a ATT&CK', 'Al menos una hipótesis de hunting documentada en reportes/', 'Rama checkpoint-2 con Pull Request hacia main y descripción completa', 'Comentarios del docente atendidos, PR fusionado y enlace subido a Teams'];
+    CHECK.forEach((c, i) => $('#f-check').append(el('label', { class: 'opcion' }, el('input', { type: 'checkbox', id: `f-ch-${i}` }), ' ' + c)));
+    const CONS0 = 'Cuentas con fallo =\nCALCULATE (\n    DISTINCTCOUNT ( Autenticacion[Usuario] ),\n    Autenticacion[Resultado] = "Fallo"\n)\n-- Tabla por IP de origen y hora; filtro del objeto visual: Cuentas con fallo >= 10';
+    $('#f-cons').value = CONS0;
+    const TAC_PREFIJO = { T1110: 'Acceso a credenciales', T1003: 'Acceso a credenciales', T1071: 'Comando y control', T1059: 'Ejecución', T1566: 'Acceso inicial', T1486: 'Impacto', T1021: 'Movimiento lateral', T1567: 'Exfiltración', T1048: 'Exfiltración', T1041: 'Exfiltración', T1069: 'Descubrimiento' };
+    const v = id => $(id).value.trim();
+    function pintarMd() {
+      const fuentes = FUENTES.filter((f, i) => $(`#f-fu-${i}`).checked);
+      const md = [`# ${v('#f-titulo') || 'Hunt sin título'}`, '', '| Campo | Detalle |', '|---|---|',
+        `| Equipo | ${v('#f-equipo') || '(pendiente)'} |`, `| Fecha | ${v('#f-fecha') || '(pendiente)'} |`,
+        `| Técnica ATT&CK | ${v('#f-tec') || '(pendiente)'}${v('#f-tecn') ? ' · ' + v('#f-tecn') : ''} |`, `| Táctica | ${v('#f-tac') || '(pendiente)'} |`, `| Resultado | ${v('#f-res') || '(pendiente)'} |`,
+        '', '## Hipótesis', v('#f-hip') || '(pendiente)', '', '## Fuentes de datos', ...(fuentes.length ? fuentes.map(f => `- ${f}`) : ['- (pendiente)']),
+        '', '## Consultas y medidas', '```dax', v('#f-cons') || '(pendiente)', '```', '', '## Hallazgos', v('#f-hal') || '(pendiente)',
+        '', '## Siguiente paso', `${v('#f-sig') || '(pendiente)'}${v('#f-sigd') ? ': ' + v('#f-sigd') : ''}`,
+        '', '## Checklist del checkpoint-2', ...CHECK.map((c, i) => `- [${$(`#f-ch-${i}`).checked ? 'x' : ' '}] ${c}`)];
+      $('#f-md').textContent = md.join('\n');
+    }
+    $('#ficha').addEventListener('input', pintarMd);
+    $('#ficha').addEventListener('change', pintarMd);
+    $('#ficha').addEventListener('submit', e => e.preventDefault());
+    $('#f-comprobar').addEventListener('click', () => {
+      const faltas = [];
+      if (v('#f-titulo').length < 5) faltas.push('un título descriptivo');
+      if (!v('#f-equipo')) faltas.push('los integrantes del equipo');
+      if (v('#f-hip').length < 40) faltas.push('una hipótesis completa («si…, entonces en… veremos…»)');
+      if (!/^T\d{4}(\.\d{3})?$/.test(v('#f-tec'))) faltas.push('un ID de técnica con formato válido (T1234 o T1234.001)');
+      if (!v('#f-tac')) faltas.push('la táctica');
+      if (!FUENTES.some((f, i) => $(`#f-fu-${i}`).checked)) faltas.push('al menos una fuente de datos');
+      if (v('#f-cons').length < 20) faltas.push('las consultas o medidas usadas');
+      if (!v('#f-res')) faltas.push('el resultado');
+      if (v('#f-hal').length < 20) faltas.push('los hallazgos, con números');
+      if (!v('#f-sig')) faltas.push('el siguiente paso');
+      if (faltas.length) { retro('#retro3', 'mal', `A tu ficha le falta: ${faltas.join('; ')}. Otro analista debe poder repetir tu hunt solo con esta ficha.`); desmarcar('reto3'); return; }
+      const esperada = TAC_PREFIJO[v('#f-tec').slice(0, 5)];
+      const aviso = esperada && esperada !== v('#f-tac') ? ` Revisa la coherencia: ${esc(v('#f-tec'))} suele mapearse a «${esperada}», no a «${esc(v('#f-tac'))}».` : '';
+      const pend = CHECK.filter((c, i) => !$(`#f-ch-${i}`).checked).length;
+      retro('#retro3', aviso ? 'aviso' : 'ok', `<strong>¡Ficha completa!</strong> Guárdala como <code>reportes/hunt-01.md</code> y enlázala desde el README.${aviso} ${pend ? `Te quedan ${pend} puntos de la checklist del checkpoint-2 por cumplir.` : 'La checklist del checkpoint-2 está completa: abre tu Pull Request.'}`);
+      marcar('reto3');
+    });
+    $('#f-copiar').addEventListener('click', async () => {
+      const txt = $('#f-md').textContent;
+      try { await navigator.clipboard.writeText(txt); retro('#retro3', 'ok', 'Markdown copiado al portapapeles.'); }
+      catch (e) {
+        const sel = window.getSelection(); sel.selectAllChildren($('#f-md'));
+        retro('#retro3', 'aviso', 'Tu navegador no permitió copiar automáticamente: el texto quedó seleccionado, cópialo con Ctrl+C (o Cmd+C).');
+      }
+    });
+    $('#f-descargar').addEventListener('click', () => {
+      try {
+        const url = URL.createObjectURL(new Blob([$('#f-md').textContent], { type: 'text/markdown;charset=utf-8' }));
+        const a = el('a', { href: url, download: 'hunt-01.md', hidden: true });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      } catch (e) {
+        retro('#retro3', 'aviso', 'Tu navegador no permitió la descarga: usa «Copiar Markdown» y pégalo en un archivo hunt-01.md.');
+      }
+    });
+    $('#f-reiniciar').addEventListener('click', () => {
+      $('#ficha').reset(); $('#f-cons').value = CONS0;
+      retro('#retro3', '', ''); pintarMd(); desmarcar('reto3');
+    });
+    pintarMd();
+  </script>
+</body>
+</html>
